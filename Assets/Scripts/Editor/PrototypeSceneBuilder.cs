@@ -148,6 +148,7 @@ namespace RiskLoop.EditorTools
             // Üst katmanlar (sıra önemli: sonra eklenen üstte çizilir)
             RevealPopupView popup = BuildRevealPopup(canvas);
             FxLayerView fx = BuildFxLayer(canvas, root);
+            BuildTooltip(canvas);   // En üstte: her şeyin üzerinde görünsün
 
             // --- GameController + hissiyat yönetmeni ---
             var controllerGo = new GameObject("GameController");
@@ -198,23 +199,38 @@ namespace RiskLoop.EditorTools
             // ---- Sol sütun: istatistikler ----
             RectTransform left = CreateColumn("LeftColumn", panel, flexibleWidth: 0.9f);
 
-            // Yükseklik bütçesi ~860: sıkı ama sığar. Metinler sığmazsa auto-size küçültür.
-            TMP_Text depth = CreateText("DepthText", left, "Derinlik", 48, 70);
+            // Üst satır: karakter + derinlik + turun değeri (az yazı, büyük sayı)
+            RectTransform top = CreateUIObject("Top", left);
+            SetHeight(top, 136);
+            AddHorizontalLayout(top, spacing: 12);
+            AvatarView avatar = BuildAvatar(top, new Vector2(102, 136));
+            RectTransform topTexts = CreateUIObject("TopTexts", top);
+            SetHeight(topTexts, 136);
+            FillRemainingWidth(topTexts.GetComponent<LayoutElement>());
+            AddVerticalLayout(topTexts, spacing: 2, padding: 0);
+            TMP_Text depth = CreateText("DepthText", topTexts, "0. KAT", 44, 46, TextAlignmentOptions.MidlineLeft);
             depth.fontStyle = FontStyles.Bold;
-            TMP_Text runValue = CreateText("RunValueText", left, "Turun değeri", 40, 84);
+            TMP_Text runValue = CreateText("RunValueText", topTexts, "0", 46, 52, TextAlignmentOptions.MidlineLeft);
             runValue.fontStyle = FontStyles.Bold;
-            TMP_Text breakdown = CreateText("RunValueBreakdownText", left, "", 24, 60);
-            TMP_Text buffs = CreateText("BuffsText", left, "Baret: 0", 22, 60);
-            TMP_Text combatStats = CreateText("CombatStatsText", left, "", 22, 36);
-            TMP_Text power = CreateText("PowerText", left, "", 22, 56);
+            runValue.color = new Color(1f, 0.88f, 0.23f);
+            TMP_Text breakdown = CreateText("RunValueBreakdownText", topTexts, "", 18, 34, TextAlignmentOptions.MidlineLeft);
 
-            TMP_Text risk = CreateText("RiskText", left, "Risk", 34, 48);
-            risk.fontStyle = FontStyles.Bold;
+            // 12 stat kartı (2 sütun). Açıklamaları fareyle üstüne gelince.
+            RectTransform chipGrid = CreateUIObject("StatChips", left);
+            SetHeight(chipGrid, 6 * 62 + 5 * 8);
+            var chipLayout = chipGrid.gameObject.AddComponent<GridLayoutGroup>();
+            chipLayout.cellSize = new Vector2(215, 62);
+            chipLayout.spacing = new Vector2(8, 8);
+            chipLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            chipLayout.constraintCount = 2;
+            chipLayout.childAlignment = TextAnchor.UpperCenter;
+            var chips = new StatChipView[RunPanelView.ChipCount];
+            for (int i = 0; i < chips.Length; i++) chips[i] = BuildStatChip(chipGrid, i);
 
             // Risk çubuğu: gri arka plan + soldan dolan renkli şerit
             RectTransform bar = CreateUIObject("RiskBar", left);
             AddImage(bar, BarBackColor).raycastTarget = false;
-            SetHeight(bar, 26);
+            SetHeight(bar, 22);
             RectTransform fill = CreateUIObject("Fill", bar);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(0.1f, 1f);
@@ -223,11 +239,10 @@ namespace RiskLoop.EditorTools
             Image fillImage = AddImage(fill, Color.green);
             fillImage.raycastTarget = false;
 
-            TMP_Text gamble = CreateText("GambleText", left, "", 22, 56);
-            TMP_Text floorsLeft = CreateText("FloorsLeftText", left, "", 20, 36);
-            TMP_Text nextReward = CreateText("NextRewardText", left, "Sonraki kat", 22, 70);
-            TMP_Text insurance = CreateText("InsuranceText", left, "Sigorta", 20, 40);
-            TMP_Text milestone = CreateText("MilestoneText", left, "Sonraki keşif", 22, 84);
+            // Kısa satırlar (açıklamaları fareyle)
+            TMP_Text gamble = CreateTipText("GambleText", left, 22, 40, out TooltipTrigger gambleTip);
+            TMP_Text buffs = CreateTipText("BuffsText", left, 20, 34, out TooltipTrigger buffsTip);
+            TMP_Text milestone = CreateTipText("MilestoneText", left, 22, 40, out TooltipTrigger milestoneTip);
             CreateFlexibleSpacer(left);
 
             // ---- Orta sütun: birinci şahıs kazı sahnesi + mesaj ----
@@ -247,18 +262,18 @@ namespace RiskLoop.EditorTools
             hint.color = HintColor;
 
             var view = panel.gameObject.AddComponent<RunPanelView>();
+            SetRef(view, "avatar", avatar);
             SetRef(view, "depthText", depth);
-            SetRef(view, "powerText", power);
-            SetRef(view, "gambleText", gamble);
-            SetRef(view, "floorsLeftText", floorsLeft);
-            SetRef(view, "autoDig", auto);
             SetRef(view, "runValueText", runValue);
             SetRef(view, "runValueBreakdownText", breakdown);
+            SetRefArray(view, "chips", chips);
+            SetRef(view, "gambleText", gamble);
+            SetRef(view, "gambleTip", gambleTip);
             SetRef(view, "buffsText", buffs);
-            SetRef(view, "riskText", risk);
-            SetRef(view, "nextRewardText", nextReward);
-            SetRef(view, "insuranceText", insurance);
+            SetRef(view, "buffsTip", buffsTip);
             SetRef(view, "milestoneText", milestone);
+            SetRef(view, "milestoneTip", milestoneTip);
+            SetRef(view, "autoDig", auto);
             SetRef(view, "messageText", message);
             SetRef(view, "riskBarFill", fill);
             SetRef(view, "riskBarFillImage", fillImage);
@@ -266,11 +281,178 @@ namespace RiskLoop.EditorTools
             SetRef(view, "digView", digView);
             SetRef(view, "advanceButton", advance);
             SetRef(view, "cashOutButton", cashOut);
-            SetRef(view, "combatStatsText", combatStats);
             SetRef(view, "keyHintText", hint);
             SetRef(view, "advanceLabel", advanceLabel);
             SetRef(view, "cashOutLabel", cashOutLabel);
             return view;
+        }
+
+        /// <summary>Stat kartı: koyu kutu + solda renkli şerit + üstte soluk etiket + altta büyük değer + ipucu.</summary>
+        private static StatChipView BuildStatChip(Transform parent, int index)
+        {
+            RectTransform root = CreateUIObject($"Chip_{index}", parent);
+            AddImage(root, BackgroundColor);   // raycastTarget açık: ipucu için
+
+            RectTransform accentRt = CreateUIObject("Accent", root);
+            accentRt.anchorMin = new Vector2(0f, 0f);
+            accentRt.anchorMax = new Vector2(0f, 1f);
+            accentRt.pivot = new Vector2(0f, 0.5f);
+            accentRt.sizeDelta = new Vector2(6f, 0f);
+            Image accent = AddImage(accentRt, Color.white);
+            accent.raycastTarget = false;
+
+            TMP_Text label = AddChipText(root, "Label", 15, new Vector2(16, 34), new Vector2(-8, -4), TextAlignmentOptions.TopLeft);
+            label.color = HintColor;
+            TMP_Text value = AddChipText(root, "Value", 28, new Vector2(16, 2), new Vector2(-8, -22), TextAlignmentOptions.BottomLeft);
+            value.fontStyle = FontStyles.Bold;
+
+            var tip = root.gameObject.AddComponent<TooltipTrigger>();
+            var view = root.gameObject.AddComponent<StatChipView>();
+            SetRef(view, "label", label);
+            SetRef(view, "value", value);
+            SetRef(view, "accent", accent);
+            SetRef(view, "tooltip", tip);
+            return view;
+        }
+
+        private static TMP_Text AddChipText(RectTransform parent, string name, float size, Vector2 offsetMin, Vector2 offsetMax, TextAlignmentOptions align)
+        {
+            RectTransform rt = CreateUIObject(name, parent);
+            Stretch(rt);
+            rt.offsetMin = offsetMin;
+            rt.offsetMax = offsetMax;
+            var tmp = rt.gameObject.AddComponent<TextMeshProUGUI>();
+            tmp.fontSize = size;
+            tmp.alignment = align;
+            tmp.color = Color.white;
+            tmp.raycastTarget = false;
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMax = size;
+            tmp.fontSizeMin = size * 0.6f;
+            return tmp;
+        }
+
+        /// <summary>Üstüne gelince açıklama veren tek satır metin.</summary>
+        private static TMP_Text CreateTipText(string name, Transform parent, float size, float height, out TooltipTrigger tip)
+        {
+            TMP_Text text = CreateText(name, parent, "", size, height, TextAlignmentOptions.MidlineLeft);
+            text.raycastTarget = true;   // Metnin kutusu fareyi yakalasın
+            tip = text.gameObject.AddComponent<TooltipTrigger>();
+            return text;
+        }
+
+        /// <summary>
+        /// Karakter: aura + hüzme (arkada), salınan kök içinde katmanlar (pelerin, sırtta kazma, gövde, pantolon, çizme,
+        /// zırh, omuzluk, eldiven, kolye, boynuz, kask, elde silah). size en-boy 24:32 olmalı.
+        /// </summary>
+        private static AvatarView BuildAvatar(Transform parent, Vector2 size)
+        {
+            RectTransform root = CreateUIObject("Avatar", parent);
+            SetHeight(root, size.y);
+            SetFixedWidth(root, size.x);
+            root.sizeDelta = size;
+
+            Image aura = AddCentered("Aura", root, size * 1.7f);
+            Image rays = AddCentered("Rays", root, size * 1.9f);
+
+            RectTransform bob = CreateUIObject("BobRoot", root);
+            Stretch(bob);
+
+            Image Layer(string n)
+            {
+                RectTransform rt = CreateUIObject(n, bob);
+                Stretch(rt);
+                Image img = AddImage(rt, Color.white);
+                img.raycastTarget = false;
+                return img;
+            }
+
+            Image cape = Layer("Cape");
+
+            // Sırtta kazma (gövdenin arkasında, sol omuzdan çapraz)
+            RectTransform pickRt = CreateUIObject("Pickaxe", bob);
+            pickRt.anchorMin = pickRt.anchorMax = new Vector2(0.27f, 0.62f);
+            pickRt.sizeDelta = new Vector2(size.x * 0.62f, size.x * 0.62f);
+            pickRt.localRotation = Quaternion.Euler(0f, 0f, 35f);
+            Image pickaxe = AddImage(pickRt, Color.white);
+            pickaxe.raycastTarget = false;
+            pickaxe.preserveAspect = true;
+
+            Image body = Layer("Body");
+            Image pants = Layer("Pants");
+            Image boots = Layer("Boots");
+            Image armor = Layer("Armor");
+            Image pauldrons = Layer("Pauldrons");
+            Image gloves = Layer("Gloves");
+            Image necklace = Layer("Necklace");
+            Image horns = Layer("Horns");
+            Image helmet = Layer("Helmet");
+
+            // Sağ elde silah (kabzadan tutulur, ağız yukarı-dışa)
+            RectTransform weaponRt = CreateUIObject("Weapon", bob);
+            weaponRt.anchorMin = weaponRt.anchorMax = new Vector2(0.75f, 0.45f);
+            weaponRt.pivot = new Vector2(0.15f, 0.12f);
+            weaponRt.sizeDelta = new Vector2(size.x * 0.7f, size.x * 0.7f);
+            weaponRt.localRotation = Quaternion.Euler(0f, 0f, -15f);
+            Image weapon = AddImage(weaponRt, Color.white);
+            weapon.raycastTarget = false;
+            weapon.preserveAspect = true;
+
+            var view = root.gameObject.AddComponent<AvatarView>();
+            SetRef(view, "bobRoot", bob);
+            SetRef(view, "aura", aura);
+            SetRef(view, "rays", rays);
+            SetRef(view, "cape", cape);
+            SetRef(view, "pickaxe", pickaxe);
+            SetRef(view, "body", body);
+            SetRef(view, "pants", pants);
+            SetRef(view, "boots", boots);
+            SetRef(view, "armor", armor);
+            SetRef(view, "pauldrons", pauldrons);
+            SetRef(view, "gloves", gloves);
+            SetRef(view, "necklace", necklace);
+            SetRef(view, "horns", horns);
+            SetRef(view, "helmet", helmet);
+            SetRef(view, "weapon", weapon);
+            return view;
+        }
+
+        /// <summary>Fareyi takip eden açıklama kutusu (Canvas'ın en üstünde, tıklamaları engellemez).</summary>
+        private static void BuildTooltip(Transform canvas)
+        {
+            RectTransform root = CreateUIObject("Tooltip", canvas);
+            Stretch(root);
+            var group = root.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            RectTransform panel = CreateUIObject("Panel", root);
+            panel.anchorMin = panel.anchorMax = new Vector2(0f, 0f);
+            panel.pivot = new Vector2(0f, 1f);
+            AddImage(panel, new Color(0.06f, 0.06f, 0.09f, 0.96f)).raycastTarget = false;
+            var layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(16, 16, 12, 12);
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            var fitter = panel.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            RectTransform textRt = CreateUIObject("Text", panel);
+            var text = textRt.gameObject.AddComponent<TextMeshProUGUI>();
+            text.fontSize = 22;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            text.alignment = TextAlignmentOptions.TopLeft;
+            var le = textRt.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = 440;
+
+            var view = root.gameObject.AddComponent<TooltipView>();
+            SetRef(view, "panel", panel);
+            SetRef(view, "text", text);
+            SetRef(view, "group", group);
         }
 
         /// <summary>Oto-kazı paneli: aç/kapat butonu + 2x2 durma kuralı butonu.</summary>
@@ -351,7 +533,19 @@ namespace RiskLoop.EditorTools
             Image ceilingImage = AddImage(ceiling, new Color(1f, 1f, 1f, 0f));
             ceilingImage.raycastTarget = false;
 
+            // Meşale ışığı: duvarı aydınlatan sıcak, titreyen parıltı (renk ve titreme DigView.Update'te)
+            Image torchGlow = AddCentered("TorchGlow", scene, new Vector2(760, 640));
+
             Image hole = AddCentered("Hole", scene, new Vector2(380, 380));
+
+            // Ganimet ışını: bulgudan yukarı uzanan dikey parıltı (nadir bulgularda açılır)
+            RectTransform beamRt = CreateUIObject("LootBeam", scene);
+            beamRt.anchorMin = beamRt.anchorMax = new Vector2(0.5f, 0.5f);
+            beamRt.pivot = new Vector2(0.5f, 0f);
+            beamRt.sizeDelta = new Vector2(110, 560);
+            beamRt.anchoredPosition = new Vector2(0f, -60f);
+            Image lootBeam = AddImage(beamRt, Color.white);
+            lootBeam.raycastTarget = false;
 
             // Duvar
             RectTransform wall = CreateUIObject("WallRoot", scene);
@@ -410,6 +604,9 @@ namespace RiskLoop.EditorTools
 
             Image monsterHpFill = BuildBar("MonsterHpBar", monster, new Vector2(360, 26), new Vector2(0f, 50f),
                                            new Color(0.85f, 0.15f, 0.15f), out TMP_Text monsterHpText);
+            // Boss öfke çubuğu: can barının hemen altında, turuncu
+            Image enrageFill = BuildBar("EnrageBar", monster, new Vector2(300, 18), new Vector2(0f, 26f),
+                                        new Color(1f, 0.55f, 0.1f), out TMP_Text enrageText);
 
             // Bulgu (delikten çıkan)
             RectTransform item = CreateUIObject("ItemRoot", scene);
@@ -523,6 +720,11 @@ namespace RiskLoop.EditorTools
             SetRef(dig, "playerHpFill", playerHpFill.rectTransform);
             SetRef(dig, "playerHpFillImage", playerHpFill);
             SetRef(dig, "playerHpText", playerHpText);
+            SetRef(dig, "torchGlow", torchGlow);
+            SetRef(dig, "lootBeam", lootBeam);
+            SetRef(dig, "enrageBar", (RectTransform)enrageFill.transform.parent);
+            SetRef(dig, "enrageFill", enrageFill.rectTransform);
+            SetRef(dig, "enrageText", enrageText);
             return dig;
         }
 
@@ -838,7 +1040,13 @@ namespace RiskLoop.EditorTools
             Stretch(root);
             AddVerticalLayout(root, spacing: 10, padding: 0);
 
-            TMP_Text stats = CreateText("StatsText", root, "", 20, 84);
+            // Üst satır: büyük karakter (giydiklerin üstünde) + güç ve stat özeti
+            RectTransform top = CreateUIObject("Top", root);
+            SetHeight(top, 220);
+            AddHorizontalLayout(top, spacing: 20);
+            AvatarView avatar = BuildAvatar(top, new Vector2(165, 220));
+            TMP_Text stats = CreateText("StatsText", top, "", 22, 220, TextAlignmentOptions.MidlineLeft);
+            FillRemainingWidth(stats);
 
             RectTransform doll = CreateUIObject("EquippedSlots", root);
             SetHeight(doll, cell);
@@ -851,13 +1059,14 @@ namespace RiskLoop.EditorTools
             var equipped = new GearSlotView[slotEnum.Length];
             for (int i = 0; i < slotEnum.Length; i++) equipped[i] = BuildGearSlot(doll, $"Slot_{slotEnum[i]}", withLabel: true);
 
-            TMP_Text invTitle = CreateText("InventoryTitle", root, "", 24, 36);
+            TMP_Text invTitle = CreateText("InventoryTitle", root, "", 22, 30);
             invTitle.color = HintColor;
 
+            const float invCell = 80;
             RectTransform inv = CreateUIObject("Inventory", root);
-            SetHeight(inv, 4 * cell + 3 * 6);
+            SetHeight(inv, 4 * invCell + 3 * 6);
             var invGrid = inv.gameObject.AddComponent<GridLayoutGroup>();
-            invGrid.cellSize = new Vector2(cell, cell);
+            invGrid.cellSize = new Vector2(invCell, invCell);
             invGrid.spacing = new Vector2(6, 6);
             invGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             invGrid.constraintCount = 8;
@@ -874,6 +1083,7 @@ namespace RiskLoop.EditorTools
             FillRemainingWidth(sellAll);
 
             var view = root.gameObject.AddComponent<EquipmentView>();
+            SetRef(view, "avatar", avatar);
             SetRef(view, "statsText", stats);
             SetRefArray(view, "equippedSlots", equipped);
             SetRef(view, "inventoryTitle", invTitle);

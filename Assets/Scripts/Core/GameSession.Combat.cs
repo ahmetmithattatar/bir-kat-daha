@@ -92,14 +92,15 @@ namespace RiskLoop.Core
             MonsterInstance monster = CurrentRun.Monster;
 
             double variance = 1.0 + (_random.NextDouble() * 2.0 - 1.0) * c.damageVariance;         // ZAR: hasar oynaması
-            double damage = RiskMath.DamageAfterDefense(c, monster.Attack * variance, Stats.Defense);
+            double enrage = 1.0 + c.enrageAttackPerStack * monster.EnrageStacks;
+            double damage = RiskMath.DamageAfterDefense(c, monster.Attack * enrage * variance, Stats.Defense);
 
             CurrentRun.PlayerHealth -= damage;
             var result = new MonsterHitResult { Damage = damage };
 
             if (CurrentRun.PlayerHealth <= 0)
             {
-                if (CurrentRun.Shields > 0)
+                if (c.shieldsProtectInCombat && CurrentRun.Shields > 0)
                 {
                     // Baret ölümü engeller: az canla ayağa kalkarsın
                     CurrentRun.Shields--;
@@ -112,11 +113,33 @@ namespace RiskLoop.Core
                 {
                     CurrentRun.PlayerHealth = 0;
                     CurrentRun.DiedToMonster = true;
-                    BustOutcome(out result.LostEarnings, out result.InsurancePayout);
+                    result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout);
                     result.PlayerDied = true;
                 }
             }
             return result;
+        }
+
+        /// <summary>Bossun öfke aralığı (sn). Normal canavarlar öfkelenmez: 0.</summary>
+        public double EnrageInterval
+        {
+            get
+            {
+                if (!InCombat) return 0;
+                switch (CurrentRun.Monster.Kind)
+                {
+                    case MonsterKind.Boss: return Balance.combat.bossEnrageInterval;
+                    case MonsterKind.MiniBoss: return Balance.combat.miniBossEnrageInterval;
+                    default: return 0;
+                }
+            }
+        }
+
+        /// <summary>Boss bir kademe öfkelenir (Game katmanı zamanla çağırır). Yeni öfke seviyesini döndürür.</summary>
+        public int EnrageMonster()
+        {
+            if (!InCombat || CurrentRun.Monster.Kind == MonsterKind.Normal) return 0;
+            return ++CurrentRun.Monster.EnrageStacks;
         }
 
         /// <summary>Canavar öldü: öldürme ödülü, katın ertelenmiş bulgusu, ganimet.</summary>

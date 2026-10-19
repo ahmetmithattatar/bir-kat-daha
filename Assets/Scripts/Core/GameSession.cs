@@ -113,7 +113,14 @@ namespace RiskLoop.Core
 
         private double LuckAt(int step) =>
             RiskMath.Luck(Balance, step, Level(UpgradeType.Luck), RunLuck) + Stats.Luck
-            + Balance.prestige.ancientLuck.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientLuck);
+            + Balance.prestige.ancientLuck.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientLuck)
+            + PityLuck;
+
+        /// <summary>Talihsizlik telafisi: art arda göçük/yenilgilerden gelen ek şans.</summary>
+        public double PityLuck => Balance.pityLuckPerStack * Math.Min(Progress.pityStacks, Balance.maxPityStacks);
+
+        /// <summary>Toplam şans (derinlik hariç kaynaklar): yükseltme + ekipman + kadim + tılsım + telafi. Gösterge için.</summary>
+        public double LuckBonus => LuckAt(1) - Balance.luckPerStep;
 
         // ---------------- Tur ----------------
 
@@ -145,8 +152,9 @@ namespace RiskLoop.Core
             {
                 Step = startStep,
                 StartStep = startStep,
-                Shields = RiskMath.StartShields(Balance, Level(UpgradeType.StartShield))
-                          + (int)Math.Round(Balance.prestige.ancientShield.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientShield)),
+                Shields = Math.Min(Balance.maxShieldsPerRun,
+                          RiskMath.StartShields(Balance, Level(UpgradeType.StartShield))
+                          + (int)Math.Round(Balance.prestige.ancientShield.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientShield))),
                 PlayerMaxHealth = maxHealth,
                 PlayerHealth = maxHealth,
             };
@@ -173,14 +181,17 @@ namespace RiskLoop.Core
                 if (CurrentRun.Shields > 0)
                 {
                     // Baret patlamayı yuttu: tur devam eder, adım normal sayılır.
+                    // Ama enkaz risk altındaki kazancın bir kısmını gömer (baret bedelsiz değil).
                     CurrentRun.Shields--;
                     CurrentRun.ShieldsUsed++;
                     Progress.shieldsUsed++;
                     result.ShieldUsed = true;
+                    result.ShieldLoss = CurrentRun.Earnings * Balance.shieldEarningsLoss;
+                    CurrentRun.Earnings -= result.ShieldLoss;
                 }
                 else
                 {
-                    BustOutcome(out result.LostEarnings, out result.InsurancePayout);
+                    result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout);
                     result.Busted = true;
                     return result;
                 }
@@ -250,6 +261,7 @@ namespace RiskLoop.Core
             CurrentRun.Status = RunStatus.CashedOut;
             MoveLootToInventory();
             CheckBestRun();
+            Progress.pityStacks = 0;  // Başarılı dönüş: talihsizlik telafisi sıfırlanır
             return payout;
         }
 
@@ -266,19 +278,34 @@ namespace RiskLoop.Core
 
         /// <summary>
         /// Göçük ya da ölüm: tur kazancı gider, sigorta bir kısmını kurtarır. Cebe girmiş (Banked) para güvende.
-        /// Turda düşen eşyalar (PendingLoot) envantere girmez, kaybolur.
+        /// Turda düşen eşyalar kaybolur; ama en nadir olanı bustSalvageChance ile enkazdan kurtulabilir (döndürülür).
+        /// Talihsizlik telafisi bir artar (sonraki turlar daha şanslı).
         /// </summary>
-        private void BustOutcome(out double lost, out double saved)
+        private GearItem BustOutcome(out double lost, out double saved)
         {
             saved = CurrentRun.Earnings * InsuranceFraction;
             lost = CurrentRun.Earnings - saved;
 
             Progress.money += saved;
             Progress.totalBusts++;
+            Progress.pityStacks = Math.Min(Progress.pityStacks + 1, Balance.maxPityStacks);
             CurrentRun.Payout = saved;
             CurrentRun.Monster = null;
             CurrentRun.Status = RunStatus.Busted;
             CheckBestRun();
+
+            // Enkazdan kurtarma: en nadir eşya, yazı-tura
+            GearItem best = null;
+            foreach (GearItem item in CurrentRun.PendingLoot)
+            {
+                if (best == null || item.tier > best.tier) best = item;
+            }
+            if (best != null && Progress.inventory.Count < InventoryCap && _random.NextDouble() < Balance.bustSalvageChance)   // ZAR: kurtarma
+            {
+                Progress.inventory.Add(best);
+                return best;
+            }
+            return null;
         }
 
         private double RegenerateHealth()
@@ -368,7 +395,7 @@ namespace RiskLoop.Core
                     CurrentRun.SafetyFactor = Math.Max(CurrentRun.SafetyFactor * (1.0 - find.Value), Balance.minRunSafetyFactor);
                     break;
                 case FindType.Shield:
-                    CurrentRun.Shields += (int)find.Value;
+                    CurrentRun.Shields = Math.Min(CurrentRun.Shields + (int)find.Value, Balance.maxShieldsPerRun);
                     CurrentRun.ShieldsFound += (int)find.Value;
                     break;
                 case FindType.LuckCharm:

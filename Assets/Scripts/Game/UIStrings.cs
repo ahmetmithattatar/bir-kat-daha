@@ -353,6 +353,22 @@ namespace RiskLoop.Game
             return text + $"\nBulgular: {run.Finds.Count}   En iyisi: {FindTitle(best)}";
         }
 
+        // ---------------- Baret bedeli, telafi, kurtarma, öfke ----------------
+
+        public static string ShieldLoss(double loss) =>
+            loss > 0 ? $"Enkaz {Num(loss)} kazancı gömdü" : "Enkaz bir şey götürmedi";
+
+        /// <summary>Göçük/yenilgi sonrası teselli satırları: kurtarılan eşya + talihsizlik telafisi.</summary>
+        public static string AfterBust(GearItem salvaged, int pityStacks, double pityLuck)
+        {
+            string text = "";
+            if (salvaged != null) text += $"\n<color={Gold}>ENKAZDAN KURTARDIN:</color> {FantasyTexts.GearName(salvaged)}";
+            if (pityStacks > 0) text += $"\n<color=#8FD3FF>Talihsizlik telafisi: sonraki turlarda nadirlik +%{Pct(pityLuck)} ({pityStacks}/5)</color>";
+            return text;
+        }
+
+        public static string Enrage(int stacks) => $"ÖFKE {stacks}! Saldırı +%{stacks * 20}";
+
         // ---------------- Güç ve risk göstergesi ----------------
 
         public static string ThreatName(ThreatLevel t)

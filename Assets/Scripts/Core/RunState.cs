@@ -72,6 +72,8 @@ namespace RiskLoop.Core
         public double RewardGained;   // Hayatta kalındıysa eklenen kazanç
         public double LostEarnings;   // Patlamada kaybedilen miktar
         public double InsurancePayout;// Patlamada sigortanın kurtardığı miktar
+        public double ShieldLoss;     // Baret göçüğü yuttuysa enkazın gömdüğü kazanç
+        public GearItem SalvagedItem; // Göçükte enkazdan kurtarılan eşya (yoksa null)
 
         public bool HasFind;          // Bu adımda bulgu çıktı mı?
         public FindResult Find;

@@ -55,6 +55,7 @@ namespace RiskLoop.Core
         public int totalFinds;
         public int shieldsUsed;
         public double bestRunValue;  // En değerli turun toplamı ("rekor tur" tatmini için)
+        public int pityStacks;       // Talihsizlik telafisi: art arda göçük/yenilgi sayısı (sınırlı)
 
         // Yeni Çağ (prestij): sıfırlanmaz
         public int age = 1;

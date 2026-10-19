@@ -68,6 +68,13 @@ namespace RiskLoop.Game.UI
         [SerializeField] private Image playerHpFillImage;
         [SerializeField] private TMP_Text playerHpText;
 
+        [Header("Atmosfer ve parıltı")]
+        [SerializeField] private Image torchGlow;             // Duvarı aydınlatan sıcak, titreyen ışık
+        [SerializeField] private Image lootBeam;              // Nadir bulguda yukarı uzanan renkli ışın
+        [SerializeField] private RectTransform enrageBar;     // Boss öfke çubuğu (kap)
+        [SerializeField] private RectTransform enrageFill;
+        [SerializeField] private TMP_Text enrageText;
+
         [Header("Kazma açıları (derece)")]
         [SerializeField] private float restAngle = 25f;
         [SerializeField] private float windupAngle = -12f;
@@ -80,6 +87,9 @@ namespace RiskLoop.Game.UI
 
         /// <summary>Hasar sayılarının çıktığı yer.</summary>
         public RectTransform MonsterAnchor => monsterBody;
+
+        /// <summary>Duvarın ortası (kat ödülünün altınları buradan uçar).</summary>
+        public RectTransform WallAnchor => wallRoot;
 
         /// <summary>Oyuncunun aldığı hasar sayıları can barından çıkar.</summary>
         public RectTransform PlayerHpAnchor => (RectTransform)playerHpFill.parent;
@@ -118,6 +128,10 @@ namespace RiskLoop.Game.UI
             helmetImage.gameObject.SetActive(false);
             monsterRoot.gameObject.SetActive(false);
             monsterAura.sprite = PixelArt.Glow();
+            torchGlow.sprite = PixelArt.Glow(64);
+            lootBeam.sprite = PixelArt.Glow(64);
+            lootBeam.enabled = false;
+            enrageBar.gameObject.SetActive(false);
             weaponRoot.localRotation = Quaternion.Euler(0, 0, WeaponRest);
             SetAlpha(holeImage, 0f);
             SetAlpha(darkOverlay, 0f);
@@ -128,8 +142,27 @@ namespace RiskLoop.Game.UI
         {
             float now = Time.unscaledTime;
 
-            // Fener titremesi: kenar karartması hafifçe nefes alır
-            SetAlpha(vignette, 0.85f + 0.08f * Mathf.PerlinNoise(now * 3f, 0f));
+            // Fener titremesi: kenar karartması hafifçe nefes alır, meşale ışığı titrer
+            float flicker = Mathf.PerlinNoise(now * 3f, 0f);
+            SetAlpha(vignette, 0.85f + 0.08f * flicker);
+            torchGlow.color = new Color(1f, 0.72f, 0.38f, 0.16f + 0.12f * Mathf.PerlinNoise(now * 7f, 3f));
+            torchGlow.rectTransform.localScale = Vector3.one * (1f + 0.04f * flicker);
+
+            // Ganimet ışını nabız gibi atar
+            if (lootBeam.enabled)
+            {
+                Color b = lootBeam.color;
+                b.a = 0.45f + 0.25f * Mathf.Sin(now * 6f);
+                lootBeam.color = b;
+            }
+
+            // Havada süzülen toz zerrecikleri (fener ışığında)
+            if (UnityEngine.Random.value < 0.06f)
+            {
+                Vector3 p = sceneRoot.position + new Vector3(UnityEngine.Random.Range(-260f, 260f), UnityEngine.Random.Range(-240f, 120f), 0f);
+                particles.Spawn(p, new Color(1f, 0.9f, 0.7f, 0.35f), 1, 12f, gravity: 18f, minSize: 3f, maxSize: 6f,
+                                lifetime: 2.2f, baseVelocity: new Vector2(UnityEngine.Random.Range(-10f, 10f), 14f), rotate: false);
+            }
 
             // Nadir bulgunun arkasındaki ışık hüzmeleri döner
             if (itemRoot.gameObject.activeSelf) raysImage.rectTransform.Rotate(0f, 0f, -40f * FxTime.Delta);
@@ -334,6 +367,15 @@ namespace RiskLoop.Game.UI
 
             particles.Spawn(itemRoot.position, tierColor, 8 + find.Tier * 5, 380f + find.Tier * 40f,
                             gravity: -400f, minSize: 5f, maxSize: 12f, lifetime: 0.9f);
+
+            // Destansı (sarı) ve üstü: bulgudan tavana uzanan renkli ganimet ışını (Diablo tarzı)
+            if (find.Tier >= 5)
+            {
+                lootBeam.enabled = true;
+                lootBeam.color = new Color(tierColor.r, tierColor.g, tierColor.b, 0.6f);
+                lootBeam.rectTransform.localScale = new Vector3(0.6f + 0.1f * find.Tier, 1f, 1f);
+                StartCoroutine(UIFx.Shake(sceneRoot, 6f + find.Tier, 0.3f, Vector2.zero));
+            }
             yield return UIFx.Wait(0.2f + 0.04f * find.Tier);
         }
 
@@ -357,6 +399,7 @@ namespace RiskLoop.Game.UI
 
         public void HideItem()
         {
+            lootBeam.enabled = false;
             itemRoot.gameObject.SetActive(false);
             itemRoot.localScale = Vector3.one;
             itemRoot.anchoredPosition = Vector2.zero;
@@ -512,8 +555,18 @@ namespace RiskLoop.Game.UI
             HideMonster();
         }
 
+        /// <summary>Boss öfke çubuğu: progress 0..1 bir sonraki öfkeye kalan, stacks mevcut öfke.</summary>
+        public void SetEnrage(float progress, int stacks)
+        {
+            if (!monsterRoot.gameObject.activeSelf) return;
+            enrageBar.gameObject.SetActive(true);
+            enrageFill.anchorMax = new Vector2(Mathf.Clamp01(progress), 1f);
+            enrageText.text = stacks > 0 ? $"ÖFKE {stacks}" : "öfke";
+        }
+
         public void HideMonster()
         {
+            enrageBar.gameObject.SetActive(false);
             monsterRoot.gameObject.SetActive(false);
             monsterBody.localScale = Vector3.one;
             monsterImage.color = Color.white;

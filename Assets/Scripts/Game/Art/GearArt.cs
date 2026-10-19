@@ -170,6 +170,22 @@ namespace RiskLoop.Game.Art
             { "star", ("FFFFFF", "C0C0E0", "FFE060") },
         };
 
+        /// <summary>Malzemenin renkleri (hex, # olmadan). Karakter katmanları da bunu kullanır.</summary>
+        public static bool TryGetMaterial(string materialId, out string main, out string shade, out string accent)
+        {
+            if (materialId != null && Materials.TryGetValue(materialId, out var c))
+            {
+                main = c.Item1;
+                shade = c.Item2;
+                accent = c.Item3;
+                return true;
+            }
+            main = "A0A0A0";
+            shade = "606060";
+            accent = "C0C0C0";
+            return false;
+        }
+
         /// <summary>Eşyanın ikonu.</summary>
         public static Sprite Icon(GearItem item)
         {

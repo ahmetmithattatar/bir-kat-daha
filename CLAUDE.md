@@ -30,6 +30,25 @@
   tünelde ilerlenir (halkalar büyür, yeni duvar karanlıktan yaklaşır) | göçükte tavan çöker, taşlar dipte YIĞILIR, sahne kararır.
 - Risk sahnede görünür: tavan çatlağı riskle koyulaşır, tavandan riskle sıklaşan çakıl düşer.
 
+## Baret ve uzun oyun dengesi (6. tur kararları)
+Sorun: ~15. katta hep baret olduğu için göçük korkusu kalmıyordu, oto-kazıyla eşya kasılıp oyun hızla doluyordu.
+- **Baret bedelli:** göçüğü yutar ama risk altındaki kazancın %35'ini gömer (`shieldEarningsLoss`). Canavara karşı KORUMAZ
+  (`shieldsProtectInCombat = false`). Tur başına en fazla 3 baret (`maxShieldsPerRun`). Yedek baret maks 2 (çok pahalı), Cüce Miğferi maks 1,
+  baret bulgu ağırlığı 7 → 4.
+- **Boss öfkesi:** boss 8 sn'de, mini boss 12 sn'de bir öfkelenir: saldırı +%20/kademe. Uzayan savaş = ölüm. Hasar yetmezse takılırsın:
+  eşya kasmak, güçlendirmek anlamlı. Zamanlayıcı `GameController`'da, görsel öfke çubuğu can barının altında.
+- **Göçük moral bozmasın:** Talihsizlik telafisi (her göçük/yenilgi +%12 nadirlik, maks 5 kademe, başarılı dönüşte sıfır) +
+  Enkazdan kurtarma (turun en nadir eşyası %50 ihtimalle envantere).
+- **Oto-kazı:** "Baret bitince dur" açıkken baret varsa risk sınırı uygulanmaz.
+- **Arayüz sadeleşti:** tur ekranı sol sütunu = karakter + derinlik + turun değeri + 12 stat kartı (RİSK, BARET, GÜÇ, TEHDİT, DAYANMA,
+  SONRAKİ, BULGU, CANAVAR, SİGORTA, DUVAR, ŞANS, SALDIRI) + kısa kumar/etki/keşif satırları. Ayrıntı fareyle üstüne gelince
+  (`TooltipTrigger` → `TooltipView`). Metinler `RunTooltips.cs`'de.
+- **Karakter (`AvatarView`, `Art/CharacterArt`):** 24x32 pixel art, katmanlı. Giyilenler malzeme renginde üstünde görünür,
+  yeşil+ kaskta boynuz / zırhta omuzluk, kırmızı+ zırhta pelerin, en nadir parçanın renginde aura (kırmızı+ dönen hüzme), elde silah,
+  sırtta kazma, nefes salınımı. Ekipman sekmesinde büyük, kazıda küçük.
+- **Hissiyat:** hit-stop (kritik 0.05 sn, öldürme 0.07, boss 0.15; `RunFeedbackDirector` FxTime.Speed'i tek yerden yönetir),
+  altınlar sayaca kavisle uçar (`FxLayerView.CoinsTo`), sarı+ bulguda ganimet ışını, titreyen meşale ışığı, süzülen toz.
+
 ## Bağımlılık ve uzun oyun sistemleri (5. tur kararları)
 - **Oto-kazı (slot "oto çevir" mantığı):** A tuşu / buton. Kazıyı kendi sürdürür, animasyonlar `FxTime.Speed` = 2.5x.
   Sıradan bulgular pencere açmadan koleksiyona uçar. Durma kuralları (`PlayerProgress.autoDig`, kayda girer):
@@ -157,7 +176,7 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
 | Tur değeri | `RunState.TotalValue` = risk altındaki (`Earnings`) + cepte (`Banked`: Kese + ilk keşif ödülü). `bestRunValue` kalıcı rekor |
 | Yükseltme birikimi | Çoğu çarpımsal. Seviyeler kalıcı, eski ilerleme boşa gitmez |
 | Sigorta | `1 - (1-e)^level`, %100'e asla ulaşmaz. Sadece risk altındaki kazanca uygulanır |
-| Baret | Göçüğü yutar, adım normal sayılır (ödül + bulgu zarı). Göçük yüzdesini değiştirmez |
+| Baret | Göçüğü yutar, adım normal sayılır (ödül + bulgu zarı) ama risk altındakinin %35'i gider. Canavara karşı korumaz. Tur başına maks 3 |
 | Fiyatlar | `ceil(baseCost * costGrowth^level)`, tam sayı |
 | Para tipi | `double` (idle oyunlar gibi büyük sayılara hazır). Gösterimde aşağı yuvarlanır |
 | Kayıt | JsonUtility ile `Application.persistentDataPath/save.json` (saveVersion 4: envanter ve kuşanılan eşyalar; GearSlot/StatType sayı olarak, SADECE SONA ekle). Tur ortası kaydedilmez (risk altındaki kazanç kaybolur, Kese/rekor ödülü anında kaydedilir) |
@@ -240,7 +259,7 @@ Zar sırası: GameSession.cs başındaki yorumda (Advance, Attack, MonsterAttack
 Varsayılanlarla kaba tahmin (bulgusuz): yükseltmesiz optimal durma noktası ~6. kat. Bulgular eklendi, Python simülasyonuyla yeniden ölçülmeli.
 
 ## Yapılacaklar
-- [ ] Unity'de derleme ve oynanış testi (oto-kazı, geçit, güçlendirme, Yeni Çağ, kazma, güç göstergesi sürümü henüz denenmedi)
+- [ ] Unity'de derleme ve oynanış testi (bedelli baret, boss öfkesi, stat kartları + ipucu, karakter, hit-stop sürümü henüz denenmedi)
 - [ ] Python simülasyonu: Yeni Çağ döngüsü süresi, güçlendirme para yutağı, oto-kazı ile tur başına süre
 - [ ] Savaş dengesi: boss süreleri, ekipman ölçeği (1.14) vs canavar ölçeği (1.18/1.16), düşme oranları
 - [ ] Sonra: silah türüne özel vuruş efekti, canavar türüne özel saldırı (zehir, büyü), set bonusları, eşya karşılaştırma ipucu (tooltip)

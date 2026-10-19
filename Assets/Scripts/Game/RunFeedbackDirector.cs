@@ -43,6 +43,23 @@ namespace RiskLoop.Game
         /// <summary>Oto-kazı açıkken: sıradan anlarda pencere açılmaz, sadece durma koşulundaki anlarda.</summary>
         public bool AutoMode { get; set; }
 
+        /// <summary>Normal animasyon hızı (oto-kazıda 2.5). Hit-stop sırasında geçici olarak neredeyse durur.</summary>
+        public float BaseSpeed { get; set; } = 1f;
+
+        private float _hitStopUntil;   // Bu zamana kadar animasyonlar donuk (vuruş hissi)
+
+        private void Update()
+        {
+            // Animasyon hızını tek yerden yönet: hit-stop varsa neredeyse dur, yoksa temel hız
+            FxTime.Speed = Time.unscaledTime < _hitStopUntil ? 0.03f : BaseSpeed;
+        }
+
+        /// <summary>Kısa donma: kritik vuruşta ve öldürmede "tok" bir his verir.</summary>
+        private void HitStop(float seconds)
+        {
+            _hitStopUntil = Mathf.Max(_hitStopUntil, Time.unscaledTime + seconds);
+        }
+
         /// <summary>Oto-kazıda bu nadirlik ve üstü pencere açar (ve oto-kazıyı durdurur).</summary>
         public int AutoStopTier { get; set; } = 4;
 
@@ -87,6 +104,8 @@ namespace RiskLoop.Game
             if (r.ShieldUsed)
             {
                 fx.Flash(DangerRed, 0.4f, 0.6f);
+                if (r.ShieldLoss > 0) fx.FloatText($"-{UIStrings.Num(r.ShieldLoss)}", DangerRed, 52f, runPanel.RunValueAnchor);
+                runPanel.ShowMessage(UIStrings.ShieldLoss(r.ShieldLoss));
                 yield return digView.ShieldSave();
                 // Oto-kazıda baret kalmışsa durdurmaz (banner yeter); son baret giderse her zaman pencere
                 if (!AutoMode || run.Shields == 0) yield return popup.ShowShieldBreak(run.Shields, fx);
@@ -99,6 +118,7 @@ namespace RiskLoop.Game
             StartCoroutine(UIFx.Punch(runPanel.DepthAnchor, 0.15f, 0.25f));
             runPanel.ShowMessage(UIStrings.StepMessage(r));
             fx.FloatText($"+{UIStrings.Num(r.RewardGained)}", RewardColor(r.RewardGained, valueBefore), 46f, runPanel.RunValueAnchor);
+            fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 6, Gold);   // Altınlar sayaca uçar
             if (r.HealthRegen > 0) digView.SetPlayerHealth(run.PlayerHealth, run.PlayerMaxHealth);
 
             // Canavar: savaş başlar, bulgu zafere kalır
@@ -146,6 +166,7 @@ namespace RiskLoop.Game
             {
                 fx.FloatText($"KRİTİK! {dmg}", CritYellow, 58f, digView.MonsterAnchor);
                 fx.Shake(8f, 0.12f);
+                HitStop(0.05f);
             }
             else
             {
@@ -177,7 +198,9 @@ namespace RiskLoop.Game
             MonsterInstance m = v.Monster;
             bool boss = m.Kind != MonsterKind.Normal;
 
+            HitStop(boss ? 0.15f : 0.07f);
             yield return digView.MonsterDeath(m);
+            fx.CoinsTo(digView.MonsterAnchor, runPanel.RunValueAnchor, boss ? 20 : 8, Gold);
             runPanel.ShowMessage(UIStrings.Victory(v) + (v.UnlockedCheckpoint ? "\n" + UIStrings.CheckpointUnlocked(m.Step) : ""));
             if (v.UnlockedCheckpoint)
             {
@@ -243,6 +266,20 @@ namespace RiskLoop.Game
             fx.Burst(runPanel.RunValueAnchor, CashGreen, 26, 600f);
             fx.Flash(CashGreen, 0.15f, 0.4f);
             yield return UIFx.Wait(0.6f);
+        }
+
+        /// <summary>Boss öfkelendi: kırmızı flaş + yazı, öfke çubuğu sıfırlanır.</summary>
+        public void PlayEnrage(int stacks)
+        {
+            fx.Banner(UIStrings.Enrage(stacks), DangerRed, 0.5f);
+            fx.Flash(DangerRed, 0.2f, 0.4f);
+            fx.Shake(10f, 0.25f);
+        }
+
+        /// <summary>Öfke çubuğu: bir sonraki öfkeye ne kadar kaldı.</summary>
+        public void SetEnrageProgress(float progress, int stacks)
+        {
+            digView.SetEnrage(progress, stacks);
         }
 
         /// <summary>Oto-kazı durdu: oyuncunun dikkatini çek (kontrol sende).</summary>

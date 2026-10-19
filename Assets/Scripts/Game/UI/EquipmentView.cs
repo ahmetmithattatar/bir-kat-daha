@@ -13,6 +13,7 @@ namespace RiskLoop.Game.UI
     /// </summary>
     public class EquipmentView : MonoBehaviour
     {
+        [SerializeField] private AvatarView avatar;   // Giyilen eşyalar karakterin üstünde
         [SerializeField] private TMP_Text statsText;
         [SerializeField] private GearSlotView[] equippedSlots;   // GearSlot enum sırasıyla
         [SerializeField] private TMP_Text inventoryTitle;
@@ -61,6 +62,7 @@ namespace RiskLoop.Game.UI
 
         public void Refresh(GameSession session, long selectedUid)
         {
+            avatar.Refresh(session);
             statsText.text = $"Savaş gücün: <b>{session.CurrentPowerLevel}. kat</b> seviyesi\n" + FantasyTexts.CharacterSummary(session.Stats);
 
             var slots = (GearSlot[])Enum.GetValues(typeof(GearSlot));

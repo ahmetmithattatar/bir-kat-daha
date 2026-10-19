@@ -157,15 +157,21 @@ namespace RiskLoop.Core
 
         // ---------------- Kumar oranı ----------------
 
-        /// <summary>Sonraki iniş: kazanırsan (kat ödülü), kaybedersen (risk altındaki - sigorta; baret varsa 0), olasılık.</summary>
+        /// <summary>
+        /// Sonraki iniş: kazanırsan (kat ödülü), kaybedersen, olasılık.
+        /// Kayıp: baret varsa enkazın gömdüğü pay (risk altındakinin %35'i), yoksa risk altındaki - sigorta.
+        /// </summary>
         public void NextGamble(out double win, out double lose, out double chance)
         {
             win = NextStepReward;
             chance = NextBustChance;
             bool shielded = CurrentRun != null && CurrentRun.Shields > 0;
             double atRisk = CurrentRun != null ? CurrentRun.Earnings : 0;
-            lose = shielded ? 0 : atRisk * (1.0 - InsuranceFraction);
+            lose = shielded ? atRisk * Balance.shieldEarningsLoss : atRisk * (1.0 - InsuranceFraction);
         }
+
+        /// <summary>Sonraki inişte bir göçük turu bitirir mi? (Baret yoksa evet.)</summary>
+        public bool NextBustEndsRun => CurrentRun == null || CurrentRun.Shields <= 0;
 
         /// <summary>Beklenen değer: kazanırsan * (1-olasılık) - kaybedersen * olasılık.</summary>
         public double NextGambleExpectedValue()

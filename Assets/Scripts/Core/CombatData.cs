@@ -92,6 +92,13 @@ namespace RiskLoop.Core
 
         public double hpRegenPerFloor = 0.08;          // Savaşsız her katta canın %8'i dolar
         public double shieldReviveHealth = 0.30;       // Baret ölümü engellerse %30 canla kalkarsın
+        public bool shieldsProtectInCombat = false;    // Baret canavara karşı korumaz: savaş gücü (eşya) önemli kalsın
+
+        // --- Boss öfkesi: uzayan savaş cezalandırılır (hasar kontrolü). Eşya ve güçlendirme kasmayı anlamlı yapar ---
+        // Her enrageInterval saniyede bir öfke: saldırı x(1 + enrageAttackPerStack * öfke)
+        public double bossEnrageInterval = 8.0;
+        public double miniBossEnrageInterval = 12.0;
+        public double enrageAttackPerStack = 0.20;
 
         // --- Stat sınırları ---
         public double maxCritChance = 0.60;
@@ -188,6 +195,7 @@ namespace RiskLoop.Core
         public double Health;
         public double Attack;
         public MilestoneDefinition Milestone;  // Boss ise hangi keşif katının bossu
+        public int EnrageStacks;               // Boss öfkesi (zamanla artar)
 
         public MonsterKind Kind => Definition.kind;
         public bool IsDead => Health <= 0;
@@ -239,5 +247,6 @@ namespace RiskLoop.Core
         public bool PlayerDied;        // Tur bitti (göçük gibi)
         public double LostEarnings;
         public double InsurancePayout;
+        public GearItem SalvagedItem;  // Yenilgide enkazdan kurtarılan eşya (yoksa null)
     }
 }

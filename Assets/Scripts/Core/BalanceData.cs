@@ -151,7 +151,21 @@ namespace RiskLoop.Core
         public FindTypeDefinition safeCacheFind = new FindTypeDefinition(20, 0.8, 0);
         public FindTypeDefinition profitBoostFind = new FindTypeDefinition(18, 0.04, 0);
         public FindTypeDefinition safetyFind = new FindTypeDefinition(15, 0.03, 0);
-        public FindTypeDefinition shieldFind = new FindTypeDefinition(7, 1, 3);
+        public FindTypeDefinition shieldFind = new FindTypeDefinition(4, 1, 3);
+
+        // --- Baret (yeniden dengelendi: güvence ama bedelsiz değil) ---
+        // Baret göçüğü yutar ama enkaz risk altındaki kazancın bir kısmını gömer: devam etmek hâlâ bir karar.
+        // Canavara karşı korumaz (savaş gücü önemli kalsın). Tur başına taşınabilecek baret sınırlı.
+        public double shieldEarningsLoss = 0.35;
+        public int maxShieldsPerRun = 3;
+
+        // --- Talihsizlik telafisi (göçük moral bozmasın) ---
+        // Her göçük/yenilgi sonraki turlara +nadirlik (birikir, sınırlı). Başarılı bir yüzeye dönüş sıfırlar.
+        public double pityLuckPerStack = 0.12;
+        public int maxPityStacks = 5;
+
+        // --- Enkazdan kurtarma: göçükte turun en nadir eşyası bu olasılıkla kurtulur (envanterde yer varsa) ---
+        public double bustSalvageChance = 0.5;
         public double maxSafetyFindReduction = 0.5;
         public int shieldDoubleTier = 7;
 
@@ -207,7 +221,7 @@ namespace RiskLoop.Core
         // Terazi:   findValueBonus = (1 + effect) ^ level          -> 0.08 ile 30. seviye = x10
         public UpgradeDefinition findValueUpgrade = new UpgradeDefinition(90, 1.58, 0.08, 30);
         // Baret:    startShields = round(effect * level)           -> her seviye +1 baret
-        public UpgradeDefinition startShieldUpgrade = new UpgradeDefinition(2000, 6, 1, 3);
+        public UpgradeDefinition startShieldUpgrade = new UpgradeDefinition(5000, 8, 1, 2);
 
         /// <summary>Yükseltme türüne göre tanımı döndürür.</summary>
         public UpgradeDefinition GetUpgrade(UpgradeType type)

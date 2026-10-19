@@ -55,6 +55,7 @@ namespace RiskLoop.Game
         private bool _swinging;
         private bool _inSequence;
         private float _monsterTimer;       // Canavarın bir sonraki vuruşuna kalan süre
+        private float _enrageTimer;        // Bossun bir sonraki öfke kademesine kalan süre
         private float _nextAttackTime;     // Oyuncunun bir sonraki vuruşu en erken ne zaman
 
         private bool InputLocked => _swinging || _inSequence;
@@ -144,12 +145,29 @@ namespace RiskLoop.Game
 #endif
         }
 
-        /// <summary>Savaştaysak canavarın sayacı işler; dolunca canavar vurur. Uzun sahnelerde durur.</summary>
+        /// <summary>
+        /// Savaştaysak canavarın sayacı işler; dolunca canavar vurur. Bosslarda ayrıca öfke sayacı:
+        /// savaş uzadıkça boss daha sert vurur (hasar kontrolü). Uzun sahnelerde ikisi de durur.
+        /// </summary>
         private void TickMonster()
         {
             if (!_session.InCombat || _inSequence) return;
 
-            _monsterTimer -= Time.unscaledDeltaTime;
+            float dt = Time.unscaledDeltaTime;
+            double enrageInterval = _session.EnrageInterval;
+            if (enrageInterval > 0)
+            {
+                _enrageTimer -= dt;
+                if (_enrageTimer <= 0f)
+                {
+                    _enrageTimer = (float)enrageInterval;
+                    int stacks = _session.EnrageMonster();
+                    feedback.PlayEnrage(stacks);
+                }
+                feedback.SetEnrageProgress(1f - _enrageTimer / (float)enrageInterval, _session.CurrentRun.Monster.EnrageStacks);
+            }
+
+            _monsterTimer -= dt;
             if (_monsterTimer <= 0f) StartCoroutine(MonsterAttackRoutine());
         }
 
@@ -201,7 +219,10 @@ namespace RiskLoop.Game
             }
 
             if (rules.stopWhenShieldsGone && _autoStartedWithShields && run.Shields == 0) { StopAuto(UIStrings.StopShields); return; }
-            if (_session.NextBustChance * 100.0 >= rules.stopRiskPercent) { StopAuto(UIStrings.StopRisk); return; }
+
+            // "Baret bitince dur" açıkken baret varsa risk sınırı uygulanmaz: göçüğü baret yutacak.
+            bool shieldGuarded = rules.stopWhenShieldsGone && run.Shields > 0;
+            if (!shieldGuarded && _session.NextBustChance * 100.0 >= rules.stopRiskPercent) { StopAuto(UIStrings.StopRisk); return; }
             OnAdvanceClicked();
         }
 
@@ -215,7 +236,7 @@ namespace RiskLoop.Game
         {
             _autoDig = on;
             if (on) _autoStartedWithShields = _session.CurrentRun != null && _session.CurrentRun.Shields > 0;
-            FxTime.Speed = on ? autoSpeed : 1f;
+            feedback.BaseSpeed = on ? autoSpeed : 1f;   // FxTime.Speed'i yönetmen ayarlar (hit-stop ile birlikte)
             feedback.AutoMode = on;
             feedback.AutoStopTier = _session.Progress.autoDig.stopTier;
             runPanel.SetAuto(on, _session.Progress.autoDig);
@@ -311,7 +332,8 @@ namespace RiskLoop.Game
                 SetAuto(false);
                 Save();
                 yield return feedback.PlayBust();
-                upgradePanel.ShowResult(UIStrings.Busted(result, _session.CurrentRun));
+                upgradePanel.ShowResult(UIStrings.Busted(result, _session.CurrentRun) +
+                                        UIStrings.AfterBust(result.SalvagedItem, _session.Progress.pityStacks, _session.PityLuck));
                 SetSequence(false);
                 ShowUpgradeScreen();
                 yield break;
@@ -321,7 +343,11 @@ namespace RiskLoop.Game
             if (result.MilestoneBonus > 0 || (result.HasFind && result.Find.Type == FindType.SafeCache)) Save();
 
             yield return feedback.PlayStep(result, _session, valueBefore);
-            if (result.Encounter != null) _monsterTimer = (float)_session.MonsterAttackInterval + monsterFirstAttackGrace;
+            if (result.Encounter != null)
+            {
+                _monsterTimer = (float)_session.MonsterAttackInterval + monsterFirstAttackGrace;
+                _enrageTimer = (float)_session.EnrageInterval + monsterFirstAttackGrace;
+            }
             if (result.HasFind) CheckAutoStopForFind(result.Find);
 
             topBar.Refresh(_session.Progress);
@@ -366,7 +392,8 @@ namespace RiskLoop.Game
                 SetAuto(false);
                 Save();
                 yield return feedback.PlayDefeat();
-                upgradePanel.ShowResult(UIStrings.Defeated(hit, run, FantasyTexts.MonsterName(monster.Definition.id)));
+                upgradePanel.ShowResult(UIStrings.Defeated(hit, run, FantasyTexts.MonsterName(monster.Definition.id)) +
+                                        UIStrings.AfterBust(hit.SalvagedItem, _session.Progress.pityStacks, _session.PityLuck));
                 SetSequence(false);
                 ShowUpgradeScreen();
                 yield break;

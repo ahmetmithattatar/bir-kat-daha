@@ -30,7 +30,7 @@ namespace RiskLoop.Core
 
         public UpgradeDefinition ancientGold = new UpgradeDefinition(3, 1.5, 0.25, 30);
         public UpgradeDefinition ancientLuck = new UpgradeDefinition(4, 1.6, 0.05, 20);
-        public UpgradeDefinition ancientShield = new UpgradeDefinition(20, 3.0, 1, 2);
+        public UpgradeDefinition ancientShield = new UpgradeDefinition(25, 3.0, 1, 1);
         public UpgradeDefinition ancientMight = new UpgradeDefinition(3, 1.5, 0.15, 30);
         public UpgradeDefinition ancientWealth = new UpgradeDefinition(5, 2.0, 500, 10);
 

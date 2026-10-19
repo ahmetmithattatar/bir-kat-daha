@@ -137,6 +137,45 @@ namespace RiskLoop.Game.UI
             Destroy(particle.gameObject);
         }
 
+        // ---------------- Altın akışı ----------------
+
+        /// <summary>
+        /// from'dan to'ya kavisle uçan altın parçacıkları; vardıklarında hedef "pat" diye büyür.
+        /// Kazancın nereye gittiğini GÖRÜNÜR kılar (sayaca akan para hissi).
+        /// </summary>
+        public void CoinsTo(RectTransform from, RectTransform to, int count, Color color)
+        {
+            for (int i = 0; i < count; i++) StartCoroutine(CoinRoutine(from.position, to, color, i * 0.035f));
+        }
+
+        private IEnumerator CoinRoutine(Vector3 start, RectTransform to, Color color, float delay)
+        {
+            yield return UIFx.Wait(delay);
+            Image coin = Instantiate(particleTemplate, transform);
+            coin.gameObject.SetActive(true);
+            coin.color = color;
+            coin.rectTransform.sizeDelta = new Vector2(14f, 14f);
+            Vector3 jitter = new Vector3(Random.Range(-60f, 60f), Random.Range(-30f, 50f), 0f);
+            Vector3 control = (start + to.position) * 0.5f + new Vector3(0f, 180f, 0f) + jitter;
+
+            const float duration = 0.55f;
+            float t = 0f;
+            while (t < duration)
+            {
+                t += FxTime.Delta;
+                float k = Mathf.Clamp01(t / duration);
+                float e = k * k;  // Hızlanarak hedefe
+                // İkinci derece Bezier: başlangıç -> kontrol -> hedef (kavis)
+                Vector3 a = Vector3.Lerp(start + jitter * 0.3f, control, e);
+                Vector3 b = Vector3.Lerp(control, to.position, e);
+                coin.transform.position = Vector3.Lerp(a, b, e);
+                coin.transform.Rotate(0f, 0f, 720f * FxTime.Delta);
+                yield return null;
+            }
+            Destroy(coin.gameObject);
+            if (to != null) StartCoroutine(UIFx.Punch(to, 0.08f, 0.12f));
+        }
+
         // ---------------- Banner ----------------
 
         /// <summary>Ekranın ortasında büyük yazı: büyüyerek gelir, bekler, solar.</summary>
