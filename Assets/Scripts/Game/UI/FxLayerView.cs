@@ -56,7 +56,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 color.a = peakAlpha * (1f - Mathf.Clamp01(t / duration));
                 flashImage.color = color;
                 yield return null;
@@ -87,7 +87,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
                 rt.anchoredPosition = start + new Vector2(0f, rise * (1f - (1f - k) * (1f - k)));  // Yavaşlayarak yüksel
                 rt.localScale = Vector3.one * (k < 0.15f ? Mathf.Lerp(0.6f, 1.15f, k / 0.15f) : Mathf.Lerp(1.15f, 1f, (k - 0.15f) * 4f));
@@ -125,7 +125,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                float dt = Time.unscaledDeltaTime;
+                float dt = FxTime.Delta;
                 t += dt;
                 velocity.y += gravity * dt;
                 rt.anchoredPosition += velocity * dt;
@@ -157,7 +157,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < inTime)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / inTime);
                 rt.localScale = Vector3.one * Mathf.Lerp(1.8f, 1f, k);
                 bannerText.alpha = k;
@@ -167,7 +167,7 @@ namespace RiskLoop.Game.UI
             t = 0f;
             while (t < outTime)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 bannerText.alpha = 1f - Mathf.Clamp01(t / outTime);
                 yield return null;
             }

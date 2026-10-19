@@ -23,8 +23,6 @@ namespace RiskLoop.Game
         [SerializeField] private DigView digView;
 
         [Header("Kazı")]
-        [Tooltip("Bir katı kazmak için kaç vuruş gerekir.")]
-        [SerializeField] private int hitsPerFloor = 3;
         [Tooltip("Son vuruştan sonra duvarın titreme süresi: taban + risk * ek (gerilim).")]
         [SerializeField] private float trembleBase = 0.12f;
         [SerializeField] private float trembleRiskExtra = 0.7f;
@@ -39,28 +37,38 @@ namespace RiskLoop.Game
         private static readonly Color CritYellow = new Color(1f, 0.85f, 0.2f);
 
         private int _hits;               // Bu duvara kaç vuruş yapıldı
+        private int _swingsNeeded = 3;   // Bu duvar kaç vuruşta yıkılır (kazı gücü / duvar sertliği)
         private bool _bestRunAnnounced;  // "En değerli turun" bu turda zaten duyuruldu mu?
 
-        /// <summary>Son vuruş yapıldı mı? (GameController buna bakıp zarı attırır.)</summary>
-        public bool WallBroken => _hits >= hitsPerFloor;
+        /// <summary>Oto-kazı açıkken: sıradan anlarda pencere açılmaz, sadece durma koşulundaki anlarda.</summary>
+        public bool AutoMode { get; set; }
 
-        /// <summary>Yeni tur başlarken çağrılır.</summary>
+        /// <summary>Oto-kazıda bu nadirlik ve üstü pencere açar (ve oto-kazıyı durdurur).</summary>
+        public int AutoStopTier { get; set; } = 4;
+
+        /// <summary>Son vuruş yapıldı mı? (GameController buna bakıp zarı attırır.)</summary>
+        public bool WallBroken => _hits >= _swingsNeeded;
+
+        /// <summary>Yeni tur başlarken çağrılır (geçitten başlandıysa o kattan).</summary>
         public void OnRunStarted(GameSession session)
         {
             _hits = 0;
             _bestRunAnnounced = false;
-            digView.ResetForRun(0, session.NextBustChance);
+            digView.ResetForRun(session.CurrentRun.Step, session.NextBustChance);
             digView.SetWeapon(session.GetEquipped(GearSlot.Weapon));
+            digView.SetPickaxe(session.GetEquipped(GearSlot.Pickaxe));
             digView.SetPlayerHealth(session.CurrentRun.PlayerHealth, session.CurrentRun.PlayerMaxHealth);
+            if (session.CurrentRun.StartStep > 0) fx.Banner(UIStrings.MilestoneName(session.CurrentRun.StartStep), Gold, 0.6f);
         }
 
         // ---------------- Kazı ----------------
 
-        /// <summary>Bir kazma vuruşu. Son vuruşsa duvar titrer (sonuç bekleniyor).</summary>
-        public IEnumerator PlaySwing(double risk)
+        /// <summary>Bir kazma vuruşu. swingsNeeded: bu duvarın gerektirdiği vuruş. Son vuruşsa duvar titrer.</summary>
+        public IEnumerator PlaySwing(double risk, int swingsNeeded)
         {
+            if (_hits == 0) _swingsNeeded = Mathf.Max(1, swingsNeeded);
             _hits++;
-            yield return digView.Swing(_hits, hitsPerFloor);
+            yield return digView.Swing(_hits, _swingsNeeded);
 
             if (WallBroken)
             {
@@ -80,7 +88,9 @@ namespace RiskLoop.Game
             {
                 fx.Flash(DangerRed, 0.4f, 0.6f);
                 yield return digView.ShieldSave();
-                yield return popup.ShowShieldBreak(run.Shields, fx);
+                // Oto-kazıda baret kalmışsa durdurmaz (banner yeter); son baret giderse her zaman pencere
+                if (!AutoMode || run.Shields == 0) yield return popup.ShowShieldBreak(run.Shields, fx);
+                else fx.Banner($"{UIStrings.ShieldBreakHeader} {UIStrings.ShieldsLeft(run.Shields)}", Gold, 0.4f);
                 StartCoroutine(UIFx.Punch(runPanel.BuffsAnchor, 0.3f, 0.4f));
             }
 
@@ -168,7 +178,12 @@ namespace RiskLoop.Game
             bool boss = m.Kind != MonsterKind.Normal;
 
             yield return digView.MonsterDeath(m);
-            runPanel.ShowMessage(UIStrings.Victory(v));
+            runPanel.ShowMessage(UIStrings.Victory(v) + (v.UnlockedCheckpoint ? "\n" + UIStrings.CheckpointUnlocked(m.Step) : ""));
+            if (v.UnlockedCheckpoint)
+            {
+                fx.Banner("GEÇİT AÇILDI!", Gold, 0.8f);
+                fx.Burst(digView.MonsterAnchor, Gold, 40, 800f);
+            }
             fx.FloatText($"+{UIStrings.Num(v.Bounty)}", Gold, 50f, runPanel.RunValueAnchor);
             if (boss)
             {
@@ -230,6 +245,13 @@ namespace RiskLoop.Game
             yield return UIFx.Wait(0.6f);
         }
 
+        /// <summary>Oto-kazı durdu: oyuncunun dikkatini çek (kontrol sende).</summary>
+        public void AnnounceAutoStop(string text)
+        {
+            fx.Banner(text, Gold, 0.7f);
+            fx.Flash(Gold, 0.15f, 0.4f);
+        }
+
         // ---------------- Yardımcılar ----------------
 
         /// <summary>Bulgu delikten fırlar; nadirse/keşif katıysa/ganimetse pencere, değilse uçan yazı; sonra koleksiyona uçar.</summary>
@@ -237,7 +259,10 @@ namespace RiskLoop.Game
         {
             yield return digView.RevealFind(find);
 
-            bool bigMoment = find.Tier >= popupMinTier || isMilestone || (find.FromMonster && find.Tier >= 2);
+            // Oto-kazıda sadece durma eşiğindeki bulgular ve keşif katları pencere açar; sıradan anlar akıp geçer
+            bool bigMoment = AutoMode
+                ? find.Tier >= AutoStopTier || isMilestone
+                : find.Tier >= popupMinTier || isMilestone || (find.FromMonster && find.Tier >= 2);
             if (bigMoment)
             {
                 string header = UIStrings.FindPopupHeader(find, step, isMilestone, firstReach);

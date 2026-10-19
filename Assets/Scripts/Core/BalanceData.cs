@@ -68,16 +68,18 @@ namespace RiskLoop.Core
         public int step;                    // Hangi adımda
         public int minTier;                 // Garantili bulgunun en düşük nadirliği
         public double firstReachRewardSteps;// İlk ulaşma ödülü = o adımın ödülü * bu sayı (doğrudan cebe)
-        public string bossId;               // Bu katı koruyan boss (CombatBalance.monsters). Boşsa boss yok
+        public string[] bossPool;           // Bu katı koruyabilecek bosslar; her seferinde biri rastgele gelir. Boşsa boss yok
 
         public MilestoneDefinition() { }
-        public MilestoneDefinition(int step, int minTier, double firstReachRewardSteps, string bossId = null)
+        public MilestoneDefinition(int step, int minTier, double firstReachRewardSteps, params string[] bossPool)
         {
             this.step = step;
             this.minTier = minTier;
             this.firstReachRewardSteps = firstReachRewardSteps;
-            this.bossId = bossId;
+            this.bossPool = bossPool;
         }
+
+        public bool HasBoss => bossPool != null && bossPool.Length > 0;
     }
 
     /// <summary>
@@ -120,21 +122,24 @@ namespace RiskLoop.Core
         public double maxFindChance = 0.90;
 
         // Şans: nadirlik ağırlıkları  weight(t) = tier.weight * (1 + luck) ^ t  ile kayar.
-        // luck = luckPerStep * step + luckUpgrade. Derine inmek nadir bulgu şansını artırır.
-        public double luckPerStep = 0.04;
+        // luck = luckPerStep * step + luckUpgrade + ekipman + tılsım. Derine inmek nadir bulgu şansını artırır.
+        public double luckPerStep = 0.025;
+        public double maxRunLuck = 1.5;          // Tılsımlardan gelen tur şansı en fazla bu kadar
 
         // 9 nadirlik: beyaz, açık mavi, mavi, lacivert, yeşil, sarı, turuncu, kırmızı, mor
+        // Her seviye bir öncekinden ~3.3 kat NADİR ve belirgin güçlü: mor bir "jackpot" olmalı.
+        // Örnek: 5. katta mor ~%0.01, 30. katta en yüksek şansla ~%2.
         public RarityTierDefinition[] rarityTiers =
         {
             new RarityTierDefinition(100, 1.0),
-            new RarityTierDefinition(45, 1.5),
-            new RarityTierDefinition(20, 2.2),
-            new RarityTierDefinition(9, 3.2),
-            new RarityTierDefinition(4, 4.7),
-            new RarityTierDefinition(1.8, 7),
-            new RarityTierDefinition(0.8, 10),
-            new RarityTierDefinition(0.35, 15),
-            new RarityTierDefinition(0.15, 25),
+            new RarityTierDefinition(30, 1.6),
+            new RarityTierDefinition(9, 2.5),
+            new RarityTierDefinition(2.7, 4),
+            new RarityTierDefinition(0.8, 6.5),
+            new RarityTierDefinition(0.24, 10),
+            new RarityTierDefinition(0.07, 16),
+            new RarityTierDefinition(0.02, 26),
+            new RarityTierDefinition(0.006, 45),
         };
 
         // Bulgu türleri. Değer formülleri:
@@ -168,35 +173,39 @@ namespace RiskLoop.Core
 
         // Keşif katları (kilometre taşları). Erken tatmin (3, 5), sonra "bir kat daha" gerilimi (10, 15, ...).
         // Taban risk yüzünden 30+ katlar efsanevi hedeflerdir. İsimleri UIStrings.MilestoneName'de.
+        // Her keşif katında 5 bossluk havuz: her inişte biri rastgele gelir (mini ve büyük bosslar sırayla).
         public MilestoneDefinition[] milestones =
         {
-            new MilestoneDefinition(3, 1, 2, "goblin_chief"),
-            new MilestoneDefinition(5, 2, 3, "bone_lord"),
-            new MilestoneDefinition(10, 3, 5, "crystal_golem"),
-            new MilestoneDefinition(15, 4, 6, "naga_queen"),
-            new MilestoneDefinition(20, 5, 8, "forge_king"),
-            new MilestoneDefinition(25, 6, 10, "fossil_wyrm"),
-            new MilestoneDefinition(30, 7, 12, "elder_dragon"),
-            new MilestoneDefinition(35, 8, 15, "lava_titan"),
-            new MilestoneDefinition(40, 8, 20, "core_devourer"),
+            new MilestoneDefinition(3, 1, 2, "goblin_chief", "orc_captain", "rat_king", "slime_mother", "warg_alpha"),
+            new MilestoneDefinition(5, 2, 3, "bone_lord", "spider_matron", "wight_thane", "orc_warlord", "stone_troll"),
+            new MilestoneDefinition(10, 3, 5, "crystal_golem", "troll_king", "crystal_wyrm", "pale_queen", "myconid_elder"),
+            new MilestoneDefinition(15, 4, 6, "naga_queen", "lake_watcher", "drowned_king", "storm_spirit", "marsh_hag"),
+            new MilestoneDefinition(20, 5, 8, "forge_king", "black_orc_chief", "iron_troll_lord", "imp_lord", "ghost_king"),
+            new MilestoneDefinition(25, 6, 10, "fossil_wyrm", "barrow_king", "great_spider", "sand_wurm", "mummy_lord"),
+            new MilestoneDefinition(30, 7, 12, "elder_dragon", "gold_sleeper", "dragon_priest", "war_troll_king", "drake_mother"),
+            new MilestoneDefinition(35, 8, 15, "lava_titan", "black_rider", "hell_warg", "magma_mother", "demon_lord"),
+            new MilestoneDefinition(40, 8, 20, "core_devourer", "shadow_flame", "world_serpent", "root_watcher", "ancient_lich"),
         };
 
         // --- Savaş, canavarlar, ekipman (ayrı sınıfta, çok sayı var) ---
         public CombatBalance combat = new CombatBalance();
 
-        // --- Yükseltmeler ---
-        // Kazanç:   earningsBonus = (1 + effect) ^ level           -> 0.15 ile 3. seviye = x1.52
-        public UpgradeDefinition earningsUpgrade = new UpgradeDefinition(50, 1.6, 0.15, 20);
-        // Güvenlik: safetyFactor = (1 - effect) ^ level            -> 0.08 ile 3. seviye = x0.78
-        public UpgradeDefinition safetyUpgrade = new UpgradeDefinition(75, 1.7, 0.08, 15);
-        // Sigorta:  savedFraction = 1 - (1 - effect) ^ level       -> 0.10 ile 3. seviye = %27.1
-        public UpgradeDefinition insuranceUpgrade = new UpgradeDefinition(100, 1.8, 0.10, 10);
-        // Dedektör: findChance += effect * level                   -> 0.03 ile 5. seviye = +%15
-        public UpgradeDefinition findChanceUpgrade = new UpgradeDefinition(60, 1.55, 0.03, 15);
-        // Fener:    luck += effect * level                         -> 0.05 ile 10. seviye = +0.5 şans
-        public UpgradeDefinition luckUpgrade = new UpgradeDefinition(120, 1.65, 0.05, 20);
-        // Terazi:   findValueBonus = (1 + effect) ^ level          -> 0.12 ile 20. seviye = x9.6 (0.20 ile x38'di, fazlaydı)
-        public UpgradeDefinition findValueUpgrade = new UpgradeDefinition(90, 1.6, 0.12, 20);
+        // --- Yeni Çağ (prestij) ---
+        public PrestigeBalance prestige = new PrestigeBalance();
+
+        // --- Yükseltmeler (maks seviyeler yüksek: tek çağda hepsi dolmasın) ---
+        // Kazanç:   earningsBonus = (1 + effect) ^ level           -> 0.10 ile 40. seviye = x45
+        public UpgradeDefinition earningsUpgrade = new UpgradeDefinition(50, 1.6, 0.10, 40);
+        // Güvenlik: safetyFactor = (1 - effect) ^ level            -> 0.05 ile 25. seviye = x0.28
+        public UpgradeDefinition safetyUpgrade = new UpgradeDefinition(75, 1.65, 0.05, 25);
+        // Sigorta:  savedFraction = 1 - (1 - effect) ^ level       -> 0.07 ile 15. seviye = %66
+        public UpgradeDefinition insuranceUpgrade = new UpgradeDefinition(100, 1.75, 0.07, 15);
+        // Dedektör: findChance += effect * level                   -> 0.02 ile 20. seviye = +%40
+        public UpgradeDefinition findChanceUpgrade = new UpgradeDefinition(60, 1.55, 0.02, 20);
+        // Fener:    luck += effect * level                         -> 0.03 ile 25. seviye = +0.75 şans
+        public UpgradeDefinition luckUpgrade = new UpgradeDefinition(120, 1.62, 0.03, 25);
+        // Terazi:   findValueBonus = (1 + effect) ^ level          -> 0.08 ile 30. seviye = x10
+        public UpgradeDefinition findValueUpgrade = new UpgradeDefinition(90, 1.58, 0.08, 30);
         // Baret:    startShields = round(effect * level)           -> her seviye +1 baret
         public UpgradeDefinition startShieldUpgrade = new UpgradeDefinition(2000, 6, 1, 3);
 

@@ -6,11 +6,12 @@ namespace RiskLoop.Core
     /// <summary>Ekipman yuvaları. Kayıtta sayı olarak tutulur: SADECE SONA ekle, sırayı değiştirme.</summary>
     public enum GearSlot
     {
-        Weapon, Helmet, Armor, Pants, Gloves, Boots, Necklace, Ring
+        Weapon, Helmet, Armor, Pants, Gloves, Boots, Necklace, Ring,
+        Pickaxe   // Kazı gücü: duvarı daha az vuruşta yıkar
     }
 
     /// <summary>
-    /// Statlar. İlk beşi savaş, son dördü kazı statı (build hem savaşı hem kazıyı etkiler).
+    /// Statlar. Savaş statları, kazı statları ve kazı gücü (build hem savaşı hem kazıyı etkiler).
     /// Kayıtta sayı olarak tutulur: SADECE SONA ekle.
     /// </summary>
     public enum StatType
@@ -23,7 +24,8 @@ namespace RiskLoop.Core
         CaveResist,  // Göçük riskini azaltır (0.05 = riski %5 azalt). Taban riskin altına inemez
         FindChance,  // Bulgu şansına eklenir
         Luck,        // Nadirlik şansına eklenir
-        GoldBonus    // Kat ödüllerini artırır (0.10 = +%10)
+        GoldBonus,   // Kat ödüllerini artırır (0.10 = +%10)
+        DigPower     // Kazı gücü (düz sayı): duvar sertliği / kazı gücü = gereken vuruş
     }
 
     /// <summary>Bir stat ve değeri.</summary>
@@ -39,7 +41,7 @@ namespace RiskLoop.Core
 
     /// <summary>
     /// Bir eşya. Kayda girer (JsonUtility). baseId -> GearBaseDefinition (stat profili) ve Game katmanında isim/görsel.
-    /// Statları düşerken bir kez hesaplanır ve sabit kalır.
+    /// Statları düşerken bir kez hesaplanır. Güçlendirme (enhance) her seviyede tüm statları %10 artırır.
     /// </summary>
     [Serializable]
     public class GearItem
@@ -49,9 +51,13 @@ namespace RiskLoop.Core
         public GearSlot slot;
         public int tier;           // Nadirlik 0..8
         public int itemLevel;      // Düştüğü kat (statlar bununla büyür)
+        public int enhance;        // Güçlendirme seviyesi (+0 .. +10)
         public List<StatValue> stats = new List<StatValue>();
 
-        /// <summary>Bu eşyadaki bir statın toplamı (aynı stat birden fazla satırda olabilir).</summary>
+        /// <summary>Güçlendirme çarpanı (CombatBalance.enhanceStatBonus ile). Varsayılan %10/seviye.</summary>
+        public double EnhanceMult(double bonusPerLevel) => 1.0 + bonusPerLevel * enhance;
+
+        /// <summary>Bu eşyadaki bir statın HAM toplamı (güçlendirmesiz).</summary>
         public double Get(StatType type)
         {
             double total = 0;
@@ -61,5 +67,8 @@ namespace RiskLoop.Core
             }
             return total;
         }
+
+        /// <summary>Güçlendirme dahil statın değeri (ekranda ve hesaplarda bu kullanılır).</summary>
+        public double GetEffective(StatType type, double bonusPerLevel) => Get(type) * EnhanceMult(bonusPerLevel);
     }
 }

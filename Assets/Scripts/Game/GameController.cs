@@ -41,6 +41,15 @@ namespace RiskLoop.Game
         [Tooltip("Canavar çıktıktan sonra ilk vuruşundan önce oyuncuya tanınan ek süre (sn).")]
         [SerializeField] private float monsterFirstAttackGrace = 0.8f;
 
+        [Header("Oto-kazı")]
+        [Tooltip("Oto-kazı açıkken animasyon hızı çarpanı.")]
+        [SerializeField] private float autoSpeed = 2.5f;
+        [Tooltip("Oto savaşta can bu oranın altına düşerse oto-kazı durur.")]
+        [SerializeField] private float autoStopHealth = 0.3f;
+
+        private bool _autoDig;
+        private bool _autoStartedWithShields;
+
         private GameSession _session;
         private float _keysLockedUntil;
         private bool _swinging;
@@ -76,6 +85,12 @@ namespace RiskLoop.Game
             upgradePanel.UnequipClicked += OnUnequipClicked;
             upgradePanel.SellClicked += OnSellClicked;
             upgradePanel.AutoEquipClicked += OnAutoEquipClicked;
+            upgradePanel.SellAllClicked += OnSellAllClicked;
+            upgradePanel.EnhanceClicked += OnEnhanceClicked;
+            upgradePanel.PrestigeClicked += OnPrestigeClicked;
+            upgradePanel.BuyPrestigeClicked += OnBuyPrestigeClicked;
+            runPanel.AutoToggleClicked += ToggleAuto;
+            runPanel.AutoSettingsChanged += OnAutoSettingsChanged;
             topBar.ResetConfirmed += OnResetConfirmed;
         }
 
@@ -100,10 +115,15 @@ namespace RiskLoop.Game
             if (_session == null) return;
 
             TickMonster();
+            if (_autoDig && !InputLocked) AutoTick();
 
 #if ENABLE_INPUT_SYSTEM
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
+
+            // A: oto-kazıyı aç/kapat (animasyon sürerken de kapatılabilir)
+            if (keyboard.aKey.wasPressedThisFrame && _session.IsRunActive) ToggleAuto();
+
             if (InputLocked || Time.unscaledTime < _keysLockedUntil) return;
 
             if (_session.IsRunActive)
@@ -111,8 +131,8 @@ namespace RiskLoop.Game
                 bool digHeld = keyboard.downArrowKey.isPressed || keyboard.sKey.isPressed || keyboard.spaceKey.isPressed;
                 bool surfacePressed = keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame;
 
-                if (surfacePressed && _session.CurrentRun.Step > 0) OnCashOutClicked();
-                else if (digHeld) OnAdvanceClicked();
+                if (surfacePressed && _session.CurrentRun.Step > _session.CurrentRun.StartStep) OnCashOutClicked();
+                else if (digHeld && !_autoDig) OnAdvanceClicked();
             }
             else
             {
@@ -144,7 +164,82 @@ namespace RiskLoop.Game
             upgradePanel.UnequipClicked -= OnUnequipClicked;
             upgradePanel.SellClicked -= OnSellClicked;
             upgradePanel.AutoEquipClicked -= OnAutoEquipClicked;
+            upgradePanel.SellAllClicked -= OnSellAllClicked;
+            upgradePanel.EnhanceClicked -= OnEnhanceClicked;
+            upgradePanel.PrestigeClicked -= OnPrestigeClicked;
+            upgradePanel.BuyPrestigeClicked -= OnBuyPrestigeClicked;
+            runPanel.AutoToggleClicked -= ToggleAuto;
+            runPanel.AutoSettingsChanged -= OnAutoSettingsChanged;
             topBar.ResetConfirmed -= OnResetConfirmed;
+        }
+
+        // ---------------- Oto-kazı ----------------
+
+        /// <summary>
+        /// Oto-kazı: kazıyı kendi sürdürür, durma kurallarından biri olunca durur ve kontrolü oyuncuya verir.
+        /// Slot makinesindeki "oto çevir" gibi: sıkıcı kısmı hızla geçer, kumar anında oyuncuyu çağırır.
+        /// </summary>
+        private void AutoTick()
+        {
+            if (!_session.IsRunActive)
+            {
+                SetAuto(false);
+                return;
+            }
+
+            AutoDigSettings rules = _session.Progress.autoDig;
+            RunState run = _session.CurrentRun;
+
+            if (_session.InCombat)
+            {
+                MonsterInstance m = run.Monster;
+                if (m.Kind != MonsterKind.Normal) { StopAuto(UIStrings.StopBoss); return; }
+                if (!rules.autoFightNormal || _session.CurrentThreat == ThreatLevel.Deadly) { StopAuto(UIStrings.StopDanger); return; }
+                if (run.PlayerHealth < run.PlayerMaxHealth * autoStopHealth) { StopAuto(UIStrings.StopLowHealth); return; }
+                OnAdvanceClicked();
+                return;
+            }
+
+            if (rules.stopWhenShieldsGone && _autoStartedWithShields && run.Shields == 0) { StopAuto(UIStrings.StopShields); return; }
+            if (_session.NextBustChance * 100.0 >= rules.stopRiskPercent) { StopAuto(UIStrings.StopRisk); return; }
+            OnAdvanceClicked();
+        }
+
+        private void ToggleAuto()
+        {
+            if (!_session.IsRunActive) return;
+            SetAuto(!_autoDig);
+        }
+
+        private void SetAuto(bool on)
+        {
+            _autoDig = on;
+            if (on) _autoStartedWithShields = _session.CurrentRun != null && _session.CurrentRun.Shields > 0;
+            FxTime.Speed = on ? autoSpeed : 1f;
+            feedback.AutoMode = on;
+            feedback.AutoStopTier = _session.Progress.autoDig.stopTier;
+            runPanel.SetAuto(on, _session.Progress.autoDig);
+        }
+
+        private void StopAuto(string reason)
+        {
+            if (!_autoDig) return;
+            SetAuto(false);
+            runPanel.ShowMessage(UIStrings.AutoStopped(reason));
+            feedback.AnnounceAutoStop(UIStrings.AutoStopped(reason));
+        }
+
+        /// <summary>Bir sonuçtaki bulgular durma eşiğini geçtiyse oto-kazıyı durdur.</summary>
+        private void CheckAutoStopForFind(FindResult find)
+        {
+            if (_autoDig && find.Tier >= _session.Progress.autoDig.stopTier) StopAuto(UIStrings.StopRareFind(find.Tier));
+        }
+
+        private void OnAutoSettingsChanged()
+        {
+            Save();
+            feedback.AutoStopTier = _session.Progress.autoDig.stopTier;
+            runPanel.SetAuto(_autoDig, _session.Progress.autoDig);
         }
 
         // Mobilde uygulama arka plana atılınca OnApplicationQuit çağrılmayabilir, o yüzden burada da kaydediyoruz.
@@ -163,10 +258,11 @@ namespace RiskLoop.Game
         private void OnStartRunClicked()
         {
             if (InputLocked || _session.IsRunActive) return;
-            _session.StartRun();
+            _session.StartRun(upgradePanel.SelectedStartStep);
             feedback.OnRunStarted(_session);
             runPanel.ShowMessage(UIStrings.RunStarted);
             ShowRunScreen();
+            SetAuto(false);
         }
 
         /// <summary>Ana eylem: savaşta saldır, değilse kaz.</summary>
@@ -188,7 +284,8 @@ namespace RiskLoop.Game
 
         private void OnCashOutClicked()
         {
-            if (InputLocked || !_session.IsRunActive || _session.CurrentRun.Step == 0) return;
+            if (InputLocked || !_session.IsRunActive || _session.CurrentRun.Step <= _session.CurrentRun.StartStep) return;
+            SetAuto(false);
             StartCoroutine(CashOutRoutine());
         }
 
@@ -201,7 +298,7 @@ namespace RiskLoop.Game
         private IEnumerator DigRoutine()
         {
             _swinging = true;
-            yield return feedback.PlaySwing(_session.NextBustChance);
+            yield return feedback.PlaySwing(_session.NextBustChance, _session.NextSwingsNeeded);
             _swinging = false;
             if (!feedback.WallBroken) yield break;
 
@@ -211,6 +308,7 @@ namespace RiskLoop.Game
 
             if (result.Busted)
             {
+                SetAuto(false);
                 Save();
                 yield return feedback.PlayBust();
                 upgradePanel.ShowResult(UIStrings.Busted(result, _session.CurrentRun));
@@ -224,6 +322,7 @@ namespace RiskLoop.Game
 
             yield return feedback.PlayStep(result, _session, valueBefore);
             if (result.Encounter != null) _monsterTimer = (float)_session.MonsterAttackInterval + monsterFirstAttackGrace;
+            if (result.HasFind) CheckAutoStopForFind(result.Find);
 
             topBar.Refresh(_session.Progress);
             runPanel.Refresh(_session);
@@ -245,7 +344,9 @@ namespace RiskLoop.Game
 
             SetSequence(true);
             yield return feedback.PlayVictory(hit.Victory, _session);
-            if (hit.Victory.HasFind && hit.Victory.Find.Type == FindType.SafeCache) Save();
+            Save();  // Geçit açılmış ya da kese düşmüş olabilir
+            if (hit.Victory.HasFind) CheckAutoStopForFind(hit.Victory.Find);
+            foreach (FindResult drop in hit.Victory.Drops) CheckAutoStopForFind(drop);
             topBar.Refresh(_session.Progress);
             runPanel.Refresh(_session);
             SetSequence(false);
@@ -262,6 +363,7 @@ namespace RiskLoop.Game
 
             if (hit.PlayerDied)
             {
+                SetAuto(false);
                 Save();
                 yield return feedback.PlayDefeat();
                 upgradePanel.ShowResult(UIStrings.Defeated(hit, run, FantasyTexts.MonsterName(monster.Definition.id)));
@@ -332,6 +434,52 @@ namespace RiskLoop.Game
             int changed = _session.AutoEquip();
             upgradePanel.ShowGearMessage(UIStrings.AutoEquipped(changed));
             AfterGearChange();
+        }
+
+        private void OnSellAllClicked()
+        {
+            double value = _session.SellAllInventory(out int count);
+            upgradePanel.ShowGearMessage(UIStrings.SoldAll(count, value));
+            AfterGearChange();
+        }
+
+        private void OnEnhanceClicked(long uid)
+        {
+            if (InputLocked) return;
+            GearItem item = _session.FindItem(uid);
+            if (item == null || !_session.CanEnhance(item)) return;
+            StartCoroutine(EnhanceRoutine(uid));
+        }
+
+        /// <summary>Güçlendirme: önce gerilim animasyonu, sonra sonuç (başarı / düşme / kırılma).</summary>
+        private IEnumerator EnhanceRoutine(long uid)
+        {
+            SetSequence(true);
+            EnhanceResult result = _session.Enhance(uid);
+            Save();
+            topBar.Refresh(_session.Progress);
+            yield return upgradePanel.PlayEnhance(result);
+            SetSequence(false);
+            RefreshAll();
+        }
+
+        private void OnPrestigeClicked()
+        {
+            int age = _session.Progress.age;
+            double gained = _session.Prestige();
+            if (gained <= 0) return;
+            Save();
+            upgradePanel.ShowResult(UIStrings.PrestigeDone(age + 1, gained));
+            RefreshAll();
+        }
+
+        private void OnBuyPrestigeClicked(PrestigeType type)
+        {
+            if (_session.TryBuyPrestige(type))
+            {
+                Save();
+                RefreshAll();
+            }
         }
 
         private void AfterGearChange()

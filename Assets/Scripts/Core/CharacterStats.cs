@@ -4,8 +4,9 @@ using System.Collections.Generic;
 namespace RiskLoop.Core
 {
     /// <summary>
-    /// Karakterin toplam statları = ekipmansız taban + kuşanılan eşyaların toplamı (sınırlarla).
-    /// Savaş statları savaşta, kazı statları (CaveResist, FindChance, Luck, GoldBonus) GameSession'da kazıya uygulanır.
+    /// Karakterin toplam statları = ekipmansız taban + kuşanılan eşyaların toplamı (güçlendirme dahil, sınırlarla).
+    /// Savaş statları savaşta, kazı statları (CaveResist, FindChance, Luck, GoldBonus, DigPower) GameSession'da kazıya uygulanır.
+    /// Prestij (Yeni Çağ) çarpanları GameSession.Stats içinde eklenir.
     /// </summary>
     public struct CharacterStats
     {
@@ -18,6 +19,7 @@ namespace RiskLoop.Core
         public double FindChance;
         public double Luck;
         public double GoldBonus;
+        public double DigPower;
 
         public static CharacterStats Compute(CombatBalance c, IEnumerable<GearItem> equipped)
         {
@@ -28,19 +30,26 @@ namespace RiskLoop.Core
                 Defense = c.playerBaseDefense,
                 CritChance = c.playerBaseCritChance,
                 CritDamage = c.playerBaseCritDamage,
+                DigPower = c.playerBaseDigPower,
             };
 
             foreach (GearItem item in equipped)
             {
                 if (item == null) continue;
-                foreach (StatValue v in item.stats) s.Add(v.stat, v.value);
+                double mult = item.EnhanceMult(c.enhanceStatBonus);
+                foreach (StatValue v in item.stats) s.Add(v.stat, v.value * mult);
             }
 
-            // Sınırlar: kritik ve göçük direnci sonsuza gitmesin
-            s.CritChance = Math.Min(s.CritChance, c.maxCritChance);
-            s.CaveResist = Math.Min(s.CaveResist, c.maxCaveResist);
-            s.GoldBonus = Math.Min(s.GoldBonus, c.maxGoldBonus);
+            s.ApplyCaps(c);
             return s;
+        }
+
+        /// <summary>Sınırlar: kritik, göçük direnci ve altın sonsuza gitmesin.</summary>
+        public void ApplyCaps(CombatBalance c)
+        {
+            CritChance = Math.Min(CritChance, c.maxCritChance);
+            CaveResist = Math.Min(CaveResist, c.maxCaveResist);
+            GoldBonus = Math.Min(GoldBonus, c.maxGoldBonus);
         }
 
         public double Get(StatType type)
@@ -56,11 +65,12 @@ namespace RiskLoop.Core
                 case StatType.FindChance: return FindChance;
                 case StatType.Luck: return Luck;
                 case StatType.GoldBonus: return GoldBonus;
+                case StatType.DigPower: return DigPower;
                 default: return 0;
             }
         }
 
-        private void Add(StatType type, double value)
+        public void Add(StatType type, double value)
         {
             switch (type)
             {
@@ -73,11 +83,12 @@ namespace RiskLoop.Core
                 case StatType.FindChance: FindChance += value; break;
                 case StatType.Luck: Luck += value; break;
                 case StatType.GoldBonus: GoldBonus += value; break;
+                case StatType.DigPower: DigPower += value; break;
             }
         }
 
-        /// <summary>Yüzde olarak gösterilen statlar (Saldırı, Can, Savunma düz sayıdır).</summary>
+        /// <summary>Yüzde olarak gösterilen statlar (Saldırı, Can, Savunma, Kazı gücü düz sayıdır).</summary>
         public static bool IsPercent(StatType type) =>
-            type != StatType.Attack && type != StatType.Health && type != StatType.Defense;
+            type != StatType.Attack && type != StatType.Health && type != StatType.Defense && type != StatType.DigPower;
     }
 }

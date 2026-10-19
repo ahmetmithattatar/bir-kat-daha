@@ -84,10 +84,11 @@ namespace RiskLoop.Game.UI
         /// <summary>Oyuncunun aldığı hasar sayıları can barından çıkar.</summary>
         public RectTransform PlayerHpAnchor => (RectTransform)playerHpFill.parent;
 
-        // Silah açıları: kazmanın aynası (sol elde)
-        private const float WeaponRest = -25f;
-        private const float WeaponWindup = 14f;
-        private const float WeaponStrike = -62f;
+        // Silah açıları (sol elde). Kılıç çizimi zaten 45° çapraz: +15 ile neredeyse dik durur,
+        // geri çekilince dikleşir (+50), vuruşta canavara doğru yatar (-35).
+        private const float WeaponRest = 15f;
+        private const float WeaponWindup = 50f;
+        private const float WeaponStrike = -35f;
 
         private static readonly Color HitTint = new Color(1f, 0.45f, 0.45f);
         private Color _auraColor;
@@ -131,7 +132,7 @@ namespace RiskLoop.Game.UI
             SetAlpha(vignette, 0.85f + 0.08f * Mathf.PerlinNoise(now * 3f, 0f));
 
             // Nadir bulgunun arkasındaki ışık hüzmeleri döner
-            if (itemRoot.gameObject.activeSelf) raysImage.rectTransform.Rotate(0f, 0f, -40f * Time.unscaledDeltaTime);
+            if (itemRoot.gameObject.activeSelf) raysImage.rectTransform.Rotate(0f, 0f, -40f * FxTime.Delta);
 
             // Boss aurası nabız gibi atar
             if (monsterRoot.gameObject.activeSelf && monsterAura.enabled)
@@ -246,7 +247,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 if (UnityEngine.Random.value < 0.25f + r)
                 {
                     particles.Spawn(TopEdgePoint(UnityEngine.Random.value), new Color(0.5f, 0.45f, 0.4f), 1, 40f,
@@ -285,7 +286,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
                 float ease = 1f - (1f - k) * (1f - k);
                 tunnelRoot.localScale = Vector3.one * Mathf.Lerp(1.25f, 1f, ease);   // Öne doğru hareket hissi
@@ -321,7 +322,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
                 float scale = k < 0.7f ? Mathf.Lerp(0f, 1.25f, k / 0.7f) : Mathf.Lerp(1.25f, 1f, (k - 0.7f) / 0.3f);
                 itemRoot.localScale = Vector3.one * scale;
@@ -344,7 +345,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
                 float ease = k * k;
                 itemRoot.position = Vector3.Lerp(start, target.position, ease) + Vector3.up * Mathf.Sin(k * Mathf.PI) * 80f;
@@ -362,6 +363,12 @@ namespace RiskLoop.Game.UI
         }
 
         // ---------------- Savaş ----------------
+
+        /// <summary>Elde tutulan kazma (null = başlangıç kazması).</summary>
+        public void SetPickaxe(GearItem pickaxe)
+        {
+            pickaxeImage.sprite = GearArt.PickaxeSprite(pickaxe != null ? pickaxe.baseId : null);
+        }
 
         /// <summary>Elde tutulan silah (null = silahsız, yumrukla dövüşür).</summary>
         public void SetWeapon(GearItem weapon)
@@ -398,7 +405,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
                 float ease = 1f - (1f - k) * (1f - k);
                 monsterBody.localScale = Vector3.one * Mathf.Lerp(0.3f, targetScale, ease);
@@ -467,7 +474,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Sin(Mathf.Clamp01(t / duration) * Mathf.PI);
                 monsterBody.localScale = Vector3.one * baseScale * (1f + 0.3f * k);
                 yield return null;
@@ -496,7 +503,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
                 monsterBody.localScale = Vector3.one * baseScale * Mathf.Lerp(1f, 0.2f, k);
                 monsterImage.color = new Color(1f, 1f, 1f, 1f - k);
@@ -545,7 +552,7 @@ namespace RiskLoop.Game.UI
             Vector2 start = h.anchoredPosition;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
                 h.anchoredPosition = start + new Vector2(120f * k, -500f * k * k);
                 h.localRotation = Quaternion.Euler(0f, 0f, -200f * k);
@@ -564,7 +571,7 @@ namespace RiskLoop.Game.UI
             float nextRock = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 if (t >= nextRock)
                 {
                     nextRock = t + 0.03f;
@@ -598,8 +605,8 @@ namespace RiskLoop.Game.UI
             float velocity = -200f;
             while (rt != null && rt.anchoredPosition.y > floor)
             {
-                velocity -= 3000f * Time.unscaledDeltaTime;
-                rt.anchoredPosition += new Vector2(0f, velocity * Time.unscaledDeltaTime);
+                velocity -= 3000f * FxTime.Delta;
+                rt.anchoredPosition += new Vector2(0f, velocity * FxTime.Delta);
                 yield return null;
             }
             if (rt != null) rt.anchoredPosition = new Vector2(x, floor);
@@ -615,7 +622,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
                 float e = easeIn ? k * k : 1f - (1f - k) * (1f - k);
                 target.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(from, to, e));

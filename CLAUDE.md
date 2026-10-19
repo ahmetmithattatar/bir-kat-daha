@@ -22,13 +22,41 @@
 - Sahne: iç içe 4 tünel halkası (içe koyulaşır), ortada kaya duvarı (+çatlak katmanı, "12. KAT" kazınmış yazı), sağ altta kazma,
   kenar karartma (fener titremesi). Kaya rengi bölgeye göre değişir (`Art/DepthTheme`: toprak, taş, kristal, göl, demirhane, fosil, ejder, lav;
   bölgeler keşif katlarında başlar). Her bölgede 4 doku çeşidi dönüşümlü.
-- **Bir kat = `hitsPerFloor` (3) kazma vuruşu.** Her vuruş: geri çekil → hızla in → kıvılcım + moloz + toz, duvar sarsılır, çatlak büyür.
+- **Bir kat = kazı gücüne göre 1-8 kazma vuruşu** (başta 3; bkz. kazma yuvası). Her vuruş: geri çekil → hızla in → kıvılcım + moloz + toz, duvar sarsılır, çatlak büyür.
   Tuş basılı tutulursa art arda vurur (yorucu olmasın). Sahneye tıklamak da vurur. Zar SADECE son vuruşta atılır.
 - Son vuruş: duvar titrer `0.12 + 0.7*risk` sn (gerilim) → sonuç:
   baret kurtardıysa sahnede baret görünür, üstüne taş yağar, kırılıp düşer + pencere | duvar parçalanır, delik açılır →
   bulgu delikten fırlar (arkasında nadirlik renginde dönen hüzme) → nadirse pencere, değilse adıyla uçan yazı → koleksiyona uçar →
   tünelde ilerlenir (halkalar büyür, yeni duvar karanlıktan yaklaşır) | göçükte tavan çöker, taşlar dipte YIĞILIR, sahne kararır.
 - Risk sahnede görünür: tavan çatlağı riskle koyulaşır, tavandan riskle sıklaşan çakıl düşer.
+
+## Bağımlılık ve uzun oyun sistemleri (5. tur kararları)
+- **Oto-kazı (slot "oto çevir" mantığı):** A tuşu / buton. Kazıyı kendi sürdürür, animasyonlar `FxTime.Speed` = 2.5x.
+  Sıradan bulgular pencere açmadan koleksiyona uçar. Durma kuralları (`PlayerProgress.autoDig`, kayda girer):
+  baret bitince (oto başlarken baret varsa), risk %X+ (10..75), nadirlik >= seçilen (varsayılan yeşil), oto savaş açık/kapalı.
+  Ayrıca her zaman durur: boss, ölümcül tehdit, can < %30. Durunca banner + flaş: kumar anında kontrol oyuncuya geçer.
+  Amaç: baret varken sıkıcı katları hızla geçmek, risk anında oyuncuyu çağırmak.
+- **Geçitler:** Keşif katının bossu yenilince (`conqueredMilestones`) sonraki turlara o kattan başlanabilir (atlanan katların ödülü yok).
+  Yükseltme ekranında "Başlangıç: ..." butonu döngüyle seçer.
+- **Güç/risk göstergesi (`GameSession.Insight.cs`):** "Savaş gücün: N. kat seviyesi" (normal canavar Orta'dan kolay VE mini boss ölümcül değil
+  olan en derin kat), tehdit (Kolay/Orta/Zor/Ölümcül = canavarı öldürene kadar kaybedilen can oranı <0.2/<0.5/<1/>=1),
+  göçük hesabıyla ortalama kaç kat daha (baret sayısı üzerinden DP), kumar satırı (kazanırsan / kaybedersen / %, yorum: Güvenli adım, Değer,
+  Kumar, Çılgınlık). Eşya detayında "Savaş gücü 14 → 17" ve kazmada "Duvar 5 → 3 vuruş".
+- **Kazma yuvası + kazı gücü:** `GearSlot.Pickaxe`, `StatType.DigPower`. Gereken vuruş = ceil(3 * 1.07^(kat-1) / kazı gücü), 1..8.
+  8 kazma (Paslı → Yıldız Demiri). Eldeki kazma görseli kuşanılanla değişir.
+- **Nadirlik farkı büyütüldü:** ağırlıklar 100/30/9/2.7/0.8/0.24/0.07/0.02/0.006 (~3.3x), güç 1/1.6/2.5/4/6.5/10/16/26/45,
+  eşya nadirlik çarpanı `1.22^tier` (mor x4.9), luckPerStep 0.025, tur şansı sınırı 1.5. Kırmızı/mor eşyalar efsanevi isim alır.
+- **Güçlendirme (Shaiya tarzı):** +1..+10, şans %95 → %15, her seviye statlar +%10. +4'ten sonra başarısızlık seviye düşürür,
+  +7'den sonra eşya KIRILIR. Ücret satış değeri x2 x1.6^seviye (para yutağı). Ruletvari animasyon.
+- **Yeni Çağ (prestij):** 15. kattan sonra açılır. Yadigar = floor(rekor^1.6 / 10). Sıfırlanır: para, yükseltmeler, eşyalar, rekor, geçitler.
+  Kalır: çağ, yadigar, 5 Kadim yükseltme (Kadim Altın, Yıldızların Lütfu, Cüce Miğferi, Kralların Kanı, Ejder Hazinesi), oto-kazı ayarları.
+- **Yükseltme maks seviyeleri yükseltildi** (tek çağda dolmasın): Kazanç 40, Güvenlik 25, Sigorta 15, Dedektör 20, Fener 25, Terazi 30.
+- **İçerik:** bölge başına 6 canavarlık havuz (48), her keşif katında 5 bossluk havuz (45), 19 şablon. LOTR havası ama **özgün isimler**
+  (Steam'de telif/marka riski olmasın: Balrog/Nazgûl/Moria gibi birebir isim YOK). Keşif katları: Goblin Tünelleri, Kayıp Cüce Karakolu,
+  Kristal Salonlar, Gözcünün Gölü, Cüce Kralın Demirhanesi, Kadim Höyükler, Ejderin Altın Yatağı, Gölge ve Alev Köprüsü, Dünyanın Kökleri.
+- **Çantayı sat:** ekipman sekmesinde, iki basış ister.
+- **Config uyarısı:** `BalanceConfig.asset` Inspector'da bir kez düzenlenirse tüm alanlar asset'e yazılır ve koddaki yeni varsayılanlar
+  artık uygulanmaz. Yeni varsayılanları almak için asset'in ⋮ menüsünden Reset.
 
 ## Savaş, canavarlar, ekipman (RPG katmanı)
 Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur biter**, **eşyalar yüzeye dönünce kalıcı**, **savaş + kazı statları**.
@@ -106,7 +134,7 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
   İlk kez ulaşınca ayrıca güvenli ilk keşif ödülü (`o katın ödülü * firstReachRewardSteps`) doğrudan cebe girer.
   Amaç: oyuncunun kendine "şu kata kadar in, dön" hedefi koyması (geliştiricinin kendi stratejisi). Keşif katı bu hedefi doğal kılıyor,
   bir önceki katta "bir tane daha" gerilimi yaratıyor.
-- Koleksiyon: aynı tür + aynı nadirlik tek kartta birikir (×adet, toplam etki), en nadir solda. 10 kutu, fazlası "+N daha".
+- Koleksiyon: aynı tür + aynı nadirlik tek kartta birikir (×adet, toplam etki), en nadir solda. 9 kutu, fazlası "+N daha". Ekipmanlar yuvaya göre de ayrılır.
 
 ## Yükseltmeler (7)
 | Tür | UI adı | Etki | Birikim |
@@ -149,7 +177,10 @@ Assets/Scripts/
     RiskMath.cs        Saf formüller (durumsuz, zar dışarıdan). Python'a birebir taşınacak dosya
     GameSession.cs     Kurallar (partial): tur, kazı, bulgular, yükseltmeler
     GameSession.Combat.cs  Canavar çıkışı, Attack / MonsterAttack, zafer ve ganimet
-    GameSession.Gear.cs    Eşya üretimi (RollGearItem), envanter, kuşan/çıkar/sat, otomatik kuşan
+    GameSession.Gear.cs    Eşya üretimi (RollGearItem), envanter, kuşan/çıkar/sat, otomatik kuşan, çantayı sat, güçlendirme
+    GameSession.Prestige.cs  Yeni Çağ, Yadigar, Kadim yükseltmeler
+    GameSession.Insight.cs   Savaş gücü, tehdit, kalan kat (DP), kumar oranı (hiçbir şeyi değiştirmez)
+    Prestige.cs        PrestigeType, PrestigeBalance
     Gear.cs            GearSlot, StatType, StatValue, GearItem
     CombatData.cs      CombatBalance (savaş/ekipman sayıları), MonsterDefinition, GearBaseDefinition, sonuç tipleri
     DefaultContent.cs  Varsayılan içerik: 18 silah, 47 zırh/takı tabanı, 41 canavar
@@ -171,7 +202,8 @@ Assets/Scripts/
                        MonsterArt (14 şablon x renk), GearArt (10 silah şablonu, 7 zırh/takı şablonu x malzeme rengi)
     UI/                TopBarView, RunPanelView, FindCollectionView + FindMiniCardView, UpgradePanelView, UpgradeRowView:
                        sadece gösterir, olay yayar. DigView (kazı + savaş sahnesi), UIParticleSpawner, FxLayerView, RevealPopupView, UIFx: efektler
-                       EquipmentView + GearSlotView + ItemDetailView: ekipman sekmesi
+                       EquipmentView + GearSlotView + ItemDetailView: ekipman sekmesi. PrestigePanelView + PrestigeRowView: Yeni Çağ sekmesi.
+                       AutoDigView: oto-kazı paneli. FxTime: animasyon hız çarpanı (oto-kazıda hızlanır)
   Editor/
     PrototypeSceneBuilder.cs
 Assets/Config/BalanceConfig.asset   (menü ilk çalıştığında oluşur)
@@ -208,7 +240,8 @@ Zar sırası: GameSession.cs başındaki yorumda (Advance, Attack, MonsterAttack
 Varsayılanlarla kaba tahmin (bulgusuz): yükseltmesiz optimal durma noktası ~6. kat. Bulgular eklendi, Python simülasyonuyla yeniden ölçülmeli.
 
 ## Yapılacaklar
-- [ ] Unity'de derleme ve oynanış testi (kazı sahnesi + savaş/canavar/boss/ekipman sürümü henüz editörde HİÇ denenmedi)
+- [ ] Unity'de derleme ve oynanış testi (oto-kazı, geçit, güçlendirme, Yeni Çağ, kazma, güç göstergesi sürümü henüz denenmedi)
+- [ ] Python simülasyonu: Yeni Çağ döngüsü süresi, güçlendirme para yutağı, oto-kazı ile tur başına süre
 - [ ] Savaş dengesi: boss süreleri, ekipman ölçeği (1.14) vs canavar ölçeği (1.18/1.16), düşme oranları
 - [ ] Sonra: silah türüne özel vuruş efekti, canavar türüne özel saldırı (zehir, büyü), set bonusları, eşya karşılaştırma ipucu (tooltip)
 - [ ] Pixel art'ı gerçek bir sanatçı/asset ile değiştirmek istenirse: SpriteLibrary.FindIcon tek giriş noktası

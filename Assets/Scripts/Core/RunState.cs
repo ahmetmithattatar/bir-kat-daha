@@ -13,6 +13,7 @@ namespace RiskLoop.Core
     public class RunState
     {
         public int Step { get; internal set; }            // Mevcut derinlik (0 = henüz inmedi)
+        public int StartStep { get; internal set; }       // Geçitten başlandıysa başlangıç katı (0 = yüzey)
         public double Earnings { get; internal set; }     // Bu turda biriken, RİSK ALTINDAKİ kazanç
         public double Banked { get; internal set; }       // Bu turda doğrudan cebe giren (güvenli) para
         public RunStatus Status { get; internal set; } = RunStatus.Active;

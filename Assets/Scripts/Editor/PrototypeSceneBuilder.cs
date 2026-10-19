@@ -198,22 +198,23 @@ namespace RiskLoop.EditorTools
             // ---- Sol sütun: istatistikler ----
             RectTransform left = CreateColumn("LeftColumn", panel, flexibleWidth: 0.9f);
 
-            TMP_Text depth = CreateText("DepthText", left, "Derinlik", 54, 80);
+            // Yükseklik bütçesi ~860: sıkı ama sığar. Metinler sığmazsa auto-size küçültür.
+            TMP_Text depth = CreateText("DepthText", left, "Derinlik", 48, 70);
             depth.fontStyle = FontStyles.Bold;
-            TMP_Text multiplier = CreateText("MultiplierText", left, "Çarpan", 32, 44);
-            TMP_Text runValue = CreateText("RunValueText", left, "Turun değeri", 42, 96);
+            TMP_Text runValue = CreateText("RunValueText", left, "Turun değeri", 40, 84);
             runValue.fontStyle = FontStyles.Bold;
-            TMP_Text breakdown = CreateText("RunValueBreakdownText", left, "", 28, 70);
-            TMP_Text buffs = CreateText("BuffsText", left, "Baret: 0", 26, 74);
-            TMP_Text combatStats = CreateText("CombatStatsText", left, "", 24, 44);
+            TMP_Text breakdown = CreateText("RunValueBreakdownText", left, "", 24, 60);
+            TMP_Text buffs = CreateText("BuffsText", left, "Baret: 0", 22, 60);
+            TMP_Text combatStats = CreateText("CombatStatsText", left, "", 22, 36);
+            TMP_Text power = CreateText("PowerText", left, "", 22, 56);
 
-            TMP_Text risk = CreateText("RiskText", left, "Risk", 38, 56);
+            TMP_Text risk = CreateText("RiskText", left, "Risk", 34, 48);
             risk.fontStyle = FontStyles.Bold;
 
             // Risk çubuğu: gri arka plan + soldan dolan renkli şerit
             RectTransform bar = CreateUIObject("RiskBar", left);
             AddImage(bar, BarBackColor).raycastTarget = false;
-            SetHeight(bar, 30);
+            SetHeight(bar, 26);
             RectTransform fill = CreateUIObject("Fill", bar);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(0.1f, 1f);
@@ -222,9 +223,11 @@ namespace RiskLoop.EditorTools
             Image fillImage = AddImage(fill, Color.green);
             fillImage.raycastTarget = false;
 
-            TMP_Text nextReward = CreateText("NextRewardText", left, "Sonraki kat", 26, 96);
-            TMP_Text insurance = CreateText("InsuranceText", left, "Sigorta", 22, 54);
-            TMP_Text milestone = CreateText("MilestoneText", left, "Sonraki keşif", 24, 100);
+            TMP_Text gamble = CreateText("GambleText", left, "", 22, 56);
+            TMP_Text floorsLeft = CreateText("FloorsLeftText", left, "", 20, 36);
+            TMP_Text nextReward = CreateText("NextRewardText", left, "Sonraki kat", 22, 70);
+            TMP_Text insurance = CreateText("InsuranceText", left, "Sigorta", 20, 40);
+            TMP_Text milestone = CreateText("MilestoneText", left, "Sonraki keşif", 22, 84);
             CreateFlexibleSpacer(left);
 
             // ---- Orta sütun: birinci şahıs kazı sahnesi + mesaj ----
@@ -232,19 +235,23 @@ namespace RiskLoop.EditorTools
             DigView digView = BuildDigView(center);
             TMP_Text message = CreateText("MessageText", center, "", 30, 110);
 
-            // ---- Sağ sütun: bulgu koleksiyonu, butonlar ----
+            // ---- Sağ sütun: bulgu koleksiyonu, oto-kazı, butonlar ----
             RectTransform right = CreateColumn("RightColumn", panel, flexibleWidth: 1f);
 
             FindCollectionView collection = BuildFindCollection(right);
+            AutoDigView auto = BuildAutoDig(right);
             CreateFlexibleSpacer(right);
-            Button advance = CreateButton("AdvanceButton", right, UIStrings.AdvanceButton, AdvanceColor, 130, 58, out TMP_Text advanceLabel);
-            Button cashOut = CreateButton("CashOutButton", right, UIStrings.CashOutButton, CashOutColor, 96, 40, out TMP_Text cashOutLabel);
-            TMP_Text hint = CreateText("KeyHintText", right, UIStrings.KeyHintRun, 20, 70);
+            Button advance = CreateButton("AdvanceButton", right, UIStrings.AdvanceButton, AdvanceColor, 110, 54, out TMP_Text advanceLabel);
+            Button cashOut = CreateButton("CashOutButton", right, UIStrings.CashOutButton, CashOutColor, 76, 36, out TMP_Text cashOutLabel);
+            TMP_Text hint = CreateText("KeyHintText", right, UIStrings.KeyHintRun, 18, 46);
             hint.color = HintColor;
 
             var view = panel.gameObject.AddComponent<RunPanelView>();
             SetRef(view, "depthText", depth);
-            SetRef(view, "multiplierText", multiplier);
+            SetRef(view, "powerText", power);
+            SetRef(view, "gambleText", gamble);
+            SetRef(view, "floorsLeftText", floorsLeft);
+            SetRef(view, "autoDig", auto);
             SetRef(view, "runValueText", runValue);
             SetRef(view, "runValueBreakdownText", breakdown);
             SetRef(view, "buffsText", buffs);
@@ -263,6 +270,45 @@ namespace RiskLoop.EditorTools
             SetRef(view, "keyHintText", hint);
             SetRef(view, "advanceLabel", advanceLabel);
             SetRef(view, "cashOutLabel", cashOutLabel);
+            return view;
+        }
+
+        /// <summary>Oto-kazı paneli: aç/kapat butonu + 2x2 durma kuralı butonu.</summary>
+        private static AutoDigView BuildAutoDig(Transform parent)
+        {
+            RectTransform root = CreateUIObject("AutoDig", parent);
+            SetHeight(root, 56 + 8 + 2 * 44 + 8);
+            AddVerticalLayout(root, spacing: 8, padding: 0);
+
+            Button toggle = CreateButton("AutoToggle", root, UIStrings.AutoOff, MutedColor, 56, 28, out TMP_Text toggleLabel);
+
+            RectTransform grid = CreateUIObject("Rules", root);
+            SetHeight(grid, 2 * 44 + 8);
+            var gridLayout = grid.gameObject.AddComponent<GridLayoutGroup>();
+            gridLayout.cellSize = new Vector2(236, 44);
+            gridLayout.spacing = new Vector2(8, 8);
+            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridLayout.constraintCount = 2;
+            gridLayout.childAlignment = TextAnchor.UpperCenter;
+
+            Button shields = CreateButton("StopShields", grid, "", BarBackColor, 44, 18, out TMP_Text shieldsLabel);
+            Button risk = CreateButton("StopRisk", grid, "", BarBackColor, 44, 18, out TMP_Text riskLabel);
+            Button tier = CreateButton("StopTier", grid, "", BarBackColor, 44, 18, out TMP_Text tierLabel);
+            Button fight = CreateButton("AutoFight", grid, "", BarBackColor, 44, 18, out TMP_Text fightLabel);
+            foreach (TMP_Text l in new[] { shieldsLabel, riskLabel, tierLabel, fightLabel }) l.fontStyle = FontStyles.Normal;
+
+            var view = root.gameObject.AddComponent<AutoDigView>();
+            SetRef(view, "toggleButton", toggle);
+            SetRef(view, "toggleImage", toggle.GetComponent<Image>());
+            SetRef(view, "toggleLabel", toggleLabel);
+            SetRef(view, "shieldsButton", shields);
+            SetRef(view, "shieldsLabel", shieldsLabel);
+            SetRef(view, "riskButton", risk);
+            SetRef(view, "riskLabel", riskLabel);
+            SetRef(view, "tierButton", tier);
+            SetRef(view, "tierLabel", tierLabel);
+            SetRef(view, "fightButton", fight);
+            SetRef(view, "fightLabel", fightLabel);
             return view;
         }
 
@@ -411,9 +457,10 @@ namespace RiskLoop.EditorTools
             // Silah: sol alt köşe (diğer el), kazmanın aynası
             RectTransform weapon = CreateUIObject("WeaponRoot", scene);
             weapon.anchorMin = weapon.anchorMax = new Vector2(0f, 0f);
-            weapon.pivot = new Vector2(0.2f, 0.08f);
-            weapon.sizeDelta = new Vector2(260, 260);
-            weapon.anchoredPosition = new Vector2(120f, -30f);
+            // Dönme noktası kabzada (kılıç çiziminde sol alt), ekranın biraz yukarısında: kalkık durur, vuruşta canavara iner
+            weapon.pivot = new Vector2(0.15f, 0.12f);
+            weapon.sizeDelta = new Vector2(300, 300);
+            weapon.anchoredPosition = new Vector2(70f, 40f);
             RectTransform weaponImgRt = CreateUIObject("WeaponImage", weapon);
             Stretch(weaponImgRt);
             Image weaponImage = AddImage(weaponImgRt, Color.white);
@@ -521,12 +568,12 @@ namespace RiskLoop.EditorTools
             return image;
         }
 
-        /// <summary>Bu turun bulguları: başlık + 3x4 kart ızgarası (12 kutu, fazlası "+N daha").</summary>
+        /// <summary>Bu turun bulguları: başlık + 3x3 kart ızgarası (9 kutu, fazlası "+N daha").</summary>
         private static FindCollectionView BuildFindCollection(Transform parent)
         {
             const int columns = 3;
-            const int slotCount = 12;
-            const float gridHeight = 4 * 108 + 3 * 8;
+            const int slotCount = 9;
+            const float gridHeight = 3 * 108 + 2 * 8;
 
             RectTransform root = CreateUIObject("FindCollection", parent);
             SetHeight(root, 40 + 8 + gridHeight);
@@ -719,25 +766,28 @@ namespace RiskLoop.EditorTools
         {
             RectTransform panel = CreatePanelWithColumns("UpgradePanel", parent);
 
-            // ---- Sol sütun: son turun sonucu, seçili eşya detayı, başla butonu ----
+            // ---- Sol sütun: son turun sonucu, seçili eşya detayı, geçit seçici, başla butonu ----
             RectTransform left = CreateColumn("LeftColumn", panel, flexibleWidth: 1);
-            TMP_Text result = CreateText("ResultText", left, "", 30, 230);
+            TMP_Text result = CreateText("ResultText", left, "", 26, 160);
             ItemDetailView detail = BuildItemDetail(left);
             CreateFlexibleSpacer(left);
-            Button startRun = CreateButton("StartRunButton", left, UIStrings.StartRunButton, AdvanceColor, 140, 60, out _);
-            TMP_Text hint = CreateText("KeyHintText", left, UIStrings.KeyHintUpgrade, 24, 40);
+            Button startStep = CreateButton("StartStepButton", left, UIStrings.StartFrom(0), BarBackColor, 52, 24, out TMP_Text startStepLabel);
+            Button startRun = CreateButton("StartRunButton", left, UIStrings.StartRunButton, AdvanceColor, 120, 56, out _);
+            TMP_Text hint = CreateText("KeyHintText", left, UIStrings.KeyHintUpgrade, 22, 36);
             hint.color = HintColor;
 
             // ---- Sağ sütun: sekmeler + içerik ----
             RectTransform right = CreateColumn("RightColumn", panel, flexibleWidth: 1.3f);
 
             RectTransform tabs = CreateUIObject("Tabs", right);
-            SetHeight(tabs, 64);
+            SetHeight(tabs, 60);
             AddHorizontalLayout(tabs, spacing: 10);
-            Button upgradesTab = CreateButton("UpgradesTab", tabs, UIStrings.TabUpgrades, BuyColor, 64, 30, out _);
+            Button upgradesTab = CreateButton("UpgradesTab", tabs, UIStrings.TabUpgrades, BuyColor, 60, 28, out _);
             FillRemainingWidth(upgradesTab);
-            Button equipmentTab = CreateButton("EquipmentTab", tabs, UIStrings.TabEquipment, MutedColor, 64, 30, out _);
+            Button equipmentTab = CreateButton("EquipmentTab", tabs, UIStrings.TabEquipment, MutedColor, 60, 28, out _);
             FillRemainingWidth(equipmentTab);
+            Button prestigeTab = CreateButton("PrestigeTab", tabs, UIStrings.TabPrestige, MutedColor, 60, 28, out _);
+            FillRemainingWidth(prestigeTab);
 
             RectTransform content = CreateUIObject("TabContent", right);
             content.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
@@ -752,62 +802,76 @@ namespace RiskLoop.EditorTools
                 rows.Add(BuildUpgradeRow(upgradesRoot, type));
             }
 
-            // Ekipman sekmesi
+            // Ekipman ve Yeni Çağ sekmeleri
             EquipmentView equipment = BuildEquipmentView(content);
+            PrestigePanelView prestige = BuildPrestigePanel(content);
 
             var view = panel.gameObject.AddComponent<UpgradePanelView>();
             SetRef(view, "resultText", result);
             SetRefArray(view, "rows", rows.ToArray());
             SetRef(view, "startRunButton", startRun);
+            SetRef(view, "startStepButton", startStep);
+            SetRef(view, "startStepLabel", startStepLabel);
             SetRef(view, "upgradesTab", upgradesTab);
             SetRef(view, "equipmentTab", equipmentTab);
+            SetRef(view, "prestigeTab", prestigeTab);
             SetRef(view, "upgradesTabImage", upgradesTab.GetComponent<Image>());
             SetRef(view, "equipmentTabImage", equipmentTab.GetComponent<Image>());
+            SetRef(view, "prestigeTabImage", prestigeTab.GetComponent<Image>());
             SetRef(view, "upgradesRoot", upgradesRoot.gameObject);
             SetRef(view, "equipmentRoot", equipment.gameObject);
+            SetRef(view, "prestigeRoot", prestige.gameObject);
             SetRef(view, "equipment", equipment);
             SetRef(view, "itemDetail", detail);
+            SetRef(view, "prestige", prestige);
             return view;
         }
 
-        /// <summary>Ekipman sekmesi: stat özeti, 8 karakter yuvası, envanter ızgarası, "En iyileri kuşan".</summary>
+        /// <summary>Ekipman sekmesi: güç + stat özeti, 9 karakter yuvası, envanter ızgarası, "En iyileri kuşan" ve "Çantayı sat".</summary>
         private static EquipmentView BuildEquipmentView(Transform parent)
         {
             const int inventorySlots = 32;   // CombatBalance.inventoryCap ile aynı tut
+            const float cell = 96;
             var slotEnum = (GearSlot[])System.Enum.GetValues(typeof(GearSlot));
 
             RectTransform root = CreateUIObject("EquipmentRoot", parent);
             Stretch(root);
             AddVerticalLayout(root, spacing: 10, padding: 0);
 
-            TMP_Text stats = CreateText("StatsText", root, "", 22, 70);
+            TMP_Text stats = CreateText("StatsText", root, "", 20, 84);
 
             RectTransform doll = CreateUIObject("EquippedSlots", root);
-            SetHeight(doll, 100);
+            SetHeight(doll, cell);
             var dollGrid = doll.gameObject.AddComponent<GridLayoutGroup>();
-            dollGrid.cellSize = new Vector2(100, 100);
-            dollGrid.spacing = new Vector2(8, 8);
+            dollGrid.cellSize = new Vector2(cell, cell);
+            dollGrid.spacing = new Vector2(6, 6);
             dollGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             dollGrid.constraintCount = slotEnum.Length;
             dollGrid.childAlignment = TextAnchor.UpperCenter;
             var equipped = new GearSlotView[slotEnum.Length];
             for (int i = 0; i < slotEnum.Length; i++) equipped[i] = BuildGearSlot(doll, $"Slot_{slotEnum[i]}", withLabel: true);
 
-            TMP_Text invTitle = CreateText("InventoryTitle", root, "", 26, 40);
+            TMP_Text invTitle = CreateText("InventoryTitle", root, "", 24, 36);
             invTitle.color = HintColor;
 
             RectTransform inv = CreateUIObject("Inventory", root);
-            SetHeight(inv, 4 * 100 + 3 * 8);
+            SetHeight(inv, 4 * cell + 3 * 6);
             var invGrid = inv.gameObject.AddComponent<GridLayoutGroup>();
-            invGrid.cellSize = new Vector2(100, 100);
-            invGrid.spacing = new Vector2(8, 8);
+            invGrid.cellSize = new Vector2(cell, cell);
+            invGrid.spacing = new Vector2(6, 6);
             invGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             invGrid.constraintCount = 8;
             invGrid.childAlignment = TextAnchor.UpperCenter;
             var invSlots = new GearSlotView[inventorySlots];
             for (int i = 0; i < inventorySlots; i++) invSlots[i] = BuildGearSlot(inv, $"Inv_{i}", withLabel: false);
 
-            Button auto = CreateButton("AutoEquipButton", root, UIStrings.AutoEquipButton, CashOutColor, 60, 28, out _);
+            RectTransform buttons = CreateUIObject("Buttons", root);
+            SetHeight(buttons, 56);
+            AddHorizontalLayout(buttons, spacing: 12);
+            Button auto = CreateButton("AutoEquipButton", buttons, UIStrings.AutoEquipButton, CashOutColor, 56, 26, out _);
+            FillRemainingWidth(auto);
+            Button sellAll = CreateButton("SellAllButton", buttons, UIStrings.SellAllButton, AdvanceColor, 56, 22, out TMP_Text sellAllLabel);
+            FillRemainingWidth(sellAll);
 
             var view = root.gameObject.AddComponent<EquipmentView>();
             SetRef(view, "statsText", stats);
@@ -815,6 +879,50 @@ namespace RiskLoop.EditorTools
             SetRef(view, "inventoryTitle", invTitle);
             SetRefArray(view, "inventorySlots", invSlots);
             SetRef(view, "autoEquipButton", auto);
+            SetRef(view, "sellAllButton", sellAll);
+            SetRef(view, "sellAllLabel", sellAllLabel);
+            return view;
+        }
+
+        /// <summary>Yeni Çağ sekmesi: çağ + Yadigar, açıklama, 5 Kadim yükseltme, "Yeni Çağ başlat".</summary>
+        private static PrestigePanelView BuildPrestigePanel(Transform parent)
+        {
+            RectTransform root = CreateUIObject("PrestigeRoot", parent);
+            Stretch(root);
+            AddVerticalLayout(root, spacing: 10, padding: 0);
+
+            TMP_Text header = CreateText("HeaderText", root, "", 34, 50);
+            TMP_Text info = CreateText("InfoText", root, "", 22, 110);
+
+            var rows = new List<PrestigeRowView>();
+            foreach (PrestigeType type in System.Enum.GetValues(typeof(PrestigeType)))
+            {
+                const float rowHeight = 84;
+                RectTransform row = CreateUIObject($"PrestigeRow_{type}", root);
+                SetHeight(row, rowHeight);
+                AddHorizontalLayout(row, spacing: 20);
+                TMP_Text rowInfo = CreateText("InfoText", row, "", 26, rowHeight, TextAlignmentOptions.MidlineLeft);
+                FillRemainingWidth(rowInfo);
+                Button buy = CreateButton("BuyButton", row, "Al", new Color(0.55f, 0.35f, 0.75f), rowHeight, 26, out TMP_Text buyText);
+                SetFixedWidth(buy, 260);
+
+                var rowView = row.gameObject.AddComponent<PrestigeRowView>();
+                SetEnum(rowView, "type", (int)type);
+                SetRef(rowView, "infoText", rowInfo);
+                SetRef(rowView, "buyButton", buy);
+                SetRef(rowView, "buyText", buyText);
+                rows.Add(rowView);
+            }
+
+            CreateFlexibleSpacer(root);
+            Button prestigeButton = CreateButton("PrestigeButton", root, "", new Color(0.70f, 0.20f, 0.25f), 70, 26, out TMP_Text prestigeLabel);
+
+            var view = root.gameObject.AddComponent<PrestigePanelView>();
+            SetRef(view, "headerText", header);
+            SetRef(view, "infoText", info);
+            SetRefArray(view, "rows", rows.ToArray());
+            SetRef(view, "prestigeButton", prestigeButton);
+            SetRef(view, "prestigeLabel", prestigeLabel);
             return view;
         }
 
@@ -872,17 +980,17 @@ namespace RiskLoop.EditorTools
         private static ItemDetailView BuildItemDetail(Transform parent)
         {
             RectTransform root = CreateUIObject("ItemDetail", parent);
-            SetHeight(root, 400);
+            SetHeight(root, 420);
             AddImage(root, BackgroundColor).raycastTarget = false;
             AddVerticalLayout(root, spacing: 8, padding: 12);
 
             // Üst satır: ikon kutusu + ad/seviye
             RectTransform top = CreateUIObject("Top", root);
-            SetHeight(top, 110);
+            SetHeight(top, 100);
             AddHorizontalLayout(top, spacing: 14);
 
             RectTransform iconBox = CreateUIObject("IconBox", top);
-            SetHeight(iconBox, 110);
+            SetHeight(iconBox, 100);
             Image frame = AddImage(iconBox, Color.gray);
             frame.raycastTarget = false;
             RectTransform innerRt = CreateUIObject("Inner", iconBox);
@@ -897,27 +1005,30 @@ namespace RiskLoop.EditorTools
             Image icon = AddImage(iconRt, Color.white);
             icon.preserveAspect = true;
             icon.raycastTarget = false;
-            SetFixedWidth(frame, 110);
+            SetFixedWidth(frame, 100);
 
             RectTransform texts = CreateUIObject("Texts", top);
-            SetHeight(texts, 110);
+            SetHeight(texts, 100);
             AddVerticalLayout(texts, spacing: 4, padding: 0);
             texts.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleLeft;
             FillRemainingWidth(texts.GetComponent<LayoutElement>());
-            TMP_Text nameText = CreateText("NameText", texts, "", 30, 56, TextAlignmentOptions.MidlineLeft);
+            TMP_Text nameText = CreateText("NameText", texts, "", 28, 54, TextAlignmentOptions.MidlineLeft);
             nameText.fontStyle = FontStyles.Bold;
-            TMP_Text levelText = CreateText("LevelText", texts, "", 22, 40, TextAlignmentOptions.MidlineLeft);
+            TMP_Text levelText = CreateText("LevelText", texts, "", 20, 36, TextAlignmentOptions.MidlineLeft);
 
-            TMP_Text stats = CreateText("StatsText", root, "", 22, 150, TextAlignmentOptions.TopLeft);
-            TMP_Text message = CreateText("MessageText", root, "", 22, 30, TextAlignmentOptions.MidlineLeft);
+            TMP_Text compare = CreateText("CompareText", root, "", 20, 56, TextAlignmentOptions.MidlineLeft);
+            TMP_Text stats = CreateText("StatsText", root, "", 20, 120, TextAlignmentOptions.TopLeft);
+            TMP_Text message = CreateText("MessageText", root, "", 20, 30, TextAlignmentOptions.MidlineLeft);
             message.color = new Color(1f, 0.88f, 0.23f);
 
             RectTransform buttons = CreateUIObject("Buttons", root);
-            SetHeight(buttons, 60);
-            AddHorizontalLayout(buttons, spacing: 12);
-            Button equip = CreateButton("EquipButton", buttons, UIStrings.EquipButton, CashOutColor, 60, 28, out TMP_Text equipLabel);
+            SetHeight(buttons, 56);
+            AddHorizontalLayout(buttons, spacing: 10);
+            Button equip = CreateButton("EquipButton", buttons, UIStrings.EquipButton, CashOutColor, 56, 24, out TMP_Text equipLabel);
             FillRemainingWidth(equip);
-            Button sell = CreateButton("SellButton", buttons, "Sat", AdvanceColor, 60, 28, out TMP_Text sellLabel);
+            Button enhance = CreateButton("EnhanceButton", buttons, "Güçlendir", new Color(0.55f, 0.35f, 0.75f), 56, 18, out TMP_Text enhanceLabel);
+            FillRemainingWidth(enhance);
+            Button sell = CreateButton("SellButton", buttons, "Sat", AdvanceColor, 56, 22, out TMP_Text sellLabel);
             FillRemainingWidth(sell);
 
             var view = root.gameObject.AddComponent<ItemDetailView>();
@@ -925,10 +1036,13 @@ namespace RiskLoop.EditorTools
             SetRef(view, "icon", icon);
             SetRef(view, "nameText", nameText);
             SetRef(view, "levelText", levelText);
+            SetRef(view, "compareText", compare);
             SetRef(view, "statsText", stats);
             SetRef(view, "messageText", message);
             SetRef(view, "equipButton", equip);
             SetRef(view, "equipLabel", equipLabel);
+            SetRef(view, "enhanceButton", enhance);
+            SetRef(view, "enhanceLabel", enhanceLabel);
             SetRef(view, "sellButton", sell);
             SetRef(view, "sellLabel", sellLabel);
             return view;

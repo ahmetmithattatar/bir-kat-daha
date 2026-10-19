@@ -66,6 +66,12 @@ namespace RiskLoop.Game.Art
                 "....KHK.........", "...KHK..........", "..KhK...........", ".KhK............",
                 ".KK.............", "................", "................", "................" } },
 
+            { "pickaxe", new[] {
+                "......aaaa......", "....aaAAAAaa....", "...aAAaaaaAAa...", "..aAa..hh..aAa..",
+                "..aa...HH...aa..", ".aa....HH....aa.", ".a.....HH.....a.", ".......HH.......",
+                ".......HH.......", ".......HH.......", ".......HH.......", ".......HH.......",
+                ".......HH.......", ".......hh.......", ".......hh.......", "................" } },
+
             // Zırh ve takılar
             { "helmet", new[] {
                 "................", "................", ".....KKKKKK.....", "....KAAWAAAK....",
@@ -129,6 +135,21 @@ namespace RiskLoop.Game.Art
             { "void_scythe", ("scythe", "8A5AC8", "4A2A80", "C080FF") },
         };
 
+        // ---------------- Kazma başı renkleri: (metal, metal gölge) ----------------
+
+        private static readonly Dictionary<string, (string metal, string shade)> Pickaxes =
+            new Dictionary<string, (string, string)>
+        {
+            { "rusty_pick", ("A87A5A", "6A4A34") },
+            { "iron_pick", ("B0B4BC", "6A6E76") },
+            { "steel_pick", ("D0D5DC", "8A8F98") },
+            { "dwarf_pick", ("E0B040", "9A7020") },
+            { "mithril_pick", ("C8F0FF", "70B0D0") },
+            { "runic_pick", ("80C8FF", "3A70B0") },
+            { "dragonbone_pick", ("F0E8D0", "B0A080") },
+            { "star_pick", ("FFFFFF", "C0B0FF") },
+        };
+
         // ---------------- Malzeme renkleri: (ana, gölge, vurgu) ----------------
 
         private static readonly Dictionary<string, (string main, string shade, string accent)> Materials =
@@ -153,6 +174,7 @@ namespace RiskLoop.Game.Art
         public static Sprite Icon(GearItem item)
         {
             if (item.slot == GearSlot.Weapon) return WeaponSprite(item.baseId);
+            if (item.slot == GearSlot.Pickaxe) return PickaxeSprite(item.baseId);
 
             string material = FantasyTexts.MaterialId(item);
             var colors = Materials.TryGetValue(material, out var c) ? c : ("A0A0A0", "606060", "C0C0C0");
@@ -167,10 +189,18 @@ namespace RiskLoop.Game.Art
             return Build($"weapon_{weaponId}", Templates[w.Item1], w.Item2, w.Item3, w.Item4);
         }
 
+        /// <summary>Kazma görseli (elde tutulan kazma için de kullanılır). null = başlangıç (paslı) kazma.</summary>
+        public static Sprite PickaxeSprite(string pickaxeId)
+        {
+            string id = pickaxeId ?? "rusty_pick";
+            var c = Pickaxes.TryGetValue(id, out var found) ? found : ("B0B4BC", "6A6E76");
+            return Build($"pickaxe_{id}", Templates["pickaxe"], c.Item1, c.Item2, c.Item1);
+        }
+
         /// <summary>Boş yuva için soluk şablon (ekipman ekranında).</summary>
         public static Sprite EmptySlotSprite(GearSlot slot)
         {
-            string template = slot == GearSlot.Weapon ? "sword" : SlotTemplate(slot);
+            string template = slot == GearSlot.Weapon ? "sword" : slot == GearSlot.Pickaxe ? "pickaxe" : SlotTemplate(slot);
             return Build($"empty_{template}", Templates[template], "3A3A44", "2A2A32", "3A3A44");
         }
 

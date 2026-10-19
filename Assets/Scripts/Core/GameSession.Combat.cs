@@ -21,9 +21,11 @@ namespace RiskLoop.Core
         {
             CombatBalance c = Balance.combat;
 
-            if (milestone != null && !string.IsNullOrEmpty(milestone.bossId))
+            if (milestone != null && milestone.HasBoss)
             {
-                MonsterDefinition boss = c.FindMonster(milestone.bossId);
+                // Havuzdan rastgele bir boss: her keşif farklı bir karşılaşma olabilir
+                int index = Math.Min((int)(_random.NextDouble() * milestone.bossPool.Length), milestone.bossPool.Length - 1);   // ZAR: hangi boss
+                MonsterDefinition boss = c.FindMonster(milestone.bossPool[index]);
                 return boss != null ? CreateMonster(boss, step, milestone) : null;
             }
 
@@ -127,6 +129,13 @@ namespace RiskLoop.Core
             CurrentRun.Kills++;
             Progress.monstersKilled++;
             if (monster.Kind != MonsterKind.Normal) Progress.bossesKilled++;
+
+            // Keşif katının bossu yenildi: geçit açılır (sonraki turlara buradan başlanabilir)
+            if (monster.Milestone != null && !Progress.conqueredMilestones.Contains(monster.Milestone.step))
+            {
+                Progress.conqueredMilestones.Add(monster.Milestone.step);
+                victory.UnlockedCheckpoint = true;
+            }
 
             // Öldürme ödülü: risk altında (yüzeye dönmeden cebe girmez)
             double reward = CurrentRun.PendingStepReward;

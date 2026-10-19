@@ -39,8 +39,25 @@ namespace RiskLoop.Core
 
         public bool IsRunActive => CurrentRun != null && CurrentRun.Status == RunStatus.Active;
 
-        /// <summary>Karakterin kuşanılan eşyalarla toplam statları.</summary>
-        public CharacterStats Stats => CharacterStats.Compute(Balance.combat, Progress.equipped);
+        /// <summary>Karakterin kuşanılan eşyalarla ve Kadim Güç (prestij) ile toplam statları.</summary>
+        public CharacterStats Stats => StatsWith(Progress.equipped);
+
+        /// <summary>Verilen eşya listesiyle statlar (eşya karşılaştırması için "bunu kuşansam" hesabı).</summary>
+        public CharacterStats StatsWith(System.Collections.Generic.IEnumerable<GearItem> equipped)
+        {
+            CharacterStats s = CharacterStats.Compute(Balance.combat, equipped);
+            double might = Math.Pow(1.0 + Balance.prestige.ancientMight.effectPerLevel, Progress.GetPrestigeLevel(PrestigeType.AncientMight));
+            s.Attack *= might;
+            s.Health *= might;
+            return s;
+        }
+
+        /// <summary>Kadim Altın (prestij) çarpanı.</summary>
+        private double AncientGoldMult =>
+            Math.Pow(1.0 + Balance.prestige.ancientGold.effectPerLevel, Progress.GetPrestigeLevel(PrestigeType.AncientGold));
+
+        /// <summary>Bir sonraki katın duvarı için gereken kazma vuruşu (kazı gücüne göre).</summary>
+        public int NextSwingsNeeded => RiskMath.SwingsNeeded(Balance.combat, CurrentStep + 1, Stats.DigPower);
 
         // ---------------- Ekranda gösterilecek değerler ----------------
 
@@ -51,9 +68,9 @@ namespace RiskLoop.Core
         private double RunSafetyFactor => CurrentRun != null ? CurrentRun.SafetyFactor : 1;
         private double RunLuck => CurrentRun != null ? CurrentRun.RunLuck : 0;
 
-        /// <summary>Mevcut derinlikteki toplam çarpan (ekipmandaki altın bonusu dahil).</summary>
+        /// <summary>Mevcut derinlikteki toplam çarpan (ekipmandaki altın bonusu ve Kadim Altın dahil).</summary>
         public double CurrentMultiplier =>
-            RiskMath.TotalMultiplier(Balance, CurrentStep, Level(UpgradeType.Earnings), RunProfitBonus) * (1.0 + Stats.GoldBonus);
+            RiskMath.TotalMultiplier(Balance, CurrentStep, Level(UpgradeType.Earnings), RunProfitBonus) * (1.0 + Stats.GoldBonus) * AncientGoldMult;
 
         /// <summary>
         /// Bir sonraki inişte patlama olasılığı (0..1). Ekipmandaki göçük direnci riski azaltır,
@@ -77,7 +94,7 @@ namespace RiskLoop.Core
             get
             {
                 MilestoneDefinition m = RiskMath.MilestoneAt(Balance, CurrentStep + 1);
-                if (m != null && !string.IsNullOrEmpty(m.bossId)) return 1.0;
+                if (m != null && m.HasBoss) return 1.0;
                 return RiskMath.MonsterChance(Balance.combat, CurrentStep + 1);
             }
         }
@@ -89,23 +106,47 @@ namespace RiskLoop.Core
         public MilestoneDefinition NextMilestone => RiskMath.NextMilestone(Balance, CurrentStep);
 
         private double RewardFor(int step) =>
-            RiskMath.StepReward(Balance, step, Level(UpgradeType.Earnings), RunProfitBonus) * (1.0 + Stats.GoldBonus);
+            RiskMath.StepReward(Balance, step, Level(UpgradeType.Earnings), RunProfitBonus) * (1.0 + Stats.GoldBonus) * AncientGoldMult;
 
         private double FindChanceAt(int step) =>
             Math.Min(RiskMath.FindChance(Balance, step, Level(UpgradeType.FindChance)) + Stats.FindChance, Balance.maxFindChance);
 
         private double LuckAt(int step) =>
-            RiskMath.Luck(Balance, step, Level(UpgradeType.Luck), RunLuck) + Stats.Luck;
+            RiskMath.Luck(Balance, step, Level(UpgradeType.Luck), RunLuck) + Stats.Luck
+            + Balance.prestige.ancientLuck.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientLuck);
 
         // ---------------- Tur ----------------
 
-        public void StartRun()
+        /// <summary>Tura başlanabilecek katlar: 0 (yüzey) + bossu yenilmiş keşif katları (geçitler).</summary>
+        public System.Collections.Generic.List<int> AvailableStartSteps
+        {
+            get
+            {
+                var list = new System.Collections.Generic.List<int> { 0 };
+                foreach (MilestoneDefinition m in Balance.milestones)
+                {
+                    if (Progress.conqueredMilestones.Contains(m.step)) list.Add(m.step);
+                }
+                return list;
+            }
+        }
+
+        /// <summary>
+        /// Yeni tur. startStep > 0 ise o geçitten (bossu yenilmiş keşif katı) başlanır:
+        /// atlanan katların ödülü/bulgusu yoktur, risk ve canavarlar o derinlikten başlar.
+        /// </summary>
+        public void StartRun(int startStep = 0)
         {
             if (IsRunActive) throw new InvalidOperationException("Zaten aktif bir tur var.");
+            if (startStep < 0 || (startStep > 0 && !Progress.conqueredMilestones.Contains(startStep))) startStep = 0;
+
             double maxHealth = Stats.Health;
             CurrentRun = new RunState
             {
-                Shields = RiskMath.StartShields(Balance, Level(UpgradeType.StartShield)),
+                Step = startStep,
+                StartStep = startStep,
+                Shields = RiskMath.StartShields(Balance, Level(UpgradeType.StartShield))
+                          + (int)Math.Round(Balance.prestige.ancientShield.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientShield)),
                 PlayerMaxHealth = maxHealth,
                 PlayerHealth = maxHealth,
             };
@@ -171,6 +212,7 @@ namespace RiskLoop.Core
                 Progress.bestStep = nextStep;
                 result.NewRecord = true;
             }
+            if (nextStep > Progress.allTimeBestStep) Progress.allTimeBestStep = nextStep;
 
             // Canavar: keşif katında boss garantili, diğer katlarda zar
             MonsterInstance monster = RollEncounter(nextStep, milestone);   // ZAR 2-3
@@ -330,7 +372,7 @@ namespace RiskLoop.Core
                     CurrentRun.ShieldsFound += (int)find.Value;
                     break;
                 case FindType.LuckCharm:
-                    CurrentRun.RunLuck += find.Value;
+                    CurrentRun.RunLuck = Math.Min(CurrentRun.RunLuck + find.Value, Balance.maxRunLuck);
                     break;
                 case FindType.FindStreak:
                     CurrentRun.GuaranteedFinds += (int)find.Value;

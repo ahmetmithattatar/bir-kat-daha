@@ -89,15 +89,15 @@ namespace RiskLoop.Game
         {
             switch (step)
             {
-                case 3: return "Paslı Sandık";
-                case 5: return "Kayıp Madenci Kampı";
-                case 10: return "Kristal Mağarası";
-                case 15: return "Yeraltı Gölü";
-                case 20: return "Cüce Demirhanesi";
-                case 25: return "Dev Fosil Mezarlığı";
-                case 30: return "Ejderin İni";
-                case 35: return "Lav Kalbi";
-                case 40: return "Dünyanın Çekirdeği";
+                case 3: return "Goblin Tünelleri";
+                case 5: return "Kayıp Cüce Karakolu";
+                case 10: return "Kristal Salonlar";
+                case 15: return "Gözcünün Gölü";
+                case 20: return "Cüce Kralın Demirhanesi";
+                case 25: return "Kadim Höyükler";
+                case 30: return "Ejderin Altın Yatağı";
+                case 35: return "Gölge ve Alev Köprüsü";
+                case 40: return "Dünyanın Kökleri";
                 default: return $"{step}. Kat Hazinesi";
             }
         }
@@ -353,17 +353,114 @@ namespace RiskLoop.Game
             return text + $"\nBulgular: {run.Finds.Count}   En iyisi: {FindTitle(best)}";
         }
 
+        // ---------------- Güç ve risk göstergesi ----------------
+
+        public static string ThreatName(ThreatLevel t)
+        {
+            switch (t)
+            {
+                case ThreatLevel.Easy: return "<color=#3CCB5A>Kolay</color>";
+                case ThreatLevel.Medium: return "<color=#FFE03A>Orta</color>";
+                case ThreatLevel.Hard: return "<color=#FF9A2E>Zor</color>";
+                default: return "<color=#FF3B3B>ÖLÜMCÜL</color>";
+            }
+        }
+
+        /// <summary>"Gücün: 14. kat seviyesi · Bu kat: Kolay"</summary>
+        public static string PowerLine(int powerLevel, ThreatLevel threat, bool inCombat) =>
+            $"Savaş gücün: <b>{powerLevel}. kat</b> seviyesi   {(inCombat ? "Bu savaş" : "Sonraki kat")}: {ThreatName(threat)}";
+
+        /// <summary>Göçük açısından ortalama kaç kat daha.</summary>
+        public static string FloorsLeft(double floors) =>
+            floors >= 40 ? "Göçük riski: çok uzun süre dayanırsın" : $"Göçük hesabıyla ortalama <b>{floors:0.0}</b> kat daha dayanırsın";
+
+        /// <summary>Kumar satırı: kazanırsan / kaybedersen / olasılık + yorum.</summary>
+        public static string Gamble(double win, double lose, double chance, double ev)
+        {
+            string loseText = lose <= 0 ? $"<color={Gold}>0 (baret korur)</color>" : $"<color={AtRiskColor}>{Num(lose)}</color>";
+            string verdict;
+            if (lose <= 0) verdict = $"<color=#3CCB5A>Güvenli adım</color>";
+            else if (ev >= 0) verdict = "<color=#3CCB5A>Değer</color>";
+            else if (ev > -win) verdict = $"<color={Gold}>Kumar</color>";
+            else verdict = "<color=#FF3B3B>Çılgınlık</color>";
+            return $"Kazanırsan <color=#3CCB5A>+{Num(win)}</color> · Kaybedersen {loseText} (%{Pct(chance)})  {verdict}";
+        }
+
+        public static string SwingsLine(int swings) => $"Duvar: {swings} vuruş";
+
+        // ---------------- Oto-kazı ----------------
+
+        public const string AutoOn = "OTO-KAZ: AÇIK (A)";
+        public const string AutoOff = "OTO-KAZ (A)";
+        public static string AutoShields(bool on) => on ? "Baret bitince dur: AÇIK" : "Baret bitince dur: KAPALI";
+        public static string AutoRisk(int pct) => $"Risk %{pct}+ ise dur";
+        public static string AutoTier(int tier) => $"Dur: {RarityStyle.Colored(RarityStyle.Name(tier), tier)} ve üstü";
+        public static string AutoFight(bool on) => on ? "Oto savaş: AÇIK" : "Oto savaş: KAPALI";
+
+        public static string AutoStopped(string reason) => $"OTO-KAZ DURDU: {reason}";
+        public const string StopShields = "baret bitti";
+        public const string StopRisk = "risk sınırı aşıldı";
+        public const string StopBoss = "boss!";
+        public const string StopDanger = "tehlikeli canavar";
+        public const string StopLowHealth = "can azaldı";
+        public static string StopRareFind(int tier) => $"{RarityStyle.Name(tier)} bulgu!";
+
+        // ---------------- Geçitler ----------------
+
+        public static string StartFrom(int step) =>
+            step <= 0 ? "Başlangıç: Yüzey" : $"Başlangıç: {step}. kat ({MilestoneName(step)})";
+        public static string CheckpointUnlocked(int step) => $"<color={Gold}>GEÇİT AÇILDI: artık {step}. kattan başlayabilirsin!</color>";
+
+        // ---------------- Güçlendirme ----------------
+
+        public static string EnhanceButton(int nextLevel, double chance, double cost) =>
+            $"Güçlendir +{nextLevel}\n%{Pct(chance)} · {Num(cost)}";
+        public const string EnhanceMaxed = "MAKS +10";
+        public static string EnhanceSuccess(int level) => $"<color=#3CCB5A>BAŞARILI! Eşya artık +{level}</color>";
+        public static string EnhanceDowngrade(int level) => $"<color=#FF9A2E>Başarısız... seviye +{level}'e düştü</color>";
+        public const string EnhanceBroken = "<color=#FF3B3B>EŞYA KIRILDI! Kayboldu...</color>";
+        public const string EnhanceFailSafe = "<color=#FFE03A>Başarısız, ama eşya sağlam.</color>";
+        public static string EnhanceRiskNote(int current, int downgradeFrom, int breakFrom) =>
+            current >= breakFrom ? $"<color=#FF3B3B>Dikkat: başarısızlıkta eşya KIRILIR</color>"
+            : current >= downgradeFrom ? $"<color=#FF9A2E>Başarısızlıkta seviye düşer</color>"
+            : "Başarısızlıkta kayıp yok";
+
+        public static string PowerCompare(int now, int with) =>
+            with == now ? $"Savaş gücü: {now}. kat (değişmez)"
+            : with > now ? $"Savaş gücü: {now} → <color=#3CCB5A>{with}. kat</color>"
+            : $"Savaş gücü: {now} → <color=#FF5A4A>{with}. kat</color>";
+
+        public static string SwingsCompare(int now, int with) =>
+            with == now ? "" : with < now ? $"   Duvar: {now} → <color=#3CCB5A>{with} vuruş</color>" : $"   Duvar: {now} → <color=#FF5A4A>{with} vuruş</color>";
+
+        // ---------------- Yeni Çağ ----------------
+
+        public const string TabPrestige = "Yeni Çağ";
+        public static string PrestigeHeader(int age, double relics) => $"<b>{age}. Çağ</b>    Yadigar: <color={Gold}><b>{Num(relics)}</b></color>";
+        public static string PrestigeInfo(int minStep, int bestStep, double gain) =>
+            bestStep < minStep
+                ? $"Yeni Çağ {minStep}. kata ulaşınca açılır (rekor: {bestStep}).\nHer şey sıfırlanır, Yadigar kazanırsın. Kadim yükseltmeler sonsuza kadar kalır."
+                : $"Şimdi başlatırsan <color={Gold}>+{Num(gain)} Yadigar</color> kazanırsın.\nPara, yükseltmeler, eşyalar, rekor ve geçitler sıfırlanır. Kadim yükseltmeler kalır. Daha derin = çok daha fazla Yadigar.";
+        public static string PrestigeButton(double gain) => $"YENİ ÇAĞ BAŞLAT (+{Num(gain)} Yadigar)";
+        public const string PrestigeConfirm = "EMİN MİSİN? Her şey sıfırlanacak!\nTekrar bas";
+        public static string PrestigeDone(int age, double gained) => $"<color={Gold}>{age}. ÇAĞ BAŞLADI! +{Num(gained)} Yadigar</color>";
+        public static string RelicCostButton(double cost) => $"Al: {Num(cost)} Yadigar";
+
         // ---------------- Ekipman ekranı ----------------
         public const string TabUpgrades = "Yükseltmeler";
         public const string TabEquipment = "Ekipman";
         public const string EquipButton = "Kuşan";
         public const string UnequipButton = "Çıkar";
         public const string AutoEquipButton = "En iyileri kuşan";
+        public const string SellAllButton = "Çantayı sat";
+        public const string SellAllConfirm = "Emin misin? Tekrar bas";
+        public static string SoldAll(int count, double value) =>
+            count > 0 ? $"{count} eşya satıldı: +{Num(value)}" : "Çanta zaten boş.";
         public const string NoItemSelected = "Bir eşyaya tıkla: statlarını gör, kuşan ya da sat.";
         public static string SellButton(double value) => $"Sat: +{Num(value)}";
         public static string InventoryTitle(int count, int cap) => $"Envanter ({count}/{cap})";
         public static string ItemLevelLine(GearItem item, bool equipped) =>
-            $"{FantasyTexts.SlotName(item.slot)}  ·  Seviye {item.itemLevel}{(equipped ? "  ·  <color=#3CCB5A>KUŞANILDI</color>" : "")}";
+            $"{FantasyTexts.BaseName(item)}  ·  Seviye {item.itemLevel}{(equipped ? "  ·  <color=#3CCB5A>KUŞANILDI</color>" : "")}";
         public static string Sold(double value) => $"Satıldı: +{Num(value)}";
         public static string AutoEquipped(int changed) => changed > 0 ? $"{changed} eşya değiştirildi." : "Zaten en iyileri kuşanmışsın.";
 

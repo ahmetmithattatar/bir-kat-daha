@@ -42,7 +42,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < lifetime)
             {
-                float dt = Time.unscaledDeltaTime;
+                float dt = FxTime.Delta;
                 t += dt;
                 velocity.y += gravity * dt;
                 rt.anchoredPosition += velocity * dt;

@@ -251,8 +251,37 @@ namespace RiskLoop.Core
 
         // ---------------- Ekipman ----------------
 
-        /// <summary>Nadirlik çarpanı: sıradan x1, mor x3.</summary>
-        public static double GearRarityMult(CombatBalance c, int tier) => 1.0 + c.gearRarityStep * tier;
+        /// <summary>Nadirlik çarpanı: gearRarityGrowth^tier (1.22 ile mor x4.9).</summary>
+        public static double GearRarityMult(CombatBalance c, int tier) => Math.Pow(c.gearRarityGrowth, tier);
+
+        // ---------------- Kazı gücü ----------------
+
+        /// <summary>Duvar sertliği: derinlikle büyür.</summary>
+        public static double WallHardness(CombatBalance c, int step) =>
+            c.wallBaseHardness * Math.Pow(c.wallHardnessGrowth, Math.Max(step, 1) - 1);
+
+        /// <summary>Bu katın duvarını yıkmak için gereken kazma vuruşu (1..maxSwingsPerFloor).</summary>
+        public static int SwingsNeeded(CombatBalance c, int step, double digPower)
+        {
+            double swings = Math.Ceiling(WallHardness(c, step) / Math.Max(digPower, 0.1));
+            return (int)Math.Max(1, Math.Min(swings, c.maxSwingsPerFloor));
+        }
+
+        // ---------------- Güçlendirme ----------------
+
+        /// <summary>Bir sonraki seviyeye güçlendirme ücreti.</summary>
+        public static double EnhanceCost(CombatBalance c, GearItem item)
+        {
+            double baseValue = c.sellBase * Math.Pow(c.gearStatGrowth, Math.Max(item.itemLevel, 1) - 1) * Math.Pow(1 + item.tier, 1.5);
+            return Math.Ceiling(baseValue * c.enhanceCostMult * Math.Pow(c.enhanceCostGrowth, item.enhance));
+        }
+
+        /// <summary>Bir sonraki seviyeye çıkma şansı (0..1). Maks seviyedeyse 0.</summary>
+        public static double EnhanceChance(CombatBalance c, GearItem item)
+        {
+            if (item.enhance >= c.enhanceMax || item.enhance >= c.enhanceSuccess.Length) return 0;
+            return c.enhanceSuccess[item.enhance];
+        }
 
         /// <summary>
         /// Eşyadaki bir statın değeri. Düz statlar derinlikle üstel, yüzde statlar yavaş (doğrusal) büyür.
@@ -274,7 +303,8 @@ namespace RiskLoop.Core
         /// <summary>Satış fiyatı. Derin ve nadir eşya daha değerli.</summary>
         public static double GearSellValue(CombatBalance c, GearItem item)
         {
-            return Math.Ceiling(c.sellBase * Math.Pow(c.gearStatGrowth, Math.Max(item.itemLevel, 1) - 1) * Math.Pow(1 + item.tier, 1.5));
+            return Math.Ceiling(c.sellBase * Math.Pow(c.gearStatGrowth, Math.Max(item.itemLevel, 1) - 1) * Math.Pow(1 + item.tier, 1.5)
+                                * (1.0 + 0.5 * item.enhance));
         }
 
         /// <summary>
@@ -298,9 +328,10 @@ namespace RiskLoop.Core
                     case StatType.FindChance: score += s.value * 200 * scale; break;
                     case StatType.Luck: score += s.value * 100 * scale; break;
                     case StatType.GoldBonus: score += s.value * 120 * scale; break;
+                    case StatType.DigPower: score += s.value * 4.0; break;
                 }
             }
-            return score;
+            return score * item.EnhanceMult(c.enhanceStatBonus);
         }
 
         // ---------------- Yükseltmeler ----------------

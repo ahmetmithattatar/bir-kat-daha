@@ -64,17 +64,80 @@ namespace RiskLoop.Game.Art
             { "lava_elemental", new Look("elemental", "FF6A1A", "B03A0A", "FFE060") },
             { "magma_slime", new Look("slime", "E04A1A", "901A0A", "FFB040") },
             { "demon", new Look("imp", "A01A2A", "600A18", "FF8A30") },
-            { "hellhound", new Look("rat", "5A1A1A", "300A0A", "FF5A20") },
-            // Bosslar
+            { "hellhound", new Look("wolf", "5A1A1A", "300A0A", "FF5A20") },
+            // Yeni normal canavarlar
+            { "orc_scout", new Look("orc", "6A8A4A", "445A30", "6A4A2A") },
+            { "warg_pup", new Look("wolf", "7A6A5A", "4A3E34", "C04040") },
+            { "orc_warrior", new Look("orc", "5A7A3A", "38502A", "7A7A80") },
+            { "barrow_wight", new Look("wight", "A8C0B8", "6A8078", "5A6A70") },
+            { "cave_troll", new Look("troll", "7A8A7A", "4E5A4E", "6A4A2A") },
+            { "dark_warg", new Look("wolf", "3A3A40", "222226", "E05030") },
+            { "lake_tentacle", new Look("tentacle", "3A7A6A", "1E4A40", "E0E0A0") },
+            { "marsh_ghoul", new Look("wraith", "7A9A5A", "4A6A34", "D0E080") },
+            { "black_orc", new Look("orc", "3A4A3A", "222C22", "5A5A60") },
+            { "forge_troll", new Look("troll", "8A5A4A", "5A362A", "FF8A30") },
+            { "giant_spider", new Look("spider", "2A2A2A", "141414", "6A3A6A") },
+            { "cursed_dead", new Look("wight", "C8C0A0", "8A8268", "40C060") },
+            { "fire_drake", new Look("dragon", "E06A2A", "902A10", "FFD040") },
+            { "war_troll", new Look("troll", "6A6A8A", "40405A", "A03030") },
+            { "shadow_rider", new Look("wight", "2A2A3A", "16161E", "C04040") },
+            { "flame_wraith", new Look("wraith", "FF8A3A", "C04A1A", "FFF0A0") },
+
+            // ---- Boss havuzları ----
+            // 3. kat
             { "goblin_chief", new Look("goblin", "5A9A3A", "36602A", "D8B040") },
+            { "orc_captain", new Look("orc", "4A6A2A", "2E4418", "C8A040") },
+            { "rat_king", new Look("rat", "6A5A4A", "3E342A", "FFD040") },
+            { "slime_mother", new Look("slime", "3AA03A", "1E6A1E", "FFE060") },
+            { "warg_alpha", new Look("wolf", "9A9A9A", "5A5A5A", "FF4020") },
+            // 5. kat
             { "bone_lord", new Look("skeleton", "F0F0F0", "B0B0C0", "8040C0") },
+            { "spider_matron", new Look("spider", "4A2A4A", "2A162A", "E040A0") },
+            { "wight_thane", new Look("wight", "B8D0D0", "7A9090", "C8A040") },
+            { "orc_warlord", new Look("orc", "4A5A3A", "2A3420", "C03030") },
+            { "stone_troll", new Look("troll", "9A9A90", "62625A", "5A4A3A") },
+            // 10. kat
             { "crystal_golem", new Look("golem", "9A80E8", "5A40B0", "E0F0FF") },
+            { "troll_king", new Look("troll", "6A7A6A", "3E4A3E", "FFD040") },
+            { "crystal_wyrm", new Look("dragon", "8AC0F0", "4A80C0", "FFFFFF") },
+            { "pale_queen", new Look("wraith", "E0E8FF", "A0A8D0", "80C0FF") },
+            { "myconid_elder", new Look("mushroom", "8A3AA0", "5A1A6A", "E8DCC0") },
+            // 15. kat
             { "naga_queen", new Look("serpent", "2AB0A0", "16706A", "FFD040") },
+            { "lake_watcher", new Look("tentacle", "2A5A5A", "143434", "FFE040") },
+            { "drowned_king", new Look("skeleton", "7AA0A0", "4A7070", "FFD040") },
+            { "storm_spirit", new Look("elemental", "B0D0FF", "6080C0", "FFFFA0") },
+            { "marsh_hag", new Look("wraith", "6A8A4A", "3E5A2A", "E0A040") },
+            // 20. kat
             { "forge_king", new Look("golem", "B0603A", "70381E", "FFC040") },
+            { "black_orc_chief", new Look("orc", "2A3A2A", "141E14", "FFD040") },
+            { "iron_troll_lord", new Look("troll", "7A808A", "4A4E55", "FF8A30") },
+            { "imp_lord", new Look("imp", "C02A1A", "801A0A", "FFD040") },
+            { "ghost_king", new Look("wight", "E8D8A0", "A89860", "80E0FF") },
+            // 25. kat
             { "fossil_wyrm", new Look("dragon", "D8CCA8", "9A8E6A", "A8946A") },
+            { "barrow_king", new Look("wight", "90A8A0", "5A706A", "FFD040") },
+            { "great_spider", new Look("spider", "1A1A1A", "0A0A0A", "C02A2A") },
+            { "sand_wurm", new Look("worm", "C8A060", "8A6A30", "FF4030") },
+            { "mummy_lord", new Look("skeleton", "E0D0A0", "A09060", "40C0C0") },
+            // 30. kat
             { "elder_dragon", new Look("dragon", "C02A2A", "701616", "FFD040") },
+            { "gold_sleeper", new Look("dragon", "E8B830", "A07A10", "FFFFFF") },
+            { "dragon_priest", new Look("wraith", "8A1A2A", "500A18", "FFD040") },
+            { "war_troll_king", new Look("troll", "5A5A7A", "34344A", "FFD040") },
+            { "drake_mother", new Look("dragon", "6A2A8A", "3E1656", "FF8A30") },
+            // 35. kat
             { "lava_titan", new Look("elemental", "FF7A2A", "A03A0A", "FFFFA0") },
+            { "black_rider", new Look("wight", "1A1A24", "0A0A10", "FF2A2A") },
+            { "hell_warg", new Look("wolf", "3A0A0A", "200404", "FF6A20") },
+            { "magma_mother", new Look("slime", "FF5A1A", "A02A0A", "FFE060") },
+            { "demon_lord", new Look("imp", "6A0A1A", "3A040E", "FFA030") },
+            // 40. kat
             { "core_devourer", new Look("imp", "4A2A7A", "28164A", "C080FF") },
+            { "shadow_flame", new Look("imp", "1E1A1A", "0A0808", "FF6A1A") },
+            { "world_serpent", new Look("serpent", "2A4A3A", "142A1E", "E8C040") },
+            { "root_watcher", new Look("tentacle", "4A3A2A", "2A2016", "80FF80") },
+            { "ancient_lich", new Look("wraith", "3A4A6A", "1E2A40", "60FFE0") },
         };
 
         private static readonly Dictionary<string, string[]> Templates = new Dictionary<string, string[]>
@@ -144,6 +207,31 @@ namespace RiskLoop.Game.Art
                 "....KAAAAAAK....", "....KARAARAK....", "....KAAAAAAK....", ".....KAWWAK.....",
                 "..KKKKAAAAKKKK..", ".KCCKAAAAAAKCCK.", "KCCCKAAAAAAKCCCK", ".KKK.KAAAAK.KKK.",
                 ".....KAKKAK.....", ".....KAK.KAK....", "....KKK...KKK...", "................" } },
+            { "orc", new[] {
+                "................", "....KKKKKKKK....", "...KAAAAAAAAK...", "..KAAKKAAKKAAK..",
+                "..KAARKAAKRAAK..", "..KAAAAAAAAAAK..", "...KAWKAAKWAK...", "...KAAAAAAAAK...",
+                "..KKCCCCCCCCKK..", ".KAKCCCKKCCCKAK.", ".KAKCCCCCCCCKAK.", ".KKKCCKKKKCCKKK.",
+                "....KAAK.KAAK...", "....KaaK.KaaK...", "...KKKKK.KKKKK..", "................" } },
+            { "troll", new[] {
+                "....KKKKKKKK....", "...KAAAAAAAAK...", "..KAAAAAAAAAAK..", "..KAKRKAAKRKAK..",
+                "..KAAAAAAAAAAK..", "..KAAKWKKWKAAK..", ".KKAAAAAAAAAAKK.", "KAAKaAAAAAAaKAAK",
+                "KAAKaAAAAAAaKAAK", "KAAKAAAAAAAAKAAK", "KKKKCCCCCCCCKKKK", "...KCCCCCCCCK...",
+                "...KAAAKKAAAK...", "...KAAAKKAAAK...", "..KKKKKK.KKKKK..", "................" } },
+            { "wolf", new[] {
+                "................", "................", "..K.K...........", ".KAKAK..........",
+                ".KAAAAK.........", "KRAAAAAKKKKKKK..", "KAAAAAAAAAAAAAK.", "KWKAAAAAAAAAAAAK",
+                ".KKKAAAAAAAaAAAK", "...KAAaaaaaaAAK.", "...KAAK.KK.KAAK.", "...KAK......KAK.",
+                "...KaK......KaK.", "...KKK......KKK.", "................", "................" } },
+            { "wight", new[] {
+                "......KKKK......", ".....KCCCCK.....", "....KCCCCCCK....", "....KCKKKKCK....",
+                "....KCKRRKCK....", "....KCCCCCCK....", "..KKKKCCCCKKKK..", ".KCCKAAAAAAKCCK.",
+                ".KCAKAAAAAAKACK.", ".KCAKAaAAaAKACK.", "..KKKAAAAAAKKK..", "....KAAKKAAK....",
+                "....KAAK.KAAK...", "....KAAK.KAAK...", "...KKKKK.KKKKK..", "................" } },
+            { "tentacle", new[] {
+                "................", "......KKKK......", ".....KAAAAK.....", "....KAWRRWAK....",
+                "....KARRRRAK....", ".....KAAAAK.....", "..K...KAAK...K..", ".KAK..KAAK..KAK.",
+                ".KAAK.KAAK.KAAK.", "..KAAKKAAKKAAK..", "...KAAAAAAAAK...", "..KAaAAaaAAaAK..",
+                ".KAaKKAaaAKKaAK.", ".KAK.KAaaAK.KAK.", "..K...KKKK...K..", "................" } },
             { "dragon", new[] {
                 "................", "..KK........KK..", ".KCCK......KCCK.", ".KCCCK.KK.KCCCK.",
                 "..KCCKKAAKKCCK..", "...KKAAAAAAKK...", "....KARAARAAK...", "....KAAAAAAAAK..",

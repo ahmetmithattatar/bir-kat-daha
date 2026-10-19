@@ -52,7 +52,7 @@ namespace RiskLoop.Core
                 itemLevel = step
             };
 
-            // 3) Taban statlar
+            // 3) Taban statlar (düz statlar seviyeyle üstel, yüzde statlar yavaş büyür)
             foreach (StatValue s in baseDef.stats)
             {
                 item.stats.Add(new StatValue(s.stat, RiskMath.GearStatValue(c, s, baseDef.statMult, tier, step)));
@@ -154,6 +154,62 @@ namespace RiskLoop.Core
             Progress.inventory.Remove(item);
             Progress.money += value;
             return value;
+        }
+
+        /// <summary>Envanterdeki (kuşanılmamış) tüm eşyaları sat. Toplam satış fiyatını döndürür.</summary>
+        public double SellAllInventory(out int count)
+        {
+            count = 0;
+            if (!CanManageGear) return 0;
+            double total = 0;
+            foreach (GearItem item in Progress.inventory) total += SellValue(item);
+            count = Progress.inventory.Count;
+            Progress.inventory.Clear();
+            Progress.money += total;
+            return total;
+        }
+
+        // ---------------- Güçlendirme ----------------
+
+        public double EnhanceCost(GearItem item) => RiskMath.EnhanceCost(Balance.combat, item);
+        public double EnhanceChance(GearItem item) => RiskMath.EnhanceChance(Balance.combat, item);
+        public bool CanEnhance(GearItem item) =>
+            CanManageGear && item != null && item.enhance < Balance.combat.enhanceMax && Progress.money >= EnhanceCost(item);
+
+        /// <summary>
+        /// Eşyayı güçlendirmeyi dene (+1). Ücret her durumda ödenir.
+        /// Başarısızlıkta: yüksek seviyede 1 düşer, çok yüksek seviyede eşya KIRILIR (kuşanılmışsa da).
+        /// </summary>
+        public EnhanceResult Enhance(long uid)
+        {
+            GearItem item = FindItem(uid);
+            var result = new EnhanceResult();
+            if (!CanEnhance(item)) return result;
+
+            CombatBalance c = Balance.combat;
+            result.Attempted = true;
+            result.Cost = EnhanceCost(item);
+            result.Chance = EnhanceChance(item);
+            Progress.money -= result.Cost;
+
+            if (_random.NextDouble() < result.Chance)   // ZAR: güçlendirme
+            {
+                item.enhance++;
+                result.Success = true;
+            }
+            else if (item.enhance >= c.enhanceBreakFrom)
+            {
+                Progress.inventory.Remove(item);
+                Progress.equipped.Remove(item);
+                result.Destroyed = true;
+            }
+            else if (item.enhance >= c.enhanceDowngradeFrom)
+            {
+                item.enhance--;
+                result.Downgraded = true;
+            }
+            result.NewLevel = item.enhance;
+            return result;
         }
 
         /// <summary>Her yuva için en yüksek güç puanlı eşyayı kuşanır. Kaç eşya değiştiğini döndürür.</summary>

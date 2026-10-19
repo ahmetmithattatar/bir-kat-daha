@@ -77,6 +77,14 @@ namespace RiskLoop.Core
         public double playerBaseCritDamage = 1.5;      // Kritik vuruş = saldırı x 1.5
         public double playerAttackCooldown = 0.16;     // İki vuruş arası en az süre (sn). Tık spamını sınırlar
         public double damageVariance = 0.10;           // Hasar +-%10 oynar
+        public double playerBaseDigPower = 1.0;        // Kazmasız kazı gücü
+
+        // --- Duvar sertliği: gereken vuruş = ceil(sertlik / kazı gücü), 1..maxSwingsPerFloor ---
+        // sertlik(step) = wallBaseHardness * wallHardnessGrowth^(step-1). Kazmalar derinlikle daha hızlı büyür (1.14):
+        // yeni kazma bulmak kazıyı gözle görülür hızlandırır.
+        public double wallBaseHardness = 3.0;
+        public double wallHardnessGrowth = 1.07;
+        public int maxSwingsPerFloor = 8;
 
         // Savunma: alınan hasar = saldırı * (1 - def / (def + defenseFactor * saldırı))
         // Ölçekten bağımsız: savunma, canavar saldırısının 5 katıysa hasar yarıya iner.
@@ -113,15 +121,38 @@ namespace RiskLoop.Core
         public int bossDrops = 2;
 
         // --- Ekipman ---
-        // Düz statlar (Saldırı, Can, Savunma): taban * malzeme * nadirlik * gearStatGrowth^(itemLevel-1)
-        // Yüzde statlar: taban * nadirlik * (1 + pctStatPerLevel*(itemLevel-1))
-        // nadirlik = 1 + gearRarityStep * tier   (mor = x3)
+        // Düz statlar (Saldırı, Can, Savunma, Kazı gücü): taban * malzeme * nadirlik * gearStatGrowth^(itemLevel-1)
+        // Yüzde statlar: taban * malzeme * nadirlik * (1 + pctStatPerLevel*(itemLevel-1))
+        // nadirlik = gearRarityGrowth ^ tier   (1.22: mavi x1.5, yeşil x2.2, kırmızı x4, mor x4.9). Seviyeler arası fark hissedilir.
         // Ek rastgele stat sayısı = tier / 2  (mor = 4)
         public double gearStatGrowth = 1.14;
-        public double gearRarityStep = 0.25;
+        public double gearRarityGrowth = 1.22;
         public double pctStatPerLevel = 0.02;
-        public double sellBase = 5;                    // Satış = sellBase * gearStatGrowth^(lvl-1) * (1+tier)^1.5
+        public double sellBase = 5;                    // Satış = sellBase * gearStatGrowth^(lvl-1) * (1+tier)^1.5 * güçlendirme
         public int inventoryCap = 32;
+
+        // --- Güçlendirme (+1 .. +10). Shaiya tarzı: şans düşer, yüksek seviyede başarısızlık acıtır ---
+        // Her seviye tüm statları +%10. Ücret = satış değeri * enhanceCostMult * enhanceCostGrowth^seviye
+        // Başarısızlık: seviye >= enhanceDowngradeFrom ise 1 düşer; seviye >= enhanceBreakFrom ise eşya KIRILIR (yok olur).
+        public int enhanceMax = 10;
+        public double enhanceStatBonus = 0.10;
+        public double enhanceCostMult = 2.0;
+        public double enhanceCostGrowth = 1.6;
+        public int enhanceDowngradeFrom = 4;
+        public int enhanceBreakFrom = 7;
+        public double[] enhanceSuccess = { 0.95, 0.90, 0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25, 0.15 };
+
+        // --- Güç göstergesi (InsightMath) ---
+        // Oyuncu saniyede kaç vuruş yapar (tahmini; animasyon + bekleme). Tehdit = canavarı öldürene kadar alınan hasar / can.
+        public double estimatedSecondsPerAttack = 0.3;
+        public double threatEasy = 0.2;      // < %20 can kaybı: Kolay
+        public double threatMedium = 0.5;    // < %50: Orta
+        public double threatHard = 1.0;      // < %100: Zor, üstü Ölümcül
+        // Ortalama boss çarpanları (havuzların ortalaması), güç seviyesi hesabı için
+        public double avgMiniBossHpMult = 3.6;
+        public double avgMiniBossAtkMult = 1.3;
+        public double avgBossHpMult = 6.8;
+        public double avgBossAtkMult = 1.55;
 
         public StatValue[] affixPool = DefaultContent.AffixPool();
         public GearBaseDefinition[] gearBases = DefaultContent.GearBases();
@@ -170,6 +201,7 @@ namespace RiskLoop.Core
         public bool HasFind;                                  // Katın (ertelenmiş) bulgusu
         public FindResult Find;
         public List<FindResult> Drops = new List<FindResult>();  // Düşen eşyalar (Type = Gear)
+        public bool UnlockedCheckpoint;                       // Bu zaferle yeni bir geçit açıldı mı?
     }
 
     /// <summary>Oyuncunun bir vuruşu.</summary>
@@ -179,6 +211,24 @@ namespace RiskLoop.Core
         public bool Crit;
         public bool Killed;
         public VictoryResult Victory;  // Killed ise dolu
+    }
+
+    /// <summary>Güçlendirme denemesinin sonucu.</summary>
+    public struct EnhanceResult
+    {
+        public bool Attempted;   // Para yetmediyse ya da maks seviyedeyse false
+        public bool Success;
+        public bool Downgraded;
+        public bool Destroyed;
+        public int NewLevel;
+        public double Cost;
+        public double Chance;
+    }
+
+    /// <summary>Tehdit seviyesi (güç göstergesi).</summary>
+    public enum ThreatLevel
+    {
+        Easy, Medium, Hard, Deadly
     }
 
     /// <summary>Canavarın bir vuruşu.</summary>

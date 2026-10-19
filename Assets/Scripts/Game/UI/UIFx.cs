@@ -4,7 +4,7 @@ using UnityEngine;
 namespace RiskLoop.Game.UI
 {
     /// <summary>
-    /// Küçük animasyon yardımcıları (coroutine). Hepsi Time.unscaledDeltaTime kullanır.
+    /// Küçük animasyon yardımcıları (coroutine). Hepsi FxTime.Delta kullanır.
     /// Kullanım: StartCoroutine(UIFx.Punch(rectTransform, 0.2f, 0.25f));
     /// Coroutine = Python'daki generator gibi: her "yield return null" bir kare bekler.
     /// </summary>
@@ -18,7 +18,7 @@ namespace RiskLoop.Game.UI
             while (t < duration)
             {
                 if (target == null) yield break;
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float k = Mathf.Sin(Mathf.Clamp01(t / duration) * Mathf.PI);  // 0 -> 1 -> 0
                 target.localScale = baseScale * (1f + amount * k);
                 yield return null;
@@ -37,7 +37,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < duration)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 float fade = 1f - Mathf.Clamp01(t / duration);
                 target.anchoredPosition = home + Random.insideUnitCircle * strength * fade;
                 yield return null;
@@ -51,7 +51,7 @@ namespace RiskLoop.Game.UI
             float t = 0f;
             while (t < seconds)
             {
-                t += Time.unscaledDeltaTime;
+                t += FxTime.Delta;
                 yield return null;
             }
         }
