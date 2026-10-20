@@ -45,8 +45,10 @@ nadirlik açılışı sadece ilk seferde uzun, özellikler seviyeyle açılsın,
 - **Seviye ve XP (`ProgressionBalance`, `GameSession.Progression.cs`):** kat başı `xpPerFloor*bölge`, öldürme `xpPerKill*bölge`,
   boss `xpPerBoss*bölge`. Gereken XP `xpBase*xpGrowth^(seviye-1)`. Seviye ve yetenekler Yeni Çağda da KALIR. Kadim Bilgelik XP çarpanı.
 - **Özellik kilitleri (`Feature`):** Yetenekler 2, Ekipman/ganimet 3, Sigorta + Dedektör 4, Geçitler 5, Güçlendirme 6, Fener + Terazi 7,
-  Özel bulgular (harita/kristal/put) 8, Yeni Çağ 12 (+ 30. kat rekoru). Kilitli şey görünür ama soluk: "Sv X'te açılır" (merak + hedef).
-  Seviye penceresi yeni özelliği yazar ve okunana kadar bekler. Yükseltme ekranında "Sıradaki özellik: ..." satırı.
+  Özel bulgular (harita/kristal/put) 8, Yeni Çağ 12 (+ 30. kat rekoru). **Kilitli şey HİÇ görünmez** (8. tur kararı): sekme, yükseltme satırı,
+  stat kartı (sigorta), güçlendirme notu ve ipuçlarındaki bahisler (`RunTooltips.If`) açılana kadar gizli. Açıldığında oyuna yeni bir boyut
+  gelmiş hissi. Seviye penceresi yeni özelliği yazar ve okunana kadar bekler. Yükseltme ekranında sadece "Seviye N'de yeni bir şey açılacak..."
+  (ne olduğu söylenmez: merak + hedef).
 - **Yetenek ağacı (`TalentBalance`, 21 düğüm, her seviye 1 puan):** 3 dal x 4 sıra; bir dala 5 puan harcayınca sonraki sıra açılır,
   en alttaki tek düğüm dalın imzası. Cüce Madenci (kazı gücü, risk, kat ödülü, bulgu, sigorta, enkaz; imza Dağın Kalbi: bölgenin ilk 5 katında
   risk -%50), Kılıç Ustası (saldırı, can, kritik, savunma, can çalma, öfke yavaşlatma; imza Kral Katili: bosslara +%40), Ejder Avcısı
@@ -115,7 +117,8 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
   - Statlar: Saldırı, Can, Savunma, Kritik şansı (maks %60), Kritik hasarı, Göçük direnci (maks %40, taban riskin altına inemez),
     Bulgu şansı, Şans, Altın bonusu (maks +%300). Kazı statları `GameSession`'da kazıya uygulanır.
   - Turda düşen eşya `RunState.PendingLoot` (risk altında) → yüzeye dönünce envantere (32 yer; doluysa otomatik satılır).
-  - Envanter işlemleri sadece turlar arası: Kuşan / Çıkar / Sat / "En iyileri kuşan" (`RiskMath.GearPowerScore`).
+  - Envanter işlemleri sadece turlar arası: Kuşan / Çıkar / Sat / Çantayı sat. "En iyileri kuşan" 8. turda KALDIRILDI:
+    oyuncu düşen eşyanın gücünü kendisi değerlendirsin (detayda "Savaş gücü 14 → 17" karşılaştırması kalır).
 - Görsel: kazı sahnesinde canavar delikten büyüyerek çıkar (boss: aura, kükreme sarsıntısı), üstünde isim + can barı.
   Sol altta elde silah (kazmanın aynası), sahnenin üstünde oyuncu can barı. Vuruş: silah sallanır, canavar kızarır/sarsılır, hasar sayısı
   (kritik: sarı "KRİTİK!"). Canavar saldırısı: kameraya atılır, ekran kızarır, -hasar. Ölüm: parçalanır, ödül, bulgu ve ganimet tek tek açılır.
@@ -168,6 +171,8 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
   Amaç: oyuncunun kendine "şu kata kadar in, dön" hedefi koyması (geliştiricinin kendi stratejisi). Keşif katı bu hedefi doğal kılıyor,
   bir önceki katta "bir tane daha" gerilimi yaratıyor.
 - Koleksiyon: aynı tür + aynı nadirlik tek kartta birikir (×adet, toplam etki), en nadir solda. 9 kutu, fazlası "+N daha". Ekipmanlar yuvaya göre de ayrılır.
+  Kartın üstüne fareyle gelince grubun toplam etkisi ve risk altında mı / cepte mi yazar (`UIStrings.FindGroupTooltip`). Amaç: kristal ya da
+  damar gelince oyuncu turun değerini görüp risk almaya istekli olsun. Kristaller birleşik çarpanla gösterilir.
 
 ## Yükseltmeler (6)
 | Tür | UI adı | Etki | Birikim |
@@ -209,7 +214,7 @@ Assets/Scripts/
     RiskMath.cs        Saf formüller (durumsuz, zar dışarıdan). Python'a birebir taşınacak dosya
     GameSession.cs     Kurallar (partial): tur, kazı, bulgular, yükseltmeler
     GameSession.Combat.cs  Canavar çıkışı, Attack / MonsterAttack, zafer ve ganimet
-    GameSession.Gear.cs    Eşya üretimi (RollGearItem), envanter, kuşan/çıkar/sat, otomatik kuşan, çantayı sat, güçlendirme
+    GameSession.Gear.cs    Eşya üretimi (RollGearItem), envanter, kuşan/çıkar/sat, çantayı sat, güçlendirme
     GameSession.Prestige.cs  Yeni Çağ, Yadigar, Kadim yükseltmeler
     GameSession.Insight.cs   Savaş gücü, tehdit, boss katına ulaşma, kumar oranı (hiçbir şeyi değiştirmez)
     GameSession.Progression.cs  XP, seviye, özellik kilitleri (IsUnlocked), yetenek ağacı (öğren, sıfırla, toplam bonus)

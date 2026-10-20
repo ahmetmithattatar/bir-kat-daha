@@ -94,7 +94,7 @@ namespace RiskLoop.Game.UI
                 int step = Mathf.Max(1, session.Progress.bestStep);
                 compare += UIStrings.SwingsCompare(session.SwingsWith(null, step), session.SwingsWith(item, step));
             }
-            compare += "\n" + UIStrings.EnhanceRiskNote(item.enhance, c.enhanceDowngradeFrom, c.enhanceBreakFrom);
+            if (session.IsUnlocked(Feature.Enhance)) compare += "\n" + UIStrings.EnhanceRiskNote(item.enhance, c.enhanceDowngradeFrom, c.enhanceBreakFrom);
             compareText.text = compare;
 
             equipButton.gameObject.SetActive(true);

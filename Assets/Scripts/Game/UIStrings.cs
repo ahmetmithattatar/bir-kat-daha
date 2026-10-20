@@ -225,6 +225,46 @@ namespace RiskLoop.Game
             }
         }
 
+        /// <summary>
+        /// Koleksiyondaki kartın ipucu (fareyle üstüne gelince): grubun toplam etkisi ve risk altında mı, cepte mi.
+        /// Oyuncu turun neye değdiğini görsün: "kristal geldi, kazancım x1.5, şimdi dönmek mi daha derin mi?"
+        /// value: grubun toplam etkisi (Sağlam kaya ve kristalde birleşik çarpan - 1).
+        /// </summary>
+        public static string FindGroupTooltip(FindResult sample, double value, int count)
+        {
+            string title = FindTitle(sample) + (count > 1 ? $"  ×{count}" : "");
+            string body;
+            switch (sample.Type)
+            {
+                case FindType.Treasure:
+                    body = $"Tur kazancına <b>+{Num(value)}</b>\n<color={AtRiskColor}>Risk altında: göçükte gider, yüzeye dönünce cebe girer</color>"; break;
+                case FindType.SafeCache:
+                    body = $"<b>+{Num(value)}</b> doğrudan cebe girdi\n<color=#3CCB5A>Güvende: göçükte bile kaybolmaz</color>"; break;
+                case FindType.ProfitBoost:
+                    body = $"Bu tur bütün kat ödülleri <b>+%{Pct(value)}</b>\nNe kadar derine inersen o kadar çok kazandırır"; break;
+                case FindType.Safety:
+                    body = $"Bu tur göçük riski <b>-%{Pct(value)}</b> (taban riskin altına inmez)"; break;
+                case FindType.LuckCharm:
+                    body = $"Bu tur nadir bulgu şansı <b>+%{Pct(value)}</b>"; break;
+                case FindType.FindStreak:
+                    body = $"Toplam <b>{(int)value}</b> katta bulgu garantisi verdi"; break;
+                case FindType.Multiplier:
+                    body = $"Risk altındaki kazanç <b>x{1 + value:0.00}</b> oldu (bulunduğu anda)\n<color={AtRiskColor}>Çarpılan kazanç da risk altında</color>"; break;
+                case FindType.CursedTreasure:
+                    body = $"Tur kazancına <b>+{Num(value)}</b>, ama <color={AtRiskColor}>bu tur göçük riski arttı</color>"; break;
+                case FindType.Gear:
+                    body = sample.Item != null
+                        ? $"{FantasyTexts.GearStatShort(sample.Item)}\n<color={AtRiskColor}>Yüzeye dönünce envantere girer, göçükte kaybolur</color>"
+                        : "";
+                    break;
+                default: body = ""; break;
+            }
+            return $"<b>{title}</b>\n{body}";
+        }
+
+        public static string FindOverflowTooltip(int hiddenGroups) =>
+            $"Yer kalmadı: {hiddenGroups} grup daha var.\nEn nadir bulgular solda gösterilir.";
+
         // Nadirliğe göre heyecan cümleleri (açılır pencerede). Her seviyede birkaç seçenek var.
         private static readonly string[][] TierHypeLines =
         {
@@ -435,11 +475,8 @@ namespace RiskLoop.Game
             return text;
         }
 
-        public static string LockedShort(int level) => $"Sv {level}";
-        public static string LockedTip(Feature f, int level) => $"<b>{FeatureName(f)}</b>\nSeviye {level}'te açılır. {FeatureHint(f)}";
-        public static string LockedButton(int level) => $"Seviye {level}'te açılır";
-        public static string NextUnlockLine(Feature? f, int level) =>
-            f.HasValue ? $"Sıradaki özellik: <b>{FeatureName(f.Value)}</b> (Sv {level})" : "Tüm özellikler açık";
+        /// <summary>Ne açılacağını SÖYLEMEZ, sadece ne zaman: merak + hedef. 0 = hepsi açık.</summary>
+        public static string NextUnlockTeaser(int level) => level > 0 ? $"Seviye {level}'de yeni bir şey açılacak..." : "";
 
         public static string FirstOfTierLine(int tier) =>
             $"<color={Gold}>İLK {RarityStyle.Name(tier).ToUpper()}!</color> Bu nadirliği ilk kez buldun.";
@@ -590,7 +627,6 @@ namespace RiskLoop.Game
         public const string TabEquipment = "Ekipman";
         public const string EquipButton = "Kuşan";
         public const string UnequipButton = "Çıkar";
-        public const string AutoEquipButton = "En iyileri kuşan";
         public const string SellAllButton = "Çantayı sat";
         public const string SellAllConfirm = "Emin misin? Tekrar bas";
         public static string SoldAll(int count, double value) =>
@@ -601,7 +637,6 @@ namespace RiskLoop.Game
         public static string ItemLevelLine(GearItem item, bool equipped) =>
             $"{FantasyTexts.BaseName(item)}  ·  Seviye {item.itemLevel}{(equipped ? "  ·  <color=#3CCB5A>KUŞANILDI</color>" : "")}";
         public static string Sold(double value) => $"Satıldı: +{Num(value)}";
-        public static string AutoEquipped(int changed) => changed > 0 ? $"{changed} eşya değiştirildi." : "Zaten en iyileri kuşanmışsın.";
 
         // ---------------- Yükseltmeler ----------------
         public static string UpgradeName(UpgradeType type)

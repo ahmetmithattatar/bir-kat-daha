@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace RiskLoop.Game.UI
 {
-    /// <summary>Yükseltme ekranındaki tek bir satır: ad, seviye, etki ve "Al" butonu. Kilitliyse "Seviye X'te açılır".</summary>
+    /// <summary>Yükseltme ekranındaki tek bir satır: ad, seviye, etki ve "Al" butonu. Kilitliyse gizlidir.</summary>
     public class UpgradeRowView : MonoBehaviour
     {
         [SerializeField] private UpgradeType upgradeType;
@@ -23,16 +23,11 @@ namespace RiskLoop.Game.UI
 
         public void Refresh(GameSession session)
         {
-            // Henüz açılmamış yükseltme: adı görünür (merak), etkisi ve butonu kilitli
+            // Henüz açılmamış yükseltme hiç görünmez: açıldığında "yeni bir şey geldi" hissi
             Feature? feature = GameSession.UpgradeFeatureOf(upgradeType);
-            if (feature.HasValue && !session.IsUnlocked(feature.Value))
-            {
-                int unlock = session.UnlockLevel(feature.Value);
-                infoText.text = $"<color=#777788><b>{UIStrings.UpgradeName(upgradeType)}</b>\n{UIStrings.FeatureHint(feature.Value)}</color>";
-                buyButtonText.text = UIStrings.LockedButton(unlock);
-                buyButton.interactable = false;
-                return;
-            }
+            bool unlocked = !feature.HasValue || session.IsUnlocked(feature.Value);
+            gameObject.SetActive(unlocked);
+            if (!unlocked) return;
 
             int level = session.GetUpgradeLevel(upgradeType);
             int maxLevel = session.Balance.GetUpgrade(upgradeType).maxLevel;

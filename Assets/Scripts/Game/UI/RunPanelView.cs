@@ -125,10 +125,9 @@ namespace RiskLoop.Game.UI
             chips[ChipReward].Set("SONRAKİ", $"+{UIStrings.Num(session.NextStepReward)}", RunTooltips.Good, RunTooltips.NextReward(session));
             chips[ChipFind].Set("BULGU", find >= 1 ? "GARANTİ" : $"%{UIStrings.Pct(find)}", find >= 1 ? RunTooltips.Warn : RunTooltips.Info, RunTooltips.FindChance(session));
             chips[ChipMonster].Set("CANAVAR", monster >= 1 ? "BOSS!" : $"%{UIStrings.Pct(monster)}", monster >= 1 ? RunTooltips.Danger : RunTooltips.Neutral, RunTooltips.MonsterChance(session));
-            if (session.IsUnlocked(Feature.Insurance))
-                chips[ChipInsurance].Set("SİGORTA", $"%{UIStrings.Pct(session.InsuranceFraction)}", RunTooltips.Info, RunTooltips.Insurance(session));
-            else
-                chips[ChipInsurance].Set("SİGORTA", UIStrings.LockedShort(session.UnlockLevel(Feature.Insurance)), RunTooltips.Neutral, UIStrings.LockedTip(Feature.Insurance, session.UnlockLevel(Feature.Insurance)));
+            // Sigorta açılmadan kartı da görünmez
+            chips[ChipInsurance].gameObject.SetActive(session.IsUnlocked(Feature.Insurance));
+            chips[ChipInsurance].Set("SİGORTA", $"%{UIStrings.Pct(session.InsuranceFraction)}", RunTooltips.Info, RunTooltips.Insurance(session));
             chips[ChipDig].Set("DUVAR", $"{session.NextSwingsNeeded} vuruş", RunTooltips.Neutral, RunTooltips.Dig(session));
             chips[ChipLuck].Set("ŞANS", $"+%{UIStrings.Pct(session.LuckBonus)}", session.PityLuck > 0 ? RunTooltips.Info : RunTooltips.Neutral, RunTooltips.Luck(session));
             chips[ChipAttack].Set("SALDIRI", UIStrings.Num(session.Stats.Attack), RunTooltips.Neutral, RunTooltips.Combat(session));

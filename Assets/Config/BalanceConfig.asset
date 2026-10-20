@@ -15,23 +15,1879 @@ MonoBehaviour:
   data:
     startingMoney: 0
     baseStepReward: 10
-    stepMultiplierGrowth: 1.25
-    baseBustChance: 0.05
-    bustChancePerStep: 0.04
+    stepMultiplierGrowth: 1.12
+    zoneSize: 10
+    baseBustChance: 0.04
+    bustChancePerZoneFloor: 0.025
+    bustChancePerZone: 0.01
     minBustChance: 0.01
+    bustFloorPerZoneFloor: 0.012
+    bustFloorPerZone: 0.005
     maxBustChance: 0.95
+    maxRunProfitBonus: 2
+    minRunSafetyFactor: 0.5
+    findChanceBase: 0.3
+    findChancePerStep: 0.005
+    maxFindChance: 0.9
+    luckPerStep: 0.012
+    maxRunLuck: 1.5
+    rarityTiers:
+    - weight: 100
+      power: 1
+    - weight: 30
+      power: 1.6
+    - weight: 9
+      power: 2.5
+    - weight: 2.7
+      power: 4
+    - weight: 0.8
+      power: 6.5
+    - weight: 0.24
+      power: 10
+    - weight: 0.07
+      power: 16
+    - weight: 0.02
+      power: 26
+    - weight: 0.006
+      power: 45
+    treasureFind:
+      weight: 40
+      baseValue: 1.5
+      minTier: 0
+    safeCacheFind:
+      weight: 20
+      baseValue: 0.8
+      minTier: 0
+    profitBoostFind:
+      weight: 18
+      baseValue: 0.04
+      minTier: 0
+    safetyFind:
+      weight: 15
+      baseValue: 0.03
+      minTier: 0
+    maxSafetyFindReduction: 0.5
+    pityLuckPerStack: 0.12
+    maxPityStacks: 5
+    bustSalvageChance: 0.5
+    luckCharmFind:
+      weight: 10
+      baseValue: 0.06
+      minTier: 0
+    findStreakFind:
+      weight: 6
+      baseValue: 1
+      minTier: 1
+    multiplierFind:
+      weight: 5
+      baseValue: 0.1
+      minTier: 2
+    cursedTreasureFind:
+      weight: 5
+      baseValue: 4
+      minTier: 2
+    gearFind:
+      weight: 12
+      baseValue: 0
+      minTier: 0
+    streakStepsPerTier: 0.5
+    maxMultiplierFindBonus: 2
+    cursedRiskIncrease: 0.15
+    maxRunSafetyFactor: 1.6
+    milestones:
+    - step: 10
+      minTier: 2
+      firstReachRewardSteps: 3
+      bossPool:
+      - goblin_chief
+      - orc_captain
+      - rat_king
+      - slime_mother
+      - warg_alpha
+    - step: 20
+      minTier: 3
+      firstReachRewardSteps: 4
+      bossPool:
+      - bone_lord
+      - spider_matron
+      - wight_thane
+      - orc_warlord
+      - stone_troll
+    - step: 30
+      minTier: 3
+      firstReachRewardSteps: 5
+      bossPool:
+      - crystal_golem
+      - troll_king
+      - crystal_wyrm
+      - pale_queen
+      - myconid_elder
+    - step: 40
+      minTier: 4
+      firstReachRewardSteps: 6
+      bossPool:
+      - naga_queen
+      - lake_watcher
+      - drowned_king
+      - storm_spirit
+      - marsh_hag
+    - step: 50
+      minTier: 5
+      firstReachRewardSteps: 8
+      bossPool:
+      - forge_king
+      - black_orc_chief
+      - iron_troll_lord
+      - imp_lord
+      - ghost_king
+    - step: 60
+      minTier: 6
+      firstReachRewardSteps: 10
+      bossPool:
+      - fossil_wyrm
+      - barrow_king
+      - great_spider
+      - sand_wurm
+      - mummy_lord
+    - step: 70
+      minTier: 7
+      firstReachRewardSteps: 12
+      bossPool:
+      - elder_dragon
+      - gold_sleeper
+      - dragon_priest
+      - war_troll_king
+      - drake_mother
+    - step: 80
+      minTier: 8
+      firstReachRewardSteps: 15
+      bossPool:
+      - lava_titan
+      - black_rider
+      - hell_warg
+      - magma_mother
+      - demon_lord
+    - step: 90
+      minTier: 8
+      firstReachRewardSteps: 20
+      bossPool:
+      - core_devourer
+      - shadow_flame
+      - world_serpent
+      - root_watcher
+      - ancient_lich
+    combat:
+      playerBaseAttack: 10
+      playerBaseHealth: 100
+      playerBaseDefense: 0
+      playerBaseCritChance: 0.05
+      playerBaseCritDamage: 1.5
+      playerAttackCooldown: 0.16
+      damageVariance: 0.1
+      playerBaseDigPower: 1
+      wallBaseHardness: 3
+      wallHardnessGrowth: 1.07
+      maxSwingsPerFloor: 8
+      defenseFactor: 5
+      hpRegenPerFloor: 0.08
+      bossEnrageInterval: 8
+      miniBossEnrageInterval: 12
+      enrageAttackPerStack: 0.2
+      maxCritChance: 0.6
+      maxCaveResist: 0.4
+      maxGoldBonus: 3
+      monsterBaseHealth: 40
+      monsterHealthGrowth: 1.16
+      monsterBaseAttack: 6
+      monsterAttackGrowth: 1.15
+      monsterAttackInterval: 1.6
+      bossAttackIntervalMult: 0.85
+      monsterChanceBase: 0.18
+      monsterChancePerStep: 0.003
+      maxMonsterChance: 0.45
+      bountySteps: 1.5
+      normalDropChance: 0.4
+      miniBossDrops: 1
+      bossDrops: 2
+      gearStatGrowth: 1.14
+      gearRarityGrowth: 1.22
+      pctStatPerLevel: 0.02
+      sellBase: 5
+      inventoryCap: 32
+      enhanceMax: 10
+      enhanceStatBonus: 0.1
+      enhanceCostMult: 2
+      enhanceCostGrowth: 1.6
+      enhanceDowngradeFrom: 4
+      enhanceBreakFrom: 7
+      enhanceSuccess:
+      - 0.95
+      - 0.9
+      - 0.85
+      - 0.75
+      - 0.65
+      - 0.55
+      - 0.45
+      - 0.35
+      - 0.25
+      - 0.15
+      estimatedSecondsPerAttack: 0.3
+      threatEasy: 0.2
+      threatMedium: 0.5
+      threatHard: 1
+      avgMiniBossHpMult: 3.6
+      avgMiniBossAtkMult: 1.3
+      avgBossHpMult: 5.4
+      avgBossAtkMult: 1.45
+      affixPool:
+      - stat: 0
+        value: 2
+      - stat: 1
+        value: 12
+      - stat: 2
+        value: 3
+      - stat: 3
+        value: 0.02
+      - stat: 4
+        value: 0.08
+      - stat: 5
+        value: 0.015
+      - stat: 6
+        value: 0.015
+      - stat: 7
+        value: 0.03
+      - stat: 8
+        value: 0.04
+      - stat: 9
+        value: 0.3
+      gearBases:
+      - id: dagger
+        slot: 0
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 4.2
+        - stat: 3
+          value: 0.06
+      - id: shortsword
+        slot: 0
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 6
+      - id: spiked_club
+        slot: 0
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 6.6
+      - id: hand_axe
+        slot: 0
+        minStep: 6
+        weight: 1.6
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 7.2
+        - stat: 4
+          value: 0.15
+      - id: war_mace
+        slot: 0
+        minStep: 10
+        weight: 2
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 6.9
+        - stat: 2
+          value: 2
+      - id: spear
+        slot: 0
+        minStep: 10
+        weight: 2
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 6.6
+        - stat: 3
+          value: 0.04
+      - id: longbow
+        slot: 0
+        minStep: 16
+        weight: 2.6
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 6
+        - stat: 6
+          value: 0.03
+      - id: mage_staff
+        slot: 0
+        minStep: 16
+        weight: 2.6
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 6
+        - stat: 7
+          value: 0.05
+      - id: katana
+        slot: 0
+        minStep: 24
+        weight: 3.4
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 7.2
+        - stat: 3
+          value: 0.06
+      - id: great_axe
+        slot: 0
+        minStep: 24
+        weight: 3.4
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 9
+        - stat: 4
+          value: 0.2
+      - id: war_hammer
+        slot: 0
+        minStep: 32
+        weight: 4.2
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 9.6
+      - id: soul_scythe
+        slot: 0
+        minStep: 36
+        weight: 4.6
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 7.8
+        - stat: 4
+          value: 0.35
+      - id: rune_sword
+        slot: 0
+        minStep: 40
+        weight: 5
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 8.1
+        - stat: 3
+          value: 0.05
+        - stat: 7
+          value: 0.03
+      - id: crystal_staff
+        slot: 0
+        minStep: 44
+        weight: 5.4
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 7.5
+        - stat: 7
+          value: 0.08
+      - id: dragon_spear
+        slot: 0
+        minStep: 52
+        weight: 6.2
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 9.3
+        - stat: 3
+          value: 0.06
+      - id: shadow_blades
+        slot: 0
+        minStep: 56
+        weight: 6.6
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 7.2
+        - stat: 3
+          value: 0.12
+      - id: volcanic_greatsword
+        slot: 0
+        minStep: 64
+        weight: 7.4
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 10.8
+        - stat: 4
+          value: 0.25
+      - id: void_scythe
+        slot: 0
+        minStep: 72
+        weight: 8.2
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 10.2
+        - stat: 4
+          value: 0.4
+      - id: rusty_pick
+        slot: 8
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 9
+          value: 1
+      - id: iron_pick
+        slot: 8
+        minStep: 8
+        weight: 1.8
+        statMult: 1
+        stats:
+        - stat: 9
+          value: 1.3
+      - id: steel_pick
+        slot: 8
+        minStep: 18
+        weight: 2.8
+        statMult: 1
+        stats:
+        - stat: 9
+          value: 1.6
+      - id: dwarf_pick
+        slot: 8
+        minStep: 28
+        weight: 3.8
+        statMult: 1
+        stats:
+        - stat: 9
+          value: 2
+        - stat: 5
+          value: 0.02
+      - id: mithril_pick
+        slot: 8
+        minStep: 38
+        weight: 4.8
+        statMult: 1
+        stats:
+        - stat: 9
+          value: 2.4
+        - stat: 7
+          value: 0.03
+      - id: runic_pick
+        slot: 8
+        minStep: 48
+        weight: 5.8
+        statMult: 1
+        stats:
+        - stat: 9
+          value: 2.8
+        - stat: 6
+          value: 0.02
+      - id: dragonbone_pick
+        slot: 8
+        minStep: 58
+        weight: 6.8
+        statMult: 1
+        stats:
+        - stat: 9
+          value: 3.3
+        - stat: 8
+          value: 0.05
+      - id: star_pick
+        slot: 8
+        minStep: 68
+        weight: 7.8
+        statMult: 1
+        stats:
+        - stat: 9
+          value: 4
+        - stat: 5
+          value: 0.03
+      - id: cloth_helmet
+        slot: 1
+        minStep: 1
+        weight: 1.1
+        statMult: 0.8
+        stats:
+        - stat: 2
+          value: 3
+        - stat: 1
+          value: 10
+        - stat: 5
+          value: 0.02
+      - id: cloth_armor
+        slot: 2
+        minStep: 1
+        weight: 1.1
+        statMult: 0.8
+        stats:
+        - stat: 2
+          value: 6
+        - stat: 1
+          value: 25
+      - id: cloth_pants
+        slot: 3
+        minStep: 1
+        weight: 1.1
+        statMult: 0.8
+        stats:
+        - stat: 2
+          value: 4
+        - stat: 1
+          value: 18
+      - id: cloth_gloves
+        slot: 4
+        minStep: 1
+        weight: 1.1
+        statMult: 0.8
+        stats:
+        - stat: 0
+          value: 2
+        - stat: 3
+          value: 0.02
+      - id: cloth_boots
+        slot: 5
+        minStep: 1
+        weight: 1.1
+        statMult: 0.8
+        stats:
+        - stat: 2
+          value: 2
+        - stat: 1
+          value: 10
+        - stat: 6
+          value: 0.015
+      - id: leather_helmet
+        slot: 1
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 2
+          value: 3
+        - stat: 1
+          value: 10
+        - stat: 5
+          value: 0.02
+      - id: leather_armor
+        slot: 2
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 2
+          value: 6
+        - stat: 1
+          value: 25
+      - id: leather_pants
+        slot: 3
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 2
+          value: 4
+        - stat: 1
+          value: 18
+      - id: leather_gloves
+        slot: 4
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 2
+        - stat: 3
+          value: 0.02
+      - id: leather_boots
+        slot: 5
+        minStep: 1
+        weight: 1.1
+        statMult: 1
+        stats:
+        - stat: 2
+          value: 2
+        - stat: 1
+          value: 10
+        - stat: 6
+          value: 0.015
+      - id: chain_helmet
+        slot: 1
+        minStep: 10
+        weight: 2
+        statMult: 1.15
+        stats:
+        - stat: 2
+          value: 3
+        - stat: 1
+          value: 10
+        - stat: 5
+          value: 0.02
+      - id: chain_armor
+        slot: 2
+        minStep: 10
+        weight: 2
+        statMult: 1.15
+        stats:
+        - stat: 2
+          value: 6
+        - stat: 1
+          value: 25
+      - id: chain_pants
+        slot: 3
+        minStep: 10
+        weight: 2
+        statMult: 1.15
+        stats:
+        - stat: 2
+          value: 4
+        - stat: 1
+          value: 18
+      - id: chain_gloves
+        slot: 4
+        minStep: 10
+        weight: 2
+        statMult: 1.15
+        stats:
+        - stat: 0
+          value: 2
+        - stat: 3
+          value: 0.02
+      - id: chain_boots
+        slot: 5
+        minStep: 10
+        weight: 2
+        statMult: 1.15
+        stats:
+        - stat: 2
+          value: 2
+        - stat: 1
+          value: 10
+        - stat: 6
+          value: 0.015
+      - id: plate_helmet
+        slot: 1
+        minStep: 20
+        weight: 3
+        statMult: 1.3
+        stats:
+        - stat: 2
+          value: 3
+        - stat: 1
+          value: 10
+        - stat: 5
+          value: 0.02
+      - id: plate_armor
+        slot: 2
+        minStep: 20
+        weight: 3
+        statMult: 1.3
+        stats:
+        - stat: 2
+          value: 6
+        - stat: 1
+          value: 25
+      - id: plate_pants
+        slot: 3
+        minStep: 20
+        weight: 3
+        statMult: 1.3
+        stats:
+        - stat: 2
+          value: 4
+        - stat: 1
+          value: 18
+      - id: plate_gloves
+        slot: 4
+        minStep: 20
+        weight: 3
+        statMult: 1.3
+        stats:
+        - stat: 0
+          value: 2
+        - stat: 3
+          value: 0.02
+      - id: plate_boots
+        slot: 5
+        minStep: 20
+        weight: 3
+        statMult: 1.3
+        stats:
+        - stat: 2
+          value: 2
+        - stat: 1
+          value: 10
+        - stat: 6
+          value: 0.015
+      - id: mithril_helmet
+        slot: 1
+        minStep: 36
+        weight: 4.6
+        statMult: 1.5
+        stats:
+        - stat: 2
+          value: 3
+        - stat: 1
+          value: 10
+        - stat: 5
+          value: 0.02
+      - id: mithril_armor
+        slot: 2
+        minStep: 36
+        weight: 4.6
+        statMult: 1.5
+        stats:
+        - stat: 2
+          value: 6
+        - stat: 1
+          value: 25
+      - id: mithril_pants
+        slot: 3
+        minStep: 36
+        weight: 4.6
+        statMult: 1.5
+        stats:
+        - stat: 2
+          value: 4
+        - stat: 1
+          value: 18
+      - id: mithril_gloves
+        slot: 4
+        minStep: 36
+        weight: 4.6
+        statMult: 1.5
+        stats:
+        - stat: 0
+          value: 2
+        - stat: 3
+          value: 0.02
+      - id: mithril_boots
+        slot: 5
+        minStep: 36
+        weight: 4.6
+        statMult: 1.5
+        stats:
+        - stat: 2
+          value: 2
+        - stat: 1
+          value: 10
+        - stat: 6
+          value: 0.015
+      - id: dragonscale_helmet
+        slot: 1
+        minStep: 52
+        weight: 6.2
+        statMult: 1.75
+        stats:
+        - stat: 2
+          value: 3
+        - stat: 1
+          value: 10
+        - stat: 5
+          value: 0.02
+      - id: dragonscale_armor
+        slot: 2
+        minStep: 52
+        weight: 6.2
+        statMult: 1.75
+        stats:
+        - stat: 2
+          value: 6
+        - stat: 1
+          value: 25
+      - id: dragonscale_pants
+        slot: 3
+        minStep: 52
+        weight: 6.2
+        statMult: 1.75
+        stats:
+        - stat: 2
+          value: 4
+        - stat: 1
+          value: 18
+      - id: dragonscale_gloves
+        slot: 4
+        minStep: 52
+        weight: 6.2
+        statMult: 1.75
+        stats:
+        - stat: 0
+          value: 2
+        - stat: 3
+          value: 0.02
+      - id: dragonscale_boots
+        slot: 5
+        minStep: 52
+        weight: 6.2
+        statMult: 1.75
+        stats:
+        - stat: 2
+          value: 2
+        - stat: 1
+          value: 10
+        - stat: 6
+          value: 0.015
+      - id: void_helmet
+        slot: 1
+        minStep: 68
+        weight: 7.8
+        statMult: 2
+        stats:
+        - stat: 2
+          value: 3
+        - stat: 1
+          value: 10
+        - stat: 5
+          value: 0.02
+      - id: void_armor
+        slot: 2
+        minStep: 68
+        weight: 7.8
+        statMult: 2
+        stats:
+        - stat: 2
+          value: 6
+        - stat: 1
+          value: 25
+      - id: void_pants
+        slot: 3
+        minStep: 68
+        weight: 7.8
+        statMult: 2
+        stats:
+        - stat: 2
+          value: 4
+        - stat: 1
+          value: 18
+      - id: void_gloves
+        slot: 4
+        minStep: 68
+        weight: 7.8
+        statMult: 2
+        stats:
+        - stat: 0
+          value: 2
+        - stat: 3
+          value: 0.02
+      - id: void_boots
+        slot: 5
+        minStep: 68
+        weight: 7.8
+        statMult: 2
+        stats:
+        - stat: 2
+          value: 2
+        - stat: 1
+          value: 10
+        - stat: 6
+          value: 0.015
+      - id: copper_necklace
+        slot: 6
+        minStep: 1
+        weight: 1.1
+        statMult: 0.8
+        stats:
+        - stat: 1
+          value: 12
+        - stat: 7
+          value: 0.04
+        - stat: 8
+          value: 0.05
+      - id: copper_ring
+        slot: 7
+        minStep: 1
+        weight: 1.1
+        statMult: 0.8
+        stats:
+        - stat: 0
+          value: 1.5
+        - stat: 4
+          value: 0.1
+        - stat: 8
+          value: 0.04
+      - id: silver_necklace
+        slot: 6
+        minStep: 10
+        weight: 2
+        statMult: 1
+        stats:
+        - stat: 1
+          value: 12
+        - stat: 7
+          value: 0.04
+        - stat: 8
+          value: 0.05
+      - id: silver_ring
+        slot: 7
+        minStep: 10
+        weight: 2
+        statMult: 1
+        stats:
+        - stat: 0
+          value: 1.5
+        - stat: 4
+          value: 0.1
+        - stat: 8
+          value: 0.04
+      - id: gold_necklace
+        slot: 6
+        minStep: 20
+        weight: 3
+        statMult: 1.2
+        stats:
+        - stat: 1
+          value: 12
+        - stat: 7
+          value: 0.04
+        - stat: 8
+          value: 0.05
+      - id: gold_ring
+        slot: 7
+        minStep: 20
+        weight: 3
+        statMult: 1.2
+        stats:
+        - stat: 0
+          value: 1.5
+        - stat: 4
+          value: 0.1
+        - stat: 8
+          value: 0.04
+      - id: moonstone_necklace
+        slot: 6
+        minStep: 36
+        weight: 4.6
+        statMult: 1.45
+        stats:
+        - stat: 1
+          value: 12
+        - stat: 7
+          value: 0.04
+        - stat: 8
+          value: 0.05
+      - id: moonstone_ring
+        slot: 7
+        minStep: 36
+        weight: 4.6
+        statMult: 1.45
+        stats:
+        - stat: 0
+          value: 1.5
+        - stat: 4
+          value: 0.1
+        - stat: 8
+          value: 0.04
+      - id: dragoneye_necklace
+        slot: 6
+        minStep: 52
+        weight: 6.2
+        statMult: 1.7
+        stats:
+        - stat: 1
+          value: 12
+        - stat: 7
+          value: 0.04
+        - stat: 8
+          value: 0.05
+      - id: dragoneye_ring
+        slot: 7
+        minStep: 52
+        weight: 6.2
+        statMult: 1.7
+        stats:
+        - stat: 0
+          value: 1.5
+        - stat: 4
+          value: 0.1
+        - stat: 8
+          value: 0.04
+      - id: star_necklace
+        slot: 6
+        minStep: 68
+        weight: 7.8
+        statMult: 2
+        stats:
+        - stat: 1
+          value: 12
+        - stat: 7
+          value: 0.04
+        - stat: 8
+          value: 0.05
+      - id: star_ring
+        slot: 7
+        minStep: 68
+        weight: 7.8
+        statMult: 2
+        stats:
+        - stat: 0
+          value: 1.5
+        - stat: 4
+          value: 0.1
+        - stat: 8
+          value: 0.04
+      monsters:
+      - id: cave_rat
+        kind: 0
+        minStep: 1
+        maxStep: 9
+        weight: 1
+        hpMult: 0.7
+        atkMult: 0.8
+      - id: slime
+        kind: 0
+        minStep: 1
+        maxStep: 9
+        weight: 1
+        hpMult: 1
+        atkMult: 0.7
+      - id: bat
+        kind: 0
+        minStep: 1
+        maxStep: 9
+        weight: 1
+        hpMult: 0.6
+        atkMult: 1
+      - id: goblin
+        kind: 0
+        minStep: 1
+        maxStep: 9
+        weight: 1
+        hpMult: 1
+        atkMult: 1
+      - id: orc_scout
+        kind: 0
+        minStep: 1
+        maxStep: 9
+        weight: 1
+        hpMult: 1.1
+        atkMult: 1.05
+      - id: warg_pup
+        kind: 0
+        minStep: 1
+        maxStep: 9
+        weight: 1
+        hpMult: 0.8
+        atkMult: 1.15
+      - id: skeleton
+        kind: 0
+        minStep: 11
+        maxStep: 19
+        weight: 1
+        hpMult: 1
+        atkMult: 1
+      - id: cave_spider
+        kind: 0
+        minStep: 11
+        maxStep: 19
+        weight: 1
+        hpMult: 0.8
+        atkMult: 1.2
+      - id: stone_goblin
+        kind: 0
+        minStep: 11
+        maxStep: 19
+        weight: 1
+        hpMult: 1.3
+        atkMult: 0.9
+      - id: blind_worm
+        kind: 0
+        minStep: 11
+        maxStep: 19
+        weight: 1
+        hpMult: 1.5
+        atkMult: 0.7
+      - id: orc_warrior
+        kind: 0
+        minStep: 11
+        maxStep: 19
+        weight: 1
+        hpMult: 1.2
+        atkMult: 1.1
+      - id: barrow_wight
+        kind: 0
+        minStep: 11
+        maxStep: 19
+        weight: 1
+        hpMult: 1
+        atkMult: 1.2
+      - id: crystal_slime
+        kind: 0
+        minStep: 21
+        maxStep: 29
+        weight: 1
+        hpMult: 1.2
+        atkMult: 0.8
+      - id: crystal_spider
+        kind: 0
+        minStep: 21
+        maxStep: 29
+        weight: 1
+        hpMult: 0.9
+        atkMult: 1.2
+      - id: wraith
+        kind: 0
+        minStep: 21
+        maxStep: 29
+        weight: 1
+        hpMult: 0.8
+        atkMult: 1.3
+      - id: myconid
+        kind: 0
+        minStep: 21
+        maxStep: 29
+        weight: 1
+        hpMult: 1.4
+        atkMult: 0.8
+      - id: cave_troll
+        kind: 0
+        minStep: 21
+        maxStep: 29
+        weight: 1
+        hpMult: 1.8
+        atkMult: 1
+      - id: dark_warg
+        kind: 0
+        minStep: 21
+        maxStep: 29
+        weight: 1
+        hpMult: 0.9
+        atkMult: 1.3
+      - id: naga
+        kind: 0
+        minStep: 31
+        maxStep: 39
+        weight: 1
+        hpMult: 1.1
+        atkMult: 1.1
+      - id: drowned
+        kind: 0
+        minStep: 31
+        maxStep: 39
+        weight: 1
+        hpMult: 1.2
+        atkMult: 1
+      - id: serpent
+        kind: 0
+        minStep: 31
+        maxStep: 39
+        weight: 1
+        hpMult: 0.9
+        atkMult: 1.25
+      - id: water_elemental
+        kind: 0
+        minStep: 31
+        maxStep: 39
+        weight: 1
+        hpMult: 1.4
+        atkMult: 0.9
+      - id: lake_tentacle
+        kind: 0
+        minStep: 31
+        maxStep: 39
+        weight: 1
+        hpMult: 1.3
+        atkMult: 1.15
+      - id: marsh_ghoul
+        kind: 0
+        minStep: 31
+        maxStep: 39
+        weight: 1
+        hpMult: 1
+        atkMult: 1.2
+      - id: iron_golem
+        kind: 0
+        minStep: 41
+        maxStep: 49
+        weight: 1
+        hpMult: 1.6
+        atkMult: 0.8
+      - id: fire_imp
+        kind: 0
+        minStep: 41
+        maxStep: 49
+        weight: 1
+        hpMult: 0.8
+        atkMult: 1.3
+      - id: dwarf_ghost
+        kind: 0
+        minStep: 41
+        maxStep: 49
+        weight: 1
+        hpMult: 1
+        atkMult: 1.1
+      - id: coal_worm
+        kind: 0
+        minStep: 41
+        maxStep: 49
+        weight: 1
+        hpMult: 1.3
+        atkMult: 1
+      - id: black_orc
+        kind: 0
+        minStep: 41
+        maxStep: 49
+        weight: 1
+        hpMult: 1.3
+        atkMult: 1.2
+      - id: forge_troll
+        kind: 0
+        minStep: 41
+        maxStep: 49
+        weight: 1
+        hpMult: 1.9
+        atkMult: 1.05
+      - id: bone_whelp
+        kind: 0
+        minStep: 51
+        maxStep: 59
+        weight: 1
+        hpMult: 1.1
+        atkMult: 1.15
+      - id: fossil_spider
+        kind: 0
+        minStep: 51
+        maxStep: 59
+        weight: 1
+        hpMult: 1
+        atkMult: 1.2
+      - id: mummy
+        kind: 0
+        minStep: 51
+        maxStep: 59
+        weight: 1
+        hpMult: 1.4
+        atkMult: 0.9
+      - id: sand_worm
+        kind: 0
+        minStep: 51
+        maxStep: 59
+        weight: 1
+        hpMult: 1.5
+        atkMult: 0.95
+      - id: giant_spider
+        kind: 0
+        minStep: 51
+        maxStep: 59
+        weight: 1
+        hpMult: 1.2
+        atkMult: 1.3
+      - id: cursed_dead
+        kind: 0
+        minStep: 51
+        maxStep: 59
+        weight: 1
+        hpMult: 1.1
+        atkMult: 1.25
+      - id: dragon_whelp
+        kind: 0
+        minStep: 61
+        maxStep: 69
+        weight: 1
+        hpMult: 1.2
+        atkMult: 1.2
+      - id: kobold
+        kind: 0
+        minStep: 61
+        maxStep: 69
+        weight: 1
+        hpMult: 0.9
+        atkMult: 1.1
+      - id: flame_bat
+        kind: 0
+        minStep: 61
+        maxStep: 69
+        weight: 1
+        hpMult: 0.8
+        atkMult: 1.35
+      - id: dragon_cultist
+        kind: 0
+        minStep: 61
+        maxStep: 69
+        weight: 1
+        hpMult: 1
+        atkMult: 1.25
+      - id: fire_drake
+        kind: 0
+        minStep: 61
+        maxStep: 69
+        weight: 1
+        hpMult: 1.4
+        atkMult: 1.3
+      - id: war_troll
+        kind: 0
+        minStep: 61
+        maxStep: 69
+        weight: 1
+        hpMult: 2
+        atkMult: 1.15
+      - id: lava_elemental
+        kind: 0
+        minStep: 71
+        maxStep: 999
+        weight: 1
+        hpMult: 1.5
+        atkMult: 1.1
+      - id: magma_slime
+        kind: 0
+        minStep: 71
+        maxStep: 999
+        weight: 1
+        hpMult: 1.3
+        atkMult: 1
+      - id: demon
+        kind: 0
+        minStep: 71
+        maxStep: 999
+        weight: 1
+        hpMult: 1.1
+        atkMult: 1.35
+      - id: hellhound
+        kind: 0
+        minStep: 71
+        maxStep: 999
+        weight: 1
+        hpMult: 1
+        atkMult: 1.3
+      - id: shadow_rider
+        kind: 0
+        minStep: 71
+        maxStep: 999
+        weight: 1
+        hpMult: 1.2
+        atkMult: 1.4
+      - id: flame_wraith
+        kind: 0
+        minStep: 71
+        maxStep: 999
+        weight: 1
+        hpMult: 0.9
+        atkMult: 1.5
+      - id: goblin_chief
+        kind: 2
+        minStep: 3
+        maxStep: 3
+        weight: 0
+        hpMult: 3
+        atkMult: 1.2
+      - id: orc_captain
+        kind: 2
+        minStep: 3
+        maxStep: 3
+        weight: 0
+        hpMult: 3.2
+        atkMult: 1.25
+      - id: rat_king
+        kind: 2
+        minStep: 3
+        maxStep: 3
+        weight: 0
+        hpMult: 2.6
+        atkMult: 1.3
+      - id: slime_mother
+        kind: 2
+        minStep: 3
+        maxStep: 3
+        weight: 0
+        hpMult: 3.6
+        atkMult: 1.05
+      - id: warg_alpha
+        kind: 2
+        minStep: 3
+        maxStep: 3
+        weight: 0
+        hpMult: 2.8
+        atkMult: 1.35
+      - id: bone_lord
+        kind: 2
+        minStep: 5
+        maxStep: 5
+        weight: 0
+        hpMult: 3.2
+        atkMult: 1.25
+      - id: spider_matron
+        kind: 2
+        minStep: 5
+        maxStep: 5
+        weight: 0
+        hpMult: 3
+        atkMult: 1.35
+      - id: wight_thane
+        kind: 2
+        minStep: 5
+        maxStep: 5
+        weight: 0
+        hpMult: 3.4
+        atkMult: 1.2
+      - id: orc_warlord
+        kind: 2
+        minStep: 5
+        maxStep: 5
+        weight: 0
+        hpMult: 3.5
+        atkMult: 1.3
+      - id: stone_troll
+        kind: 2
+        minStep: 5
+        maxStep: 5
+        weight: 0
+        hpMult: 4.2
+        atkMult: 1.1
+      - id: crystal_golem
+        kind: 2
+        minStep: 10
+        maxStep: 10
+        weight: 0
+        hpMult: 6
+        atkMult: 1.4
+      - id: troll_king
+        kind: 2
+        minStep: 10
+        maxStep: 10
+        weight: 0
+        hpMult: 7.5
+        atkMult: 1.35
+      - id: crystal_wyrm
+        kind: 2
+        minStep: 10
+        maxStep: 10
+        weight: 0
+        hpMult: 6.2
+        atkMult: 1.55
+      - id: pale_queen
+        kind: 2
+        minStep: 10
+        maxStep: 10
+        weight: 0
+        hpMult: 5.5
+        atkMult: 1.65
+      - id: myconid_elder
+        kind: 2
+        minStep: 10
+        maxStep: 10
+        weight: 0
+        hpMult: 7
+        atkMult: 1.3
+      - id: naga_queen
+        kind: 2
+        minStep: 15
+        maxStep: 15
+        weight: 0
+        hpMult: 3.5
+        atkMult: 1.3
+      - id: lake_watcher
+        kind: 2
+        minStep: 15
+        maxStep: 15
+        weight: 0
+        hpMult: 4
+        atkMult: 1.25
+      - id: drowned_king
+        kind: 2
+        minStep: 15
+        maxStep: 15
+        weight: 0
+        hpMult: 3.6
+        atkMult: 1.3
+      - id: storm_spirit
+        kind: 2
+        minStep: 15
+        maxStep: 15
+        weight: 0
+        hpMult: 3
+        atkMult: 1.45
+      - id: marsh_hag
+        kind: 2
+        minStep: 15
+        maxStep: 15
+        weight: 0
+        hpMult: 3.2
+        atkMult: 1.4
+      - id: forge_king
+        kind: 2
+        minStep: 20
+        maxStep: 20
+        weight: 0
+        hpMult: 6.5
+        atkMult: 1.5
+      - id: black_orc_chief
+        kind: 2
+        minStep: 20
+        maxStep: 20
+        weight: 0
+        hpMult: 6.8
+        atkMult: 1.55
+      - id: iron_troll_lord
+        kind: 2
+        minStep: 20
+        maxStep: 20
+        weight: 0
+        hpMult: 8
+        atkMult: 1.4
+      - id: imp_lord
+        kind: 2
+        minStep: 20
+        maxStep: 20
+        weight: 0
+        hpMult: 5.8
+        atkMult: 1.7
+      - id: ghost_king
+        kind: 2
+        minStep: 20
+        maxStep: 20
+        weight: 0
+        hpMult: 6.2
+        atkMult: 1.6
+      - id: fossil_wyrm
+        kind: 2
+        minStep: 25
+        maxStep: 25
+        weight: 0
+        hpMult: 4
+        atkMult: 1.35
+      - id: barrow_king
+        kind: 2
+        minStep: 25
+        maxStep: 25
+        weight: 0
+        hpMult: 3.8
+        atkMult: 1.45
+      - id: great_spider
+        kind: 2
+        minStep: 25
+        maxStep: 25
+        weight: 0
+        hpMult: 3.6
+        atkMult: 1.5
+      - id: sand_wurm
+        kind: 2
+        minStep: 25
+        maxStep: 25
+        weight: 0
+        hpMult: 4.6
+        atkMult: 1.25
+      - id: mummy_lord
+        kind: 2
+        minStep: 25
+        maxStep: 25
+        weight: 0
+        hpMult: 4.2
+        atkMult: 1.35
+      - id: elder_dragon
+        kind: 2
+        minStep: 30
+        maxStep: 30
+        weight: 0
+        hpMult: 7
+        atkMult: 1.6
+      - id: gold_sleeper
+        kind: 2
+        minStep: 30
+        maxStep: 30
+        weight: 0
+        hpMult: 8.5
+        atkMult: 1.5
+      - id: dragon_priest
+        kind: 2
+        minStep: 30
+        maxStep: 30
+        weight: 0
+        hpMult: 6
+        atkMult: 1.75
+      - id: war_troll_king
+        kind: 2
+        minStep: 30
+        maxStep: 30
+        weight: 0
+        hpMult: 8.8
+        atkMult: 1.45
+      - id: drake_mother
+        kind: 2
+        minStep: 30
+        maxStep: 30
+        weight: 0
+        hpMult: 7.2
+        atkMult: 1.6
+      - id: lava_titan
+        kind: 2
+        minStep: 35
+        maxStep: 35
+        weight: 0
+        hpMult: 4.5
+        atkMult: 1.4
+      - id: black_rider
+        kind: 2
+        minStep: 35
+        maxStep: 35
+        weight: 0
+        hpMult: 4
+        atkMult: 1.6
+      - id: hell_warg
+        kind: 2
+        minStep: 35
+        maxStep: 35
+        weight: 0
+        hpMult: 3.8
+        atkMult: 1.6
+      - id: magma_mother
+        kind: 2
+        minStep: 35
+        maxStep: 35
+        weight: 0
+        hpMult: 5
+        atkMult: 1.3
+      - id: demon_lord
+        kind: 2
+        minStep: 35
+        maxStep: 35
+        weight: 0
+        hpMult: 4.2
+        atkMult: 1.55
+      - id: core_devourer
+        kind: 2
+        minStep: 40
+        maxStep: 40
+        weight: 0
+        hpMult: 8
+        atkMult: 1.7
+      - id: shadow_flame
+        kind: 2
+        minStep: 40
+        maxStep: 40
+        weight: 0
+        hpMult: 9
+        atkMult: 1.75
+      - id: world_serpent
+        kind: 2
+        minStep: 40
+        maxStep: 40
+        weight: 0
+        hpMult: 9.5
+        atkMult: 1.6
+      - id: root_watcher
+        kind: 2
+        minStep: 40
+        maxStep: 40
+        weight: 0
+        hpMult: 8.5
+        atkMult: 1.7
+      - id: ancient_lich
+        kind: 2
+        minStep: 40
+        maxStep: 40
+        weight: 0
+        hpMult: 7.5
+        atkMult: 1.85
+    progression:
+      xpBase: 60
+      xpGrowth: 1.28
+      xpPerFloor: 4
+      xpPerKill: 12
+      xpPerBoss: 150
+      talentPointsPerLevel: 1
+      talentsLevel: 2
+      equipmentLevel: 3
+      insuranceLevel: 4
+      findChanceLevel: 4
+      checkpointsLevel: 5
+      enhanceLevel: 6
+      luckLevel: 7
+      findValueLevel: 7
+      specialFindsLevel: 8
+      prestigeLevel: 12
+    talents:
+      pointsPerRow: 5
+      respecCostBase: 100
+      nodes:
+      - id: sturdy_pick
+        branch: 0
+        row: 0
+        maxRank: 5
+        effect: 0
+        perRank: 0.1
+      - id: stone_sense
+        branch: 0
+        row: 0
+        maxRank: 5
+        effect: 1
+        perRank: 0.03
+      - id: gold_vein
+        branch: 0
+        row: 1
+        maxRank: 5
+        effect: 2
+        perRank: 0.06
+      - id: deep_instinct
+        branch: 0
+        row: 1
+        maxRank: 5
+        effect: 3
+        perRank: 0.02
+      - id: brace_master
+        branch: 0
+        row: 2
+        maxRank: 3
+        effect: 4
+        perRank: 0.05
+      - id: rubble_hunter
+        branch: 0
+        row: 2
+        maxRank: 3
+        effect: 5
+        perRank: 0.15
+      - id: mountain_heart
+        branch: 0
+        row: 3
+        maxRank: 1
+        effect: 6
+        perRank: 0.5
+      - id: keen_edge
+        branch: 1
+        row: 0
+        maxRank: 5
+        effect: 7
+        perRank: 0.06
+      - id: thick_hide
+        branch: 1
+        row: 0
+        maxRank: 5
+        effect: 8
+        perRank: 0.08
+      - id: deadly_eye
+        branch: 1
+        row: 1
+        maxRank: 5
+        effect: 9
+        perRank: 0.02
+      - id: armor_master
+        branch: 1
+        row: 1
+        maxRank: 5
+        effect: 10
+        perRank: 0.08
+      - id: blood_drinker
+        branch: 1
+        row: 2
+        maxRank: 3
+        effect: 11
+        perRank: 0.01
+      - id: cold_blood
+        branch: 1
+        row: 2
+        maxRank: 3
+        effect: 12
+        perRank: 0.15
+      - id: kingslayer
+        branch: 1
+        row: 3
+        maxRank: 1
+        effect: 13
+        perRank: 0.4
+      - id: lucky_birth
+        branch: 2
+        row: 0
+        maxRank: 5
+        effect: 14
+        perRank: 0.04
+      - id: jeweler_eye
+        branch: 2
+        row: 0
+        maxRank: 5
+        effect: 15
+        perRank: 0.08
+      - id: plunderer
+        branch: 2
+        row: 1
+        maxRank: 5
+        effect: 16
+        perRank: 0.06
+      - id: haggler
+        branch: 2
+        row: 1
+        maxRank: 5
+        effect: 17
+        perRank: 0.1
+      - id: glimmer
+        branch: 2
+        row: 2
+        maxRank: 3
+        effect: 18
+        perRank: 0.03
+      - id: fortune_wheel
+        branch: 2
+        row: 2
+        maxRank: 3
+        effect: 19
+        perRank: 0.04
+      - id: dragon_eye
+        branch: 2
+        row: 3
+        maxRank: 1
+        effect: 20
+        perRank: 0.12
+    prestige:
+      minStep: 30
+      relicExponent: 1.6
+      relicDivisor: 10
+      ancientGold:
+        baseCost: 3
+        costGrowth: 1.5
+        effectPerLevel: 0.25
+        maxLevel: 30
+      ancientLuck:
+        baseCost: 4
+        costGrowth: 1.6
+        effectPerLevel: 0.05
+        maxLevel: 20
+      ancientInsight:
+        baseCost: 3
+        costGrowth: 1.5
+        effectPerLevel: 0.2
+        maxLevel: 20
+      ancientMight:
+        baseCost: 3
+        costGrowth: 1.5
+        effectPerLevel: 0.15
+        maxLevel: 30
+      ancientWealth:
+        baseCost: 5
+        costGrowth: 2
+        effectPerLevel: 500
+        maxLevel: 10
     earningsUpgrade:
       baseCost: 50
       costGrowth: 1.6
-      effectPerLevel: 0.15
-      maxLevel: 20
+      effectPerLevel: 0.1
+      maxLevel: 40
     safetyUpgrade:
       baseCost: 75
-      costGrowth: 1.7
-      effectPerLevel: 0.08
-      maxLevel: 15
+      costGrowth: 1.65
+      effectPerLevel: 0.05
+      maxLevel: 25
     insuranceUpgrade:
       baseCost: 100
-      costGrowth: 1.8
-      effectPerLevel: 0.1
-      maxLevel: 10
+      costGrowth: 1.75
+      effectPerLevel: 0.07
+      maxLevel: 15
+    findChanceUpgrade:
+      baseCost: 60
+      costGrowth: 1.55
+      effectPerLevel: 0.02
+      maxLevel: 20
+    luckUpgrade:
+      baseCost: 120
+      costGrowth: 1.62
+      effectPerLevel: 0.03
+      maxLevel: 25
+    findValueUpgrade:
+      baseCost: 90
+      costGrowth: 1.58
+      effectPerLevel: 0.08
+      maxLevel: 30

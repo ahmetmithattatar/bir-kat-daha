@@ -328,33 +328,6 @@ namespace RiskLoop.Core
                                 * (1.0 + 0.5 * item.enhance));
         }
 
-        /// <summary>
-        /// Eşyanın kaba "güç puanı": otomatik kuşanma ve karşılaştırma için.
-        /// Yüzde statlar, eşyanın düz statları ölçeğinde bir karşılığa çevrilir.
-        /// </summary>
-        public static double GearPowerScore(CombatBalance c, GearItem item)
-        {
-            double scale = Math.Pow(c.gearStatGrowth, Math.Max(item.itemLevel, 1) - 1);
-            double score = 0;
-            foreach (StatValue s in item.stats)
-            {
-                switch (s.stat)
-                {
-                    case StatType.Attack: score += s.value * 3.0; break;
-                    case StatType.Health: score += s.value * 0.5; break;
-                    case StatType.Defense: score += s.value * 1.5; break;
-                    case StatType.CritChance: score += s.value * 150 * scale; break;
-                    case StatType.CritDamage: score += s.value * 40 * scale; break;
-                    case StatType.CaveResist: score += s.value * 300 * scale; break;
-                    case StatType.FindChance: score += s.value * 200 * scale; break;
-                    case StatType.Luck: score += s.value * 100 * scale; break;
-                    case StatType.GoldBonus: score += s.value * 120 * scale; break;
-                    case StatType.DigPower: score += s.value * 4.0; break;
-                }
-            }
-            return score * item.EnhanceMult(c.enhanceStatBonus);
-        }
-
         // ---------------- Yükseltmeler ----------------
 
         /// <summary>Şu anki seviyeden bir sonrakine geçmenin fiyatı. Yukarı yuvarlanır (tam sayı fiyatlar).</summary>

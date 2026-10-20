@@ -42,12 +42,25 @@ namespace RiskLoop.Game
 
         // ---------------- Açıklamalar ----------------
 
+        // Kilitli özellikler ipuçlarında anılmaz: açıldığında oyuncu "yeni bir şey geldi" hissini yaşasın.
+        private static string If(GameSession s, Feature f, string text) => s.IsUnlocked(f) ? text : null;
+
+        /// <summary>"a, b ve c" (boş olanları atlar).</summary>
+        private static string List(params string[] parts)
+        {
+            var items = new System.Collections.Generic.List<string>();
+            foreach (string p in parts) if (!string.IsNullOrEmpty(p)) items.Add(p);
+            if (items.Count <= 1) return items.Count == 1 ? items[0] : "";
+            return string.Join(", ", items.GetRange(0, items.Count - 1)) + " ve " + items[items.Count - 1];
+        }
+
+
         public static string Risk(GameSession s)
         {
             int next = (s.CurrentRun != null ? s.CurrentRun.Step : 0) + 1;
             double floor = RiskMath.BustFloor(s.Balance, next);
             return $"<b>Göçük riski</b>\nSonraki inişte göçük olma ihtimali: <b>%{UIStrings.Pct(s.NextBustChance)}</b>.\n" +
-                   $"Derine indikçe artar. Destek kirişleri, Sağlam kaya ve ekipmandaki göçük direnci azaltır, " +
+                   $"Derine indikçe artar. {List("Destek kirişleri", "Sağlam kaya", If(s, Feature.Equipment, "ekipmandaki göçük direnci"))} azaltır, " +
                    $"ama bu derinliğin taban riski <b>%{UIStrings.Pct(floor)}</b>'in altına inemez.";
         }
 
@@ -63,7 +76,8 @@ namespace RiskLoop.Game
 
         public static string Power(GameSession s) =>
             $"<b>Savaş gücü: {s.CurrentPowerLevel}. kat seviyesi</b>\nNormal canavarları rahat, bölge bossunu sağ çıkarak yenebileceğin en derin kat.\n" +
-            "Daha iyi eşya, güçlendirme ve Kralların Kanı bunu yükseltir. Bosslar uzayan savaşta öfkelenir: hasarın yetmezse takılırsın.";
+            $"{List(If(s, Feature.Equipment, "Daha iyi eşya"), If(s, Feature.Enhance, "güçlendirme"), If(s, Feature.Talents, "yetenekler"), If(s, Feature.Prestige, "Kralların Kanı"))} bunu yükseltir. " +
+            "Bosslar uzayan savaşta öfkelenir: hasarın yetmezse takılırsın.";
 
         public static string Threat(GameSession s) =>
             $"<b>Tehdit: {ThreatShort(s.CurrentThreat)}</b>\n{(s.InCombat ? "Bu savaşı" : "Sonraki kattaki canavarı")} öldürene kadar canının ne kadarını kaybedeceğinin tahmini.\n" +
@@ -75,11 +89,12 @@ namespace RiskLoop.Game
 
         public static string NextReward(GameSession s) =>
             $"<b>Sonraki kat ödülü: +{UIStrings.Num(s.NextStepReward)}</b>\nToplam çarpan x{s.CurrentMultiplier:0.00}: " +
-            "derinlik, Daha iyi kazma, altın bonusu, Zengin damar ve Kadim Altın.\nÖdül risk altındadır: göçükte gider, yüzeye dönünce cebe girer.";
+            $"{List("derinlik", "Daha iyi kazma", If(s, Feature.Equipment, "altın bonusu"), "Zengin damar", If(s, Feature.Prestige, "Kadim Altın"))}.\nÖdül risk altındadır: göçükte gider, yüzeye dönünce cebe girer.";
 
         public static string FindChance(GameSession s) =>
-            $"<b>Bulgu şansı: %{UIStrings.Pct(System.Math.Min(1.0, s.NextFindChance))}</b>\nKatta bir şey bulma ihtimali. Keşif katında ve haritayla garanti.\n" +
-            "Maden dedektörü ve ekipmandaki bulgu şansı artırır. Canavarlı katta bulgu zafere kalır.";
+            $"<b>Bulgu şansı: %{UIStrings.Pct(System.Math.Min(1.0, s.NextFindChance))}</b>\nKatta bir şey bulma ihtimali. Boss katında garanti.\n" +
+            $"{List("Derinlik", If(s, Feature.FindChance, "Maden dedektörü"), If(s, Feature.Equipment, "ekipmandaki bulgu şansı"), If(s, Feature.Talents, "yetenekler"))} artırır. " +
+            "Canavarlı katta bulgu zafere kalır.";
 
         public static string MonsterChance(GameSession s) =>
             $"<b>Canavar şansı: %{UIStrings.Pct(System.Math.Min(1.0, s.NextMonsterChance))}</b>\nDuvarın ardından canavar çıkma ihtimali. Derinlikle artar.\n" +
@@ -96,7 +111,7 @@ namespace RiskLoop.Game
         {
             string pity = s.PityLuck > 0 ? $"\nTalihsizlik telafisi: <b>+%{UIStrings.Pct(s.PityLuck)}</b> (göçük/yenilgilerden, başarılı dönüşte sıfırlanır)" : "";
             return $"<b>Nadirlik şansı: +%{UIStrings.Pct(s.LuckBonus)}</b>\nNadir bulgu ve eşya ihtimalini artırır. Derinlik de ayrıca ekler.\n" +
-                   "Kaynaklar: Uğurlu fener, ekipman, Uğur tılsımı, Yıldızların Lütfu." + pity;
+                   $"Kaynaklar: {List(If(s, Feature.Luck, "Uğurlu fener"), If(s, Feature.Equipment, "ekipman"), "Uğur tılsımı", If(s, Feature.Talents, "yetenekler"), If(s, Feature.Prestige, "Yıldızların Lütfu"))}." + pity;
         }
 
         public static string Combat(GameSession s) => "<b>Savaş statları</b>\n" + FantasyTexts.CharacterSummary(s.Stats);
@@ -105,21 +120,23 @@ namespace RiskLoop.Game
         {
             s.NextGamble(out double win, out double lose, out double chance);
             return $"<b>Sonraki iniş kumarı</b>\nKazanırsan <b>+{UIStrings.Num(win)}</b> (%{UIStrings.Pct(1 - chance)})\n" +
-                   $"Kaybedersen <b>{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) ve tur biter (sigorta bir kısmını kurtarır)\n" +
+                   $"Kaybedersen <b>{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) ve tur biter{(s.IsUnlocked(Feature.Insurance) ? " (sigorta bir kısmını kurtarır)" : "")}\n" +
                    $"Beklenen değer: {UIStrings.Num(s.NextGambleExpectedValue())}";
         }
 
         public static string Buffs(GameSession s) =>
-            "<b>Bu turun etkileri</b>\nBulgulardan gelen geçici güçler: Zengin damar (kat ödülü +%), Sağlam kaya (risk azalır), " +
-            "Lanetli put (risk artar), Uğur tılsımı (nadirlik), Eski harita (garantili bulgu katları). Tur bitince sıfırlanır.";
+            "<b>Bu turun etkileri</b>\nBulgulardan gelen geçici güçler: " +
+            List("Zengin damar (kat ödülü +%)", "Sağlam kaya (risk azalır)", "Uğur tılsımı (nadirlik)",
+                 If(s, Feature.SpecialFinds, "Lanetli put (risk artar)"), If(s, Feature.SpecialFinds, "Eski harita (garantili bulgu katları)")) +
+            ". Tur bitince sıfırlanır.";
 
         public static string Milestone(GameSession s)
         {
             MilestoneDefinition m = s.NextMilestone;
             if (m == null) return "";
             string tier = RarityStyle.Colored(RarityStyle.Name(m.minTier), m.minTier);
-            return $"<b>{UIStrings.MilestoneName(m.step)}</b> ({m.step}. kat)\nBölge bossu bekliyor. Yenersen: en az {tier} garantili bulgu, ganimet " +
-                   "ve bu kattan başlayabileceğin bir geçit. İlk kez ulaşınca ayrıca keşif ödülü.";
+            return $"<b>{UIStrings.MilestoneName(m.step)}</b> ({m.step}. kat)\nBölge bossu bekliyor. Yenersen: " +
+                   List($"en az {tier} garantili bulgu", If(s, Feature.Equipment, "ganimet"), If(s, Feature.Checkpoints, "bu kattan başlayabileceğin bir geçit")) + ". İlk kez ulaşınca ayrıca keşif ödülü.";
         }
 
         // ---------------- Kısa satırlar ----------------

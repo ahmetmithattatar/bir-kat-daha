@@ -9,6 +9,7 @@ namespace RiskLoop.Game.UI
     /// <summary>
     /// Koleksiyondaki küçük kart: aynı tür + aynı nadirlikteki bulguların grubu.
     /// Çerçeve rengi = nadirlik, ortada pixel art ikon, sağ üstte adet (×3), altta tür ve toplam etki.
+    /// Fareyle üstüne gelince ne verdiği ayrıntılı yazar (risk altında mı, cepte mi).
     /// </summary>
     public class FindMiniCardView : MonoBehaviour
     {
@@ -17,6 +18,7 @@ namespace RiskLoop.Game.UI
         [SerializeField] private TMP_Text typeText;
         [SerializeField] private TMP_Text valueText;
         [SerializeField] private TMP_Text countText;
+        [SerializeField] private TooltipTrigger tooltip;   // Fareyle üstüne gelince grubun toplam etkisi
 
         /// <summary>sample: gruptaki son bulgu (ikon ve eşya yuvası için).</summary>
         public void Set(FindResult sample, double totalValue, int count)
@@ -32,6 +34,7 @@ namespace RiskLoop.Game.UI
                 ? FantasyTexts.SlotName(sample.Item.slot)
                 : UIStrings.FindShortValue(sample.Type, totalValue);
             countText.text = count > 1 ? $"×{count}" : "";
+            tooltip.SetText(UIStrings.FindGroupTooltip(sample, totalValue, count));
         }
 
         /// <summary>"N tane daha" kartı (yer kalmadığında son kutu).</summary>
@@ -43,6 +46,7 @@ namespace RiskLoop.Game.UI
             typeText.color = Color.white;
             valueText.text = "daha";
             countText.text = "";
+            tooltip.SetText(UIStrings.FindOverflowTooltip(hiddenCount));
         }
     }
 }

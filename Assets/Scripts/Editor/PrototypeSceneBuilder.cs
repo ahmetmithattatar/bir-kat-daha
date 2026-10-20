@@ -860,7 +860,7 @@ namespace RiskLoop.EditorTools
         {
             RectTransform card = CreateUIObject($"MiniCard_{index}", parent);
             Image frame = AddImage(card, Color.white);
-            frame.raycastTarget = false;
+            // raycastTarget açık: fareyle üstüne gelince ipucu (ne verdiği)
 
             RectTransform inner = CreateUIObject("Inner", card);
             Stretch(inner);
@@ -898,6 +898,7 @@ namespace RiskLoop.EditorTools
             SetRef(view, "typeText", type);
             SetRef(view, "valueText", value);
             SetRef(view, "countText", count);
+            SetRef(view, "tooltip", card.gameObject.AddComponent<TooltipTrigger>());
             card.gameObject.SetActive(false);  // Bulgu gelene kadar gizli
             return view;
         }
@@ -1204,7 +1205,7 @@ namespace RiskLoop.EditorTools
             return view;
         }
 
-        /// <summary>Ekipman sekmesi: güç + stat özeti, 9 karakter yuvası, envanter ızgarası, "En iyileri kuşan" ve "Çantayı sat".</summary>
+        /// <summary>Ekipman sekmesi: güç + stat özeti, 9 karakter yuvası, envanter ızgarası, "Çantayı sat".</summary>
         private static EquipmentView BuildEquipmentView(Transform parent)
         {
             const int inventorySlots = 32;   // CombatBalance.inventoryCap ile aynı tut
@@ -1252,8 +1253,6 @@ namespace RiskLoop.EditorTools
             RectTransform buttons = CreateUIObject("Buttons", root);
             SetHeight(buttons, 56);
             AddHorizontalLayout(buttons, spacing: 12);
-            Button auto = CreateButton("AutoEquipButton", buttons, UIStrings.AutoEquipButton, CashOutColor, 56, 26, out _);
-            FillRemainingWidth(auto);
             Button sellAll = CreateButton("SellAllButton", buttons, UIStrings.SellAllButton, AdvanceColor, 56, 22, out TMP_Text sellAllLabel);
             FillRemainingWidth(sellAll);
 
@@ -1263,7 +1262,6 @@ namespace RiskLoop.EditorTools
             SetRefArray(view, "equippedSlots", equipped);
             SetRef(view, "inventoryTitle", invTitle);
             SetRefArray(view, "inventorySlots", invSlots);
-            SetRef(view, "autoEquipButton", auto);
             SetRef(view, "sellAllButton", sellAll);
             SetRef(view, "sellAllLabel", sellAllLabel);
             return view;

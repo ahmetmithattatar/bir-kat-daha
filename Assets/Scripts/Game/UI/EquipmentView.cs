@@ -18,13 +18,11 @@ namespace RiskLoop.Game.UI
         [SerializeField] private GearSlotView[] equippedSlots;   // GearSlot enum sırasıyla
         [SerializeField] private TMP_Text inventoryTitle;
         [SerializeField] private GearSlotView[] inventorySlots;
-        [SerializeField] private Button autoEquipButton;
         [SerializeField] private Button sellAllButton;
         [SerializeField] private TMP_Text sellAllLabel;
         [SerializeField] private float confirmSeconds = 3f;
 
         public event Action<long> ItemSelected;
-        public event Action AutoEquipClicked;
         public event Action SellAllClicked;
 
         private float _confirmUntil = -1f;
@@ -33,7 +31,6 @@ namespace RiskLoop.Game.UI
         {
             foreach (GearSlotView slot in equippedSlots) slot.Clicked += uid => ItemSelected?.Invoke(uid);
             foreach (GearSlotView slot in inventorySlots) slot.Clicked += uid => ItemSelected?.Invoke(uid);
-            autoEquipButton.onClick.AddListener(() => AutoEquipClicked?.Invoke());
             sellAllButton.onClick.AddListener(OnSellAll);
             sellAllLabel.text = UIStrings.SellAllButton;
         }

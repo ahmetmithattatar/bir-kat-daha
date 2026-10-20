@@ -25,6 +25,7 @@ namespace RiskLoop.Game.UI
             public int Count;
             public double Total;       // Para/bonus için toplam
             public double SafetyKeep;  // Sağlam kaya için: kalan risk çarpanı (çarpımsal)
+            public double MultProduct; // Parlak kristal için: birleşik kazanç çarpanı (çarpımsal)
             public int SlotKey;        // Ekipmanlar yuvaya göre de ayrılır (diğerlerinde -1)
             public FindResult Sample;  // Gruptaki son bulgu (ikon için)
         }
@@ -49,7 +50,9 @@ namespace RiskLoop.Game.UI
                 if (i < visible)
                 {
                     Group g = groups[i];
-                    double shown = g.Type == FindType.Safety ? 1.0 - g.SafetyKeep : g.Total;
+                    double shown = g.Type == FindType.Safety ? 1.0 - g.SafetyKeep
+                                 : g.Type == FindType.Multiplier ? g.MultProduct - 1.0
+                                 : g.Total;
                     slot.gameObject.SetActive(true);
                     slot.Set(g.Sample, shown, g.Count);
 
@@ -78,12 +81,13 @@ namespace RiskLoop.Game.UI
             {
                 int slotKey = SlotKeyOf(f);
                 int index = groups.FindIndex(g => g.Type == f.Type && g.Tier == f.Tier && g.SlotKey == slotKey);
-                Group group = index >= 0 ? groups[index] : new Group { Type = f.Type, Tier = f.Tier, SafetyKeep = 1.0, SlotKey = slotKey };
+                Group group = index >= 0 ? groups[index] : new Group { Type = f.Type, Tier = f.Tier, SafetyKeep = 1.0, MultProduct = 1.0, SlotKey = slotKey };
 
                 group.Sample = f;
                 group.Count++;
                 group.Total += f.Value;
                 if (f.Type == FindType.Safety) group.SafetyKeep *= 1.0 - f.Value;
+                if (f.Type == FindType.Multiplier) group.MultProduct *= 1.0 + f.Value;
 
                 if (index >= 0) groups[index] = group;
                 else groups.Add(group);

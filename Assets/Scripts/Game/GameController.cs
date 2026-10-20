@@ -76,7 +76,6 @@ namespace RiskLoop.Game
             upgradePanel.EquipClicked += OnEquipClicked;
             upgradePanel.UnequipClicked += OnUnequipClicked;
             upgradePanel.SellClicked += OnSellClicked;
-            upgradePanel.AutoEquipClicked += OnAutoEquipClicked;
             upgradePanel.SellAllClicked += OnSellAllClicked;
             upgradePanel.EnhanceClicked += OnEnhanceClicked;
             upgradePanel.PrestigeClicked += OnPrestigeClicked;
@@ -168,7 +167,6 @@ namespace RiskLoop.Game
             upgradePanel.EquipClicked -= OnEquipClicked;
             upgradePanel.UnequipClicked -= OnUnequipClicked;
             upgradePanel.SellClicked -= OnSellClicked;
-            upgradePanel.AutoEquipClicked -= OnAutoEquipClicked;
             upgradePanel.SellAllClicked -= OnSellAllClicked;
             upgradePanel.EnhanceClicked -= OnEnhanceClicked;
             upgradePanel.PrestigeClicked -= OnPrestigeClicked;
@@ -362,13 +360,6 @@ namespace RiskLoop.Game
                 upgradePanel.ShowGearMessage(UIStrings.Sold(value));
                 AfterGearChange();
             }
-        }
-
-        private void OnAutoEquipClicked()
-        {
-            int changed = _session.AutoEquip();
-            upgradePanel.ShowGearMessage(UIStrings.AutoEquipped(changed));
-            AfterGearChange();
         }
 
         private void OnSellAllClicked()

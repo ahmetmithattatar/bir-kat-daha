@@ -212,30 +212,5 @@ namespace RiskLoop.Core
             result.NewLevel = item.enhance;
             return result;
         }
-
-        /// <summary>Her yuva için en yüksek güç puanlı eşyayı kuşanır. Kaç eşya değiştiğini döndürür.</summary>
-        public int AutoEquip()
-        {
-            if (!CanManageGear) return 0;
-            int changed = 0;
-            foreach (GearSlot slot in (GearSlot[])Enum.GetValues(typeof(GearSlot)))
-            {
-                GearItem current = GetEquipped(slot);
-                GearItem best = current;
-                double bestScore = current != null ? RiskMath.GearPowerScore(Balance.combat, current) : double.MinValue;
-                foreach (GearItem item in Progress.inventory)
-                {
-                    if (item.slot != slot) continue;
-                    double score = RiskMath.GearPowerScore(Balance.combat, item);
-                    if (score > bestScore)
-                    {
-                        best = item;
-                        bestScore = score;
-                    }
-                }
-                if (best != null && best != current && Equip(best.uid)) changed++;
-            }
-            return changed;
-        }
     }
 }

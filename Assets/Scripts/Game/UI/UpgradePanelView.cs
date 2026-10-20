@@ -12,7 +12,7 @@ namespace RiskLoop.Game.UI
     /// Turlar arası ekran.
     ///   Sol sütun: son turun sonucu, (ekipman sekmesinde) seçili eşyanın detayı, geçit seçici, "Kazıya başla".
     ///   Sağ sütun: sekmeler -> "Yükseltmeler" | "Yetenekler" | "Ekipman" | "Yeni Çağ".
-    /// Sekmeler ve geçit seçici seviyeyle açılır; kilitliyken "Sv X" yazar (oyuncu neyin geleceğini görür, merak eder).
+    /// Sekmeler, yükseltmeler ve geçit seçici seviyeyle açılır; açılana kadar GÖRÜNMEZ (açılınca oyuna yeni bir boyut gelir).
     /// (Kaydı sıfırla butonu yanlışlıkla basılmasın diye üst barda: TopBarView.)
     /// </summary>
     public class UpgradePanelView : MonoBehaviour
@@ -55,7 +55,6 @@ namespace RiskLoop.Game.UI
         public event Action<long> UnequipClicked;
         public event Action<long> SellClicked;
         public event Action<long> EnhanceClicked;
-        public event Action AutoEquipClicked;
         public event Action SellAllClicked;
         public event Action PrestigeClicked;
         public event Action<PrestigeType> BuyPrestigeClicked;
@@ -66,7 +65,6 @@ namespace RiskLoop.Game.UI
 
         private static readonly Color TabActive = new Color(0.22f, 0.45f, 0.80f);
         private static readonly Color TabInactive = new Color(0.25f, 0.25f, 0.30f);
-        private static readonly Color TabLocked = new Color(0.14f, 0.14f, 0.17f);
 
         private Tab _tab = Tab.Upgrades;
 
@@ -94,7 +92,6 @@ namespace RiskLoop.Game.UI
             prestigeTab.onClick.AddListener(() => SetTab(Tab.Prestige));
 
             equipment.ItemSelected += OnItemSelected;
-            equipment.AutoEquipClicked += () => AutoEquipClicked?.Invoke();
             equipment.SellAllClicked += () =>
             {
                 _selectedUid = -1;
@@ -134,7 +131,7 @@ namespace RiskLoop.Game.UI
             RefreshTabs(session);
 
             Feature? next = session.NextLockedFeature;
-            nextUnlockText.text = UIStrings.NextUnlockLine(next, next.HasValue ? session.UnlockLevel(next.Value) : 0);
+            nextUnlockText.text = UIStrings.NextUnlockTeaser(next.HasValue ? session.UnlockLevel(next.Value) : 0);
 
             // Geçit: seçili kat artık açık değilse (Yeni Çağ sonrası) yüzeye dön
             if (!session.AvailableStartSteps.Contains(_startStep)) _startStep = 0;
@@ -205,13 +202,15 @@ namespace RiskLoop.Game.UI
             }
         }
 
-        /// <summary>Sekme renkleri ve etiketleri. Kilitli sekme "Sv X" der; puan bekleyen yetenek sekmesi "(3)" der.</summary>
+        /// <summary>Sekme renkleri ve etiketleri. Kilitli sekme gizlidir; puan bekleyen yetenek sekmesi "(3)" der.</summary>
         private void RefreshTabs(GameSession session)
         {
             // Yeni Çağ sonrası ya da kayıt sıfırlanınca açık sekme kilitlenmiş olabilir
             if (!IsTabUnlocked(session, _tab)) SetTab(Tab.Upgrades);
 
             upgradesTabImage.color = _tab == Tab.Upgrades ? TabActive : TabInactive;
+            // Başka sekme yokken tek başına "Yükseltmeler" sekmesi gereksiz
+            upgradesTabImage.gameObject.SetActive(session.IsUnlocked(Feature.Talents) || session.IsUnlocked(Feature.Equipment));
             SetTabVisual(session, Tab.Talents, Feature.Talents, talentsTabImage, talentsTabLabel,
                          session.TalentPointsAvailable > 0 ? $"{UIStrings.TabTalents} <color=#FFE03A>({session.TalentPointsAvailable})</color>" : UIStrings.TabTalents);
             SetTabVisual(session, Tab.Equipment, Feature.Equipment, equipmentTabImage, equipmentTabLabel, UIStrings.TabEquipment);
@@ -220,9 +219,10 @@ namespace RiskLoop.Game.UI
 
         private void SetTabVisual(GameSession session, Tab tab, Feature feature, Image image, TMP_Text label, string title)
         {
-            bool unlocked = session.IsUnlocked(feature);
-            image.color = !unlocked ? TabLocked : _tab == tab ? TabActive : TabInactive;
-            label.text = unlocked ? title : $"<color=#666677>{title} ({UIStrings.LockedShort(session.UnlockLevel(feature))})</color>";
+            // Kilitli sekme hiç görünmez: açıldığı an yeni bir sekme belirir
+            image.gameObject.SetActive(session.IsUnlocked(feature));
+            image.color = _tab == tab ? TabActive : TabInactive;
+            label.text = title;
         }
     }
 }
