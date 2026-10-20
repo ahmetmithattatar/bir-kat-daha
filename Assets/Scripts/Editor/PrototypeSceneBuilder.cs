@@ -155,6 +155,7 @@ namespace RiskLoop.EditorTools
             TopBarView topBar = BuildTopBar(world);
 
             // Üst katmanlar (sıra önemli: sonra eklenen üstte çizilir)
+            ClassSelectView classSelect = BuildClassSelect(canvas);
             RevealPopupView popup = BuildRevealPopup(canvas);
             FxLayerView fx = BuildFxLayer(canvas, world);
             BuildTooltip(canvas);   // En üstte: her şeyin üzerinde görünsün
@@ -174,6 +175,10 @@ namespace RiskLoop.EditorTools
             SetRef(controller, "runPanel", runPanel);
             SetRef(controller, "upgradePanel", upgradePanel);
             SetRef(controller, "feedback", director);
+            SetRef(controller, "classSelect", classSelect);
+
+            // Eşya detayı güçlendirme efektlerini en üst efekt katmanında oynatır
+            SetRef(upgradePanel.GetComponentInChildren<ItemDetailView>(true), "fx", fx);
         }
 
         /// <summary>
@@ -302,6 +307,9 @@ namespace RiskLoop.EditorTools
             TMP_Text hint = CreateText("KeyHintText", rightBottom, UIStrings.KeyHintRun, 16, 42);
             hint.color = HintColor;
 
+            // ---- Sol alt HUD: büyü çubuğu (mana + 6 büyü, kısayol 1-6) ----
+            SpellBarView spellBar = BuildSpellBar(panel);
+
             // ---- Alt orta: Kumar terazisi (bir sonraki hamlenin riski ve ödülü, büyük) ----
             RiskGaugeView gauge = BuildRiskGauge(panel, heartbeat);
 
@@ -334,6 +342,7 @@ namespace RiskLoop.EditorTools
             SetRef(view, "buffsText", buffs);
             SetRef(view, "buffsTip", buffsTip);
             SetRef(view, "riskGauge", gauge);
+            SetRef(view, "spellBar", spellBar);
             SetRef(view, "messageText", message);
             SetRef(view, "collection", collection);
             SetRef(view, "digView", digView);
@@ -503,6 +512,13 @@ namespace RiskLoop.EditorTools
             Image aura = AddCentered("Aura", root, size * 1.7f);
             Image rays = AddCentered("Rays", root, size * 1.9f);
 
+            // Kudret rütbesi: ayak altında yatay ışık halkası
+            RectTransform groundRt = CreateUIObject("GroundGlow", root);
+            groundRt.anchorMin = groundRt.anchorMax = new Vector2(0.5f, 0.06f);
+            groundRt.sizeDelta = new Vector2(size.x * 1.6f, size.x * 1.6f);
+            Image groundGlow = AddImage(groundRt, Color.white);
+            groundGlow.raycastTarget = false;
+
             RectTransform bob = CreateUIObject("BobRoot", root);
             Stretch(bob);
 
@@ -515,6 +531,7 @@ namespace RiskLoop.EditorTools
                 return img;
             }
 
+            Image quiver = Layer("Quiver");   // Okçu: sırtta sadak (gövdenin arkasında)
             Image cape = Layer("Cape");
 
             // Sırtta kazma (gövdenin arkasında, sol omuzdan çapraz)
@@ -527,14 +544,23 @@ namespace RiskLoop.EditorTools
             pickaxe.preserveAspect = true;
 
             Image body = Layer("Body");
+            Image robe = Layer("Robe");       // Büyücü cübbesi
             Image pants = Layer("Pants");
             Image boots = Layer("Boots");
             Image armor = Layer("Armor");
             Image pauldrons = Layer("Pauldrons");
             Image gloves = Layer("Gloves");
             Image necklace = Layer("Necklace");
+            Image classHat = Layer("ClassHat");   // Şapka / başlık / alın bandı
             Image horns = Layer("Horns");
             Image helmet = Layer("Helmet");
+
+            // Silahın arkasında güçlendirme parıltısı (silahtan ÖNCE eklenir ki arkada çizilsin)
+            RectTransform weaponGlowRt = CreateUIObject("WeaponGlow", bob);
+            weaponGlowRt.anchorMin = weaponGlowRt.anchorMax = new Vector2(0.85f, 0.6f);
+            weaponGlowRt.sizeDelta = new Vector2(size.x * 1.1f, size.x * 1.1f);
+            Image weaponGlow = AddImage(weaponGlowRt, Color.white);
+            weaponGlow.raycastTarget = false;
 
             // Sağ elde silah (kabzadan tutulur, ağız yukarı-dışa)
             RectTransform weaponRt = CreateUIObject("Weapon", bob);
@@ -550,6 +576,11 @@ namespace RiskLoop.EditorTools
             SetRef(view, "bobRoot", bob);
             SetRef(view, "aura", aura);
             SetRef(view, "rays", rays);
+            SetRef(view, "groundGlow", groundGlow);
+            SetRef(view, "quiver", quiver);
+            SetRef(view, "robe", robe);
+            SetRef(view, "classHat", classHat);
+            SetRef(view, "weaponGlow", weaponGlow);
             SetRef(view, "cape", cape);
             SetRef(view, "pickaxe", pickaxe);
             SetRef(view, "body", body);
@@ -562,6 +593,244 @@ namespace RiskLoop.EditorTools
             SetRef(view, "horns", horns);
             SetRef(view, "helmet", helmet);
             SetRef(view, "weapon", weapon);
+            return view;
+        }
+
+        /// <summary>
+        /// Büyü çubuğu (sol alt HUD): üstte mana çubuğu, altta 6 büyü butonu (kısayol 1-6).
+        /// Sınıf seçilmeden ya da büyü yokken görünmez (SpellBarView kendini gizler).
+        /// </summary>
+        private static SpellBarView BuildSpellBar(Transform parent)
+        {
+            const int count = 6;
+            const float button = 64;
+
+            RectTransform root = CreateHudPanel("SpellHud", parent, new Vector2(0f, 0f), new Vector2(20f, 20f), HudSideWidth);
+
+            RectTransform manaRow = CreateUIObject("ManaRow", root);
+            SetHeight(manaRow, 26);
+            AddHorizontalLayout(manaRow, spacing: 10);
+            TMP_Text manaLabel = CreateText("ManaLabel", manaRow, UIStrings.ManaLabel, 18, 26, TextAlignmentOptions.MidlineLeft);
+            manaLabel.color = new Color(0.45f, 0.65f, 1f);
+            manaLabel.fontStyle = FontStyles.Bold;
+            SetFixedWidth(manaLabel, 70);
+            RectTransform bar = CreateUIObject("ManaBar", manaRow);
+            SetHeight(bar, 20);
+            FillRemainingWidth(bar);
+            AddImage(bar, BarBackColor).raycastTarget = false;
+            RectTransform fill = CreateUIObject("Fill", bar);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = new Vector2(0.5f, 1f);
+            fill.offsetMin = Vector2.zero;
+            fill.offsetMax = Vector2.zero;
+            AddImage(fill, new Color(0.3f, 0.5f, 1f)).raycastTarget = false;
+            RectTransform manaTextRt = CreateUIObject("ManaText", bar);
+            Stretch(manaTextRt);
+            var manaText = manaTextRt.gameObject.AddComponent<TextMeshProUGUI>();
+            manaText.fontSize = 15;
+            manaText.fontStyle = FontStyles.Bold;
+            manaText.alignment = TextAlignmentOptions.Center;
+            manaText.raycastTarget = false;
+
+            RectTransform row = CreateUIObject("Buttons", root);
+            SetHeight(row, button);
+            AddHorizontalLayout(row, spacing: 8);
+            var buttons = new SpellButtonView[count];
+            for (int i = 0; i < count; i++) buttons[i] = BuildSpellButton(row, i, button);
+
+            var view = root.gameObject.AddComponent<SpellBarView>();
+            SetRef(view, "manaFill", fill);
+            SetRef(view, "manaText", manaText);
+            SetRefArray(view, "buttons", buttons);
+            return view;
+        }
+
+        /// <summary>Kare büyü butonu: çerçeve, ikon, sol üstte kısayol, sağ altta mana bedeli.</summary>
+        private static SpellButtonView BuildSpellButton(Transform parent, int index, float size)
+        {
+            RectTransform root = CreateUIObject($"Spell_{index}", parent);
+            SetHeight(root, size);
+            SetFixedWidth(root, size);
+            Image frame = AddImage(root, Color.gray);   // raycastTarget açık: tıklama + ipucu
+
+            RectTransform innerRt = CreateUIObject("Inner", root);
+            Stretch(innerRt);
+            innerRt.offsetMin = new Vector2(3, 3);
+            innerRt.offsetMax = new Vector2(-3, -3);
+            AddImage(innerRt, new Color(0.07f, 0.06f, 0.1f)).raycastTarget = false;
+
+            RectTransform iconRt = CreateUIObject("Icon", root);
+            Stretch(iconRt);
+            iconRt.offsetMin = new Vector2(8, 8);
+            iconRt.offsetMax = new Vector2(-8, -8);
+            Image icon = AddImage(iconRt, Color.white);
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+
+            TMP_Text hotkey = AddChipText(root, "Hotkey", 14, new Vector2(5, 30), new Vector2(-5, -3), TextAlignmentOptions.TopLeft);
+            hotkey.color = new Color(0.8f, 0.8f, 0.85f);
+            TMP_Text cost = AddChipText(root, "Cost", 14, new Vector2(5, 3), new Vector2(-5, -30), TextAlignmentOptions.BottomRight);
+            cost.color = new Color(0.5f, 0.7f, 1f);
+            cost.fontStyle = FontStyles.Bold;
+
+            var button = root.gameObject.AddComponent<Button>();
+            button.targetGraphic = frame;
+            button.transition = Selectable.Transition.None;   // Renkleri SpellButtonView yönetir
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
+
+            var tip = root.gameObject.AddComponent<TooltipTrigger>();
+            var view = root.gameObject.AddComponent<SpellButtonView>();
+            SetRef(view, "button", button);
+            SetRef(view, "frame", frame);
+            SetRef(view, "icon", icon);
+            SetRef(view, "costText", cost);
+            SetRef(view, "hotkeyText", hotkey);
+            SetRef(view, "tooltip", tip);
+            return view;
+        }
+
+        /// <summary>Büyü Kitabı sekmesi: üstte sınıf ikonu + başlık, altında 6 büyü satırı (ikon, seviye rozeti, açıklama).</summary>
+        private static SpellBookView BuildSpellBook(Transform parent)
+        {
+            const int rows = 6;
+            const float rowHeight = 92;
+
+            RectTransform root = CreateUIObject("SpellsRoot", parent);
+            Stretch(root);
+            AddVerticalLayout(root, spacing: 8, padding: 0);
+
+            RectTransform header = CreateUIObject("Header", root);
+            SetHeight(header, 84);
+            AddHorizontalLayout(header, spacing: 14);
+            Image classIcon = BuildIconBox(header, 80);
+            TMP_Text headerText = CreateText("HeaderText", header, "", 26, 84, TextAlignmentOptions.MidlineLeft);
+            FillRemainingWidth(headerText);
+
+            var icons = new Image[rows];
+            var badges = new TMP_Text[rows];
+            var texts = new TMP_Text[rows];
+            var tips = new TooltipTrigger[rows];
+            for (int i = 0; i < rows; i++)
+            {
+                RectTransform row = CreateUIObject($"SpellRow_{i}", root);
+                SetHeight(row, rowHeight);
+                AddImage(row, new Color(0f, 0f, 0f, 0.25f));   // raycastTarget açık: ipucu
+                AddHorizontalLayout(row, spacing: 14);
+                row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(8, 8, 4, 4);
+                tips[i] = row.gameObject.AddComponent<TooltipTrigger>();
+
+                icons[i] = BuildIconBox(row, rowHeight - 12);
+                badges[i] = CreateText("Level", row, "", 22, rowHeight - 12);
+                badges[i].fontStyle = FontStyles.Bold;
+                SetFixedWidth(badges[i], 70);
+                // SpellBookView satırı gizlemek için metnin ebeveynini (satırı) kullanır
+                texts[i] = CreateText("Text", row, "", 24, rowHeight - 12, TextAlignmentOptions.MidlineLeft);
+                FillRemainingWidth(texts[i]);
+            }
+
+            var view = root.gameObject.AddComponent<SpellBookView>();
+            SetRef(view, "classIcon", classIcon);
+            SetRef(view, "headerText", headerText);
+            SetRefArray(view, "icons", icons);
+            SetRefArray(view, "levelBadges", badges);
+            SetRefArray(view, "rowTexts", texts);
+            SetRefArray(view, "tooltips", tips);
+            return view;
+        }
+
+        /// <summary>
+        /// Sınıf seçim ekranı: tam ekran koyu perde, başlık, 3 kart (karakter önizlemesi, ikon, ad, açıklama, SEÇ).
+        /// Başta gizli; GameController sınıf yoksa açar.
+        /// </summary>
+        private static ClassSelectView BuildClassSelect(Transform canvas)
+        {
+            RectTransform root = CreateUIObject("ClassSelect", canvas);
+            Stretch(root);
+            var group = root.gameObject.AddComponent<CanvasGroup>();
+            AddImage(root, new Color(0.03f, 0.03f, 0.05f, 0.94f));   // Tıklamayı yutar
+
+            RectTransform titleRt = CreateUIObject("Title", root);
+            titleRt.anchorMin = titleRt.anchorMax = new Vector2(0.5f, 1f);
+            titleRt.pivot = new Vector2(0.5f, 1f);
+            titleRt.sizeDelta = new Vector2(1400, 90);
+            titleRt.anchoredPosition = new Vector2(0, -70);
+            var title = titleRt.gameObject.AddComponent<TextMeshProUGUI>();
+            title.fontSize = 72;
+            title.fontStyle = FontStyles.Bold;
+            title.alignment = TextAlignmentOptions.Center;
+            title.color = new Color(1f, 0.88f, 0.23f);
+            title.raycastTarget = false;
+
+            RectTransform hintRt = CreateUIObject("Hint", root);
+            hintRt.anchorMin = hintRt.anchorMax = new Vector2(0.5f, 1f);
+            hintRt.pivot = new Vector2(0.5f, 1f);
+            hintRt.sizeDelta = new Vector2(1400, 50);
+            hintRt.anchoredPosition = new Vector2(0, -165);
+            var hint = hintRt.gameObject.AddComponent<TextMeshProUGUI>();
+            hint.fontSize = 26;
+            hint.alignment = TextAlignmentOptions.Center;
+            hint.color = HintColor;
+            hint.raycastTarget = false;
+
+            RectTransform cards = CreateUIObject("Cards", root);
+            cards.anchorMin = cards.anchorMax = new Vector2(0.5f, 0.5f);
+            cards.sizeDelta = new Vector2(1500, 720);
+            cards.anchoredPosition = new Vector2(0, -60);
+            var cardsLayout = cards.gameObject.AddComponent<HorizontalLayoutGroup>();
+            cardsLayout.spacing = 40;
+            cardsLayout.childControlWidth = true;
+            cardsLayout.childControlHeight = true;
+            cardsLayout.childForceExpandWidth = true;
+            cardsLayout.childForceExpandHeight = true;   // Bu grup bir düzenin İÇİNDE değil: güvenli
+
+            int n = ClassSelectView.Cards.Length;
+            var previews = new AvatarView[n];
+            var icons = new Image[n];
+            var names = new TMP_Text[n];
+            var descriptions = new TMP_Text[n];
+            var buttons = new Button[n];
+            for (int i = 0; i < n; i++)
+            {
+                RectTransform card = CreateUIObject($"Card_{ClassSelectView.Cards[i]}", cards);
+                AddImage(card, PanelColor).raycastTarget = false;
+                AddVerticalLayout(card, spacing: 12, padding: 24);
+                card.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.UpperCenter;
+
+                RectTransform avatarHolder = CreateUIObject("AvatarHolder", card);
+                SetHeight(avatarHolder, 260);
+                previews[i] = BuildAvatar(avatarHolder, new Vector2(165, 220));
+                RectTransform avatarRt = (RectTransform)previews[i].transform;
+                avatarRt.anchorMin = avatarRt.anchorMax = new Vector2(0.5f, 0.5f);
+                avatarRt.anchoredPosition = Vector2.zero;
+                avatarRt.GetComponent<LayoutElement>().ignoreLayout = true;
+
+                RectTransform nameRow = CreateUIObject("NameRow", card);
+                SetHeight(nameRow, 64);
+                AddHorizontalLayout(nameRow, spacing: 12);
+                nameRow.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+                icons[i] = BuildIconBox(nameRow, 60);
+                names[i] = CreateText("Name", nameRow, "", 44, 64, TextAlignmentOptions.MidlineLeft);
+                names[i].fontStyle = FontStyles.Bold;
+                SetFixedWidth(names[i], 260);
+
+                descriptions[i] = CreateText("Description", card, "", 24, 220, TextAlignmentOptions.Top);
+                CreateFlexibleSpacer(card);
+                buttons[i] = CreateButton("ChooseButton", card, UIStrings.ChooseButton, AdvanceColor, 80, 40, out _);
+            }
+
+            var view = root.gameObject.AddComponent<ClassSelectView>();
+            SetRef(view, "canvasGroup", group);
+            SetRef(view, "titleText", title);
+            SetRef(view, "hintText", hint);
+            SetRefArray(view, "previews", previews);
+            SetRefArray(view, "icons", icons);
+            SetRefArray(view, "names", names);
+            SetRefArray(view, "descriptions", descriptions);
+            SetRefArray(view, "chooseButtons", buttons);
+
+            // Başta gizli (ClassSelectView.Awake de gizler)
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
             return view;
         }
 
@@ -865,6 +1134,23 @@ namespace RiskLoop.EditorTools
             return fillImage;
         }
 
+        /// <summary>Yan yana dizilimde koyu kare kutu + içinde pixel art ikon (yükseltme, Kadim satırları). İkonu döndürür.</summary>
+        private static Image BuildIconBox(Transform parent, float size)
+        {
+            RectTransform box = CreateUIObject("IconBox", parent);
+            SetHeight(box, size);
+            SetFixedWidth(box, size);
+            AddImage(box, new Color(0.06f, 0.06f, 0.09f)).raycastTarget = false;
+            RectTransform iconRt = CreateUIObject("Icon", box);
+            Stretch(iconRt);
+            iconRt.offsetMin = new Vector2(8, 8);
+            iconRt.offsetMax = new Vector2(-8, -8);
+            Image icon = AddImage(iconRt, Color.white);
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            return icon;
+        }
+
         /// <summary>Ebeveyninin ortasında sabit boyutlu, tıklanmayan Image.</summary>
         private static Image AddCentered(string name, Transform parent, Vector2 size)
         {
@@ -1097,6 +1383,8 @@ namespace RiskLoop.EditorTools
             FillRemainingWidth(upgradesTab);
             Button talentsTab = CreateButton("TalentsTab", tabs, UIStrings.TabTalents, MutedColor, 60, 26, out TMP_Text talentsTabLabel);
             FillRemainingWidth(talentsTab);
+            Button spellsTab = CreateButton("SpellsTab", tabs, UIStrings.TabSpells, MutedColor, 60, 26, out TMP_Text spellsTabLabel);
+            FillRemainingWidth(spellsTab);
             Button equipmentTab = CreateButton("EquipmentTab", tabs, UIStrings.TabEquipment, MutedColor, 60, 26, out TMP_Text equipmentTabLabel);
             FillRemainingWidth(equipmentTab);
             Button prestigeTab = CreateButton("PrestigeTab", tabs, UIStrings.TabPrestige, MutedColor, 60, 26, out TMP_Text prestigeTabLabel);
@@ -1117,6 +1405,7 @@ namespace RiskLoop.EditorTools
 
             // Yetenek, Ekipman ve Yeni Çağ sekmeleri
             TalentTreeView talents = BuildTalentTree(content);
+            SpellBookView spellBook = BuildSpellBook(content);
             EquipmentView equipment = BuildEquipmentView(content);
             PrestigePanelView prestige = BuildPrestigePanel(content);
 
@@ -1134,6 +1423,11 @@ namespace RiskLoop.EditorTools
             SetRef(view, "prestigeTabLabel", prestigeTabLabel);
             SetRef(view, "talentsRoot", talents.gameObject);
             SetRef(view, "talents", talents);
+            SetRef(view, "spellsTab", spellsTab);
+            SetRef(view, "spellsTabImage", spellsTab.GetComponent<Image>());
+            SetRef(view, "spellsTabLabel", spellsTabLabel);
+            SetRef(view, "spellsRoot", spellBook.gameObject);
+            SetRef(view, "spellBook", spellBook);
             SetRef(view, "upgradesTab", upgradesTab);
             SetRef(view, "equipmentTab", equipmentTab);
             SetRef(view, "prestigeTab", prestigeTab);
@@ -1239,9 +1533,18 @@ namespace RiskLoop.EditorTools
             Image background = AddImage(innerRt, BackgroundColor);
             background.raycastTarget = false;
 
-            TMP_Text nameText = AddChipText(root, "Name", 19, new Vector2(8, 26), new Vector2(-8, -6), TextAlignmentOptions.Center);
+            RectTransform talentIconRt = CreateUIObject("Icon", root);
+            talentIconRt.anchorMin = talentIconRt.anchorMax = new Vector2(0.5f, 1f);
+            talentIconRt.pivot = new Vector2(0.5f, 1f);
+            talentIconRt.sizeDelta = new Vector2(34, 34);
+            talentIconRt.anchoredPosition = new Vector2(0f, -6f);
+            Image talentIcon = AddImage(talentIconRt, Color.white);
+            talentIcon.raycastTarget = false;
+            talentIcon.preserveAspect = true;
+
+            TMP_Text nameText = AddChipText(root, "Name", 16, new Vector2(4, 22), new Vector2(-4, -40), TextAlignmentOptions.Center);
             nameText.fontStyle = FontStyles.Bold;
-            TMP_Text rankText = AddChipText(root, "Rank", 18, new Vector2(8, 6), new Vector2(-8, -48), TextAlignmentOptions.Center);
+            TMP_Text rankText = AddChipText(root, "Rank", 16, new Vector2(4, 3), new Vector2(-4, -58), TextAlignmentOptions.Center);
             rankText.color = new Color(1f, 0.88f, 0.23f);
 
             var button = root.gameObject.AddComponent<Button>();
@@ -1257,6 +1560,7 @@ namespace RiskLoop.EditorTools
             SetRef(view, "border", border);
             SetRef(view, "nameText", nameText);
             SetRef(view, "rankText", rankText);
+            SetRef(view, "icon", talentIcon);
             SetRef(view, "tooltip", tip);
             return view;
         }
@@ -1340,6 +1644,7 @@ namespace RiskLoop.EditorTools
                 RectTransform row = CreateUIObject($"PrestigeRow_{type}", root);
                 SetHeight(row, rowHeight);
                 AddHorizontalLayout(row, spacing: 20);
+                Image prIcon = BuildIconBox(row, rowHeight - 10);
                 TMP_Text rowInfo = CreateText("InfoText", row, "", 26, rowHeight, TextAlignmentOptions.MidlineLeft);
                 FillRemainingWidth(rowInfo);
                 Button buy = CreateButton("BuyButton", row, "Al", new Color(0.55f, 0.35f, 0.75f), rowHeight, 26, out TMP_Text buyText);
@@ -1350,6 +1655,7 @@ namespace RiskLoop.EditorTools
                 SetRef(rowView, "infoText", rowInfo);
                 SetRef(rowView, "buyButton", buy);
                 SetRef(rowView, "buyText", buyText);
+                SetRef(rowView, "icon", prIcon);
                 rows.Add(rowView);
             }
 
@@ -1378,6 +1684,11 @@ namespace RiskLoop.EditorTools
             Image inner = AddImage(innerRt, BackgroundColor);
             inner.raycastTarget = false;
 
+            RectTransform slotGlowRt = CreateUIObject("EnhanceGlow", root);
+            Stretch(slotGlowRt);
+            Image slotGlow = AddImage(slotGlowRt, Color.white);
+            slotGlow.raycastTarget = false;
+
             RectTransform iconRt = CreateUIObject("Icon", root);
             Stretch(iconRt);
             iconRt.offsetMin = new Vector2(12, withLabel ? 22 : 12);
@@ -1402,11 +1713,24 @@ namespace RiskLoop.EditorTools
                 label.raycastTarget = false;
             }
 
+            RectTransform plusRt = CreateUIObject("EnhanceText", root);
+            plusRt.anchorMin = plusRt.anchorMax = new Vector2(1f, 1f);
+            plusRt.pivot = new Vector2(1f, 1f);
+            plusRt.sizeDelta = new Vector2(44, 24);
+            plusRt.anchoredPosition = new Vector2(-5, -3);
+            var plus = plusRt.gameObject.AddComponent<TextMeshProUGUI>();
+            plus.fontSize = 18;
+            plus.fontStyle = FontStyles.Bold;
+            plus.alignment = TextAlignmentOptions.TopRight;
+            plus.raycastTarget = false;
+
             var button = root.gameObject.AddComponent<Button>();
             button.targetGraphic = frame;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
 
             var view = root.gameObject.AddComponent<GearSlotView>();
+            SetRef(view, "glow", slotGlow);
+            SetRef(view, "enhanceText", plus);
             SetRef(view, "frame", frame);
             SetRef(view, "inner", inner);
             SetRef(view, "icon", icon);
@@ -1437,6 +1761,13 @@ namespace RiskLoop.EditorTools
             innerRt.offsetMin = new Vector2(5, 5);
             innerRt.offsetMax = new Vector2(-5, -5);
             AddImage(innerRt, PanelColor).raycastTarget = false;
+            RectTransform detailGlowRt = CreateUIObject("EnhanceGlow", iconBox);
+            Stretch(detailGlowRt);
+            detailGlowRt.offsetMin = new Vector2(-20, -20);
+            detailGlowRt.offsetMax = new Vector2(20, 20);
+            Image detailGlow = AddImage(detailGlowRt, Color.white);
+            detailGlow.raycastTarget = false;
+
             RectTransform iconRt = CreateUIObject("Icon", iconBox);
             Stretch(iconRt);
             iconRt.offsetMin = new Vector2(12, 12);
@@ -1444,6 +1775,17 @@ namespace RiskLoop.EditorTools
             Image icon = AddImage(iconRt, Color.white);
             icon.preserveAspect = true;
             icon.raycastTarget = false;
+            RectTransform badgeRt = CreateUIObject("EnhanceBadge", iconBox);
+            badgeRt.anchorMin = badgeRt.anchorMax = new Vector2(1f, 0f);
+            badgeRt.pivot = new Vector2(1f, 0f);
+            badgeRt.sizeDelta = new Vector2(70, 34);
+            badgeRt.anchoredPosition = new Vector2(-2, 2);
+            var badge = badgeRt.gameObject.AddComponent<TextMeshProUGUI>();
+            badge.fontSize = 28;
+            badge.fontStyle = FontStyles.Bold;
+            badge.alignment = TextAlignmentOptions.BottomRight;
+            badge.raycastTarget = false;
+
             SetFixedWidth(frame, 100);
 
             RectTransform texts = CreateUIObject("Texts", top);
@@ -1484,6 +1826,8 @@ namespace RiskLoop.EditorTools
             SetRef(view, "enhanceLabel", enhanceLabel);
             SetRef(view, "sellButton", sell);
             SetRef(view, "sellLabel", sellLabel);
+            SetRef(view, "iconGlow", detailGlow);
+            SetRef(view, "enhanceBadge", badge);
             return view;
         }
 
@@ -1493,6 +1837,8 @@ namespace RiskLoop.EditorTools
             RectTransform row = CreateUIObject($"UpgradeRow_{type}", parent);
             SetHeight(row, rowHeight);
             AddHorizontalLayout(row, spacing: 20);
+
+            Image icon = BuildIconBox(row, rowHeight - 10);
 
             TMP_Text info = CreateText("InfoText", row, UIStrings.UpgradeName(type), 28, rowHeight, TextAlignmentOptions.MidlineLeft);
             FillRemainingWidth(info);
@@ -1504,6 +1850,7 @@ namespace RiskLoop.EditorTools
             SetEnum(view, "upgradeType", (int)type);
             SetRef(view, "infoText", info);
             SetRef(view, "buyButton", buy);
+            SetRef(view, "icon", icon);
             SetRef(view, "buyButtonText", buyText);
             return view;
         }

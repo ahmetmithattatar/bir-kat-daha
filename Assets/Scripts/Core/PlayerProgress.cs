@@ -20,7 +20,7 @@ namespace RiskLoop.Core
     [Serializable]
     public class PlayerProgress
     {
-        public int saveVersion = 6;
+        public int saveVersion = 7;
         public double money;
         public List<UpgradeLevelEntry> upgradeLevels = new List<UpgradeLevelEntry>();
 
@@ -50,6 +50,7 @@ namespace RiskLoop.Core
         public List<UpgradeLevelEntry> prestigeLevels = new List<UpgradeLevelEntry>();
 
         // Oyuncu seviyesi ve yetenekler: Yeni Çağda da KALIR (hesap ilerlemesi)
+        public int heroClass;   // HeroClass sayı olarak (0 = seçilmedi). Yeni Çağda sıfırlanır, yeniden seçilir
         public int level = 1;
         public double xp;                 // Mevcut seviyedeki XP
         public List<UpgradeLevelEntry> talentRanks = new List<UpgradeLevelEntry>();

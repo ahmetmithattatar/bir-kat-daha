@@ -66,6 +66,27 @@ namespace RiskLoop.Game.Art
                 "....KHK.........", "...KHK..........", "..KhK...........", ".KhK............",
                 ".KK.............", "................", "................", "................" } },
 
+            { "wand", new[] {
+                "................", "............KK..", "...........KCWK.", "..........KCCCK.",
+                ".........KHKCK..", "........KHK.K...", ".......KHK......", "......KHK.......",
+                ".....KHK........", "....KAK.........", "...KAK..........", "..KhK...........",
+                ".KhK............", ".KK.............", "................", "................" } },
+            { "orb", new[] {
+                "................", ".....KKKKKK.....", "....KCCCCCCK....", "...KCWWCCCCCK...",
+                "...KCWCCCCCCK...", "...KCCCCCCCaK...", "...KCCCCCCaaK...", "....KCCCCaaK....",
+                ".....KKKKKK.....", "....KAAAAAAK....", "...KAaKAAKaAK...", "...KAK.KK.KAK...",
+                "....KK....KK....", "................", "................", "................" } },
+            { "tome", new[] {
+                "................", "...KKKKKKKKKK...", "..KAAAAAAAAAAK..", "..KAWAAAAAAAaK..",
+                "..KAAAKKKKAAaK..", "..KAAKCCCCKAaK..", "..KAAKCWCCKAaK..", "..KAAKCCCCKAaK..",
+                "..KAAAKKKKAAaK..", "..KAAAAAAAAAaK..", "..KaaaaaaaaaaK..", "..KWWWWWWWWWWK..",
+                "..KKKKKKKKKKKK..", "................", "................", "................" } },
+            { "crossbow", new[] {
+                "................", "..KK........KK..", "..KAK......KAK..", "...KAK....KAK...",
+                "....KAKKKKAK....", ".....KAAAAK.....", "..KKKKHHHHKKKK..", "..KCWK.HH.K.....",
+                ".......HH.......", ".......HH.......", ".......HH.......", "......KHHK......",
+                "......KhhK......", "......KKKK......", "................", "................" } },
+
             { "pickaxe", new[] {
                 "......aaaa......", "....aaAAAAaa....", "...aAAaaaaAAa...", "..aAa..hh..aAa..",
                 "..aa...HH...aa..", ".aa....HH....aa.", ".a.....HH.....a.", ".......HH.......",
@@ -133,6 +154,15 @@ namespace RiskLoop.Game.Art
             { "shadow_blades", ("dagger", "5A5A70", "30303A", "A060FF") },
             { "volcanic_greatsword", ("sword", "E06A2A", "902A10", "FFD040") },
             { "void_scythe", ("scythe", "8A5AC8", "4A2A80", "C080FF") },
+            { "apprentice_wand", ("wand", "C8CDD4", "8A8F98", "8FD0FF") },
+            { "ember_wand", ("wand", "E06A2A", "902A10", "FFB040") },
+            { "frost_orb", ("orb", "C8CDD4", "8A8F98", "80D8FF") },
+            { "arcane_tome", ("tome", "6A3AA0", "3A1A60", "E0C040") },
+            { "star_staff", ("staff", "FFFFFF", "C0C0E0", "FFE060") },
+            { "short_bow", ("bow", "C8CDD4", "8A8F98", "C8B89A") },
+            { "crossbow", ("crossbow", "B0B8C4", "6A707A", "C04040") },
+            { "storm_bow", ("bow", "90C8FF", "4A80C0", "FFFFFF") },
+            { "phoenix_bow", ("bow", "FF8A2A", "C04010", "FFE060") },
         };
 
         // ---------------- Kazma başı renkleri: (metal, metal gölge) ----------------
@@ -186,17 +216,37 @@ namespace RiskLoop.Game.Art
             return false;
         }
 
-        /// <summary>Eşyanın ikonu.</summary>
+        /// <summary>
+        /// Eşyanın ikonu. Nadirlik ve güçlendirme GÖRÜNÜŞÜ de değiştirir (Diablo/WoW gibi "uzaktan belli olsun"):
+        ///   lacivert+  : süs/taş pikselleri nadirlik renginde
+        ///   turuncu+   : kontur nadirlik renginde parlar
+        ///   +4         : parıltılar altın
+        ///   +7         : metal parlaklaşır
+        ///   +10        : altın kaplama
+        /// </summary>
         public static Sprite Icon(GearItem item)
         {
-            if (item.slot == GearSlot.Weapon) return WeaponSprite(item.baseId);
+            if (item.slot == GearSlot.Weapon) return WeaponSprite(item);
             if (item.slot == GearSlot.Pickaxe) return PickaxeSprite(item.baseId);
 
             string material = FantasyTexts.MaterialId(item);
             var colors = Materials.TryGetValue(material, out var c) ? c : ("A0A0A0", "606060", "C0C0C0");
             string template = SlotTemplate(item.slot);
-            return Build($"gear_{template}_{material}", Templates[template], colors.Item1, colors.Item2, colors.Item3);
+            return Build($"gear_{template}_{material}", Templates[template], colors.Item1, colors.Item2, colors.Item3, item.tier, item.enhance);
         }
+
+        /// <summary>Eşyanın silah görseli: nadirlik ve güçlendirme süsleriyle (elde tutulan silah için de).</summary>
+        public static Sprite WeaponSprite(GearItem item)
+        {
+            var w = Weapons.TryGetValue(item.baseId, out var found) ? found : ("sword", "C8CDD4", "8A8F98", "C04040");
+            return Build($"weapon_{item.baseId}", Templates[w.Item1], w.Item2, w.Item3, w.Item4, item.tier, item.enhance);
+        }
+
+        /// <summary>Güçlendirme görsel kademesi: 0 (+0..+3), 1 (+4..+6), 2 (+7..+9), 3 (+10).</summary>
+        public static int EnhanceBand(int enhance) => enhance >= 10 ? 3 : enhance >= 7 ? 2 : enhance >= 4 ? 1 : 0;
+
+        /// <summary>Nadirlik görsel kademesi: 0 (beyaz..mavi), 1 (lacivert..sarı), 2 (turuncu+).</summary>
+        public static int RarityBand(int tier) => tier >= 6 ? 2 : tier >= 3 ? 1 : 0;
 
         /// <summary>Silah görseli (elde tutulan silah için de kullanılır).</summary>
         public static Sprite WeaponSprite(string weaponId)
@@ -235,7 +285,7 @@ namespace RiskLoop.Game.Art
             }
         }
 
-        private static Sprite Build(string key, string[] rows, string main, string shade, string accent)
+        private static Sprite Build(string key, string[] rows, string main, string shade, string accent, int tier = -1, int enhance = 0)
         {
             var palette = new Dictionary<char, Color32>
             {
@@ -247,7 +297,39 @@ namespace RiskLoop.Game.Art
                 { 'H', new Color32(0x8A, 0x5A, 0x30, 0xFF) },
                 { 'h', new Color32(0x5C, 0x3A, 0x1A, 0xFF) },
             };
-            return PixelArt.FromRows(key, rows, palette);
+            if (tier < 0) return PixelArt.FromRows(key, rows, palette);
+
+            // Önbellek anahtarı süs kademelerini içerir: aynı eşya +3 ve +7'de farklı sprite
+            string suffix = Decorate(palette, tier, enhance);
+            return PixelArt.FromRows(key + suffix, rows, palette);
+        }
+
+        /// <summary>
+        /// Paleti nadirlik ve güçlendirmeye göre süsler (eşya ikonu ve karakter katmanı aynı kuralı kullanır).
+        /// Önbellek anahtarına eklenecek eki döndürür.
+        /// </summary>
+        public static string Decorate(Dictionary<char, Color32> palette, int tier, int enhance)
+        {
+            int rarity = RarityBand(tier);
+            int shine = EnhanceBand(enhance);
+            Color rarityColor = RarityStyle.TierColor(tier);
+            Color gold = new Color(1f, 0.82f, 0.25f);
+
+            if (rarity >= 1) palette['C'] = rarityColor;                                                   // Taşlar nadirlik renginde
+            if (rarity >= 2) palette['K'] = Color.Lerp(new Color32(0x14, 0x10, 0x10, 0xFF), rarityColor * 0.55f, 0.85f); // Parlayan kontur
+            if (shine >= 1) palette['W'] = Color.Lerp(Color.white, gold, 0.55f);                            // Altın parıltı
+            if (shine >= 2 && palette.ContainsKey('A'))
+            {
+                palette['A'] = Color.Lerp(palette['A'], Color.white, 0.3f);                                 // Cilalanmış metal
+                palette['a'] = Color.Lerp(palette['a'], palette['A'], 0.35f);
+            }
+            if (shine >= 3 && palette.ContainsKey('A'))
+            {
+                palette['A'] = Color.Lerp(palette['A'], gold, 0.5f);                                        // Altın kaplama
+                palette['a'] = Color.Lerp(palette['a'], gold * 0.7f, 0.5f);
+                if (palette.ContainsKey('H')) palette['H'] = Color.Lerp(palette['H'], gold, 0.5f);
+            }
+            return $"_r{(rarity >= 1 ? tier : 0)}_e{shine}";
         }
 
         private static Color32 Hex(string hex)

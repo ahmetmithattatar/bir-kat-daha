@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using RiskLoop.Core;
+using UnityEngine;
 
 namespace RiskLoop.Game
 {
@@ -525,6 +526,19 @@ namespace RiskLoop.Game
         public static string EnhanceSuccess(int level) => $"<color=#3CCB5A>BAŞARILI! Eşya artık +{level}</color>";
         public static string EnhanceDowngrade(int level) => $"<color=#FF9A2E>Başarısız... seviye +{level}'e düştü</color>";
         public const string EnhanceBroken = "<color=#FF3B3B>EŞYA KIRILDI! Kayboldu...</color>";
+        public const string EnhanceBrokenTitle = "EŞYA PARAMPARÇA!";
+
+        /// <summary>Görünüşün değiştiği eşik seviyeler: ekranda başlık (null = eşik değil).</summary>
+        public static string EnhanceMilestone(int level)
+        {
+            switch (level)
+            {
+                case 4: return "+4: ALTIN PARILTI!";
+                case 7: return "+7: CİLALI ÇELİK!";
+                case 10: return "+10: ALTIN KAPLAMA!!!";
+                default: return null;
+            }
+        }
         public const string EnhanceFailSafe = "<color=#FFE03A>Başarısız, ama eşya sağlam.</color>";
         public static string EnhanceRiskNote(int current, int downgradeFrom, int breakFrom) =>
             current >= breakFrom ? $"<color=#FF3B3B>Dikkat: başarısızlıkta eşya KIRILIR</color>"
@@ -534,6 +548,157 @@ namespace RiskLoop.Game
         // ---------------- Kudret (eşya puanı) ----------------
 
         public const string KudretLabel = "KUDRET";
+
+        // Kudret rütbeleri (sadece görünüş: karakterin ayak altı ışığı ve kıvılcımları bununla büyür)
+        private static readonly double[] KudretRankThresholds = { 0, 150, 500, 1200, 2500, 5000, 9000 };
+        private static readonly string[] KudretRankNames = { "Çaylak", "Madenci", "Yiğit", "Kahraman", "Efsane", "Yarı Tanrı", "Ölümsüz" };
+        private static readonly Color[] KudretRankColors =
+        {
+            new Color(0.7f, 0.7f, 0.75f), new Color(0.75f, 0.9f, 1f), new Color(0.3f, 0.75f, 1f), new Color(0.3f, 0.9f, 0.4f),
+            new Color(1f, 0.85f, 0.25f), new Color(1f, 0.55f, 0.15f), new Color(0.75f, 0.4f, 1f)
+        };
+
+        public static int KudretRank(double kudret)
+        {
+            int rank = 0;
+            for (int i = 0; i < KudretRankThresholds.Length; i++) if (kudret >= KudretRankThresholds[i]) rank = i;
+            return rank;
+        }
+
+        public static string KudretRankName(int rank) => KudretRankNames[Math.Max(0, Math.Min(rank, KudretRankNames.Length - 1))];
+        public static Color KudretRankColor(int rank) => KudretRankColors[Math.Max(0, Math.Min(rank, KudretRankColors.Length - 1))];
+
+        /// <summary>Sonraki rütbe için gereken Kudret (son rütbedeyse 0).</summary>
+        public static double NextKudretRankAt(double kudret)
+        {
+            int rank = KudretRank(kudret);
+            return rank + 1 < KudretRankThresholds.Length ? KudretRankThresholds[rank + 1] : 0;
+        }
+
+        // ---------------- Sınıflar ----------------
+
+        public const string ClassSelectTitle = "SINIFINI SEÇ";
+        public const string ClassSelectHint = "Sınıf; canını, gücünü, silahlarını ve büyü kitabını belirler. Yeni Çağda yeniden seçebilirsin.";
+        public const string ChooseButton = "SEÇ";
+        public static string ClassChosen(HeroClass c) =>
+            $"<color=#FFE03A>{ClassName(c).ToUpper()} OLDUN!</color> Büyü kitabın açıldı. Kazıda büyü kısayolları: 1-6.";
+        public static string WrongClassWeapon(HeroClass c) => $"<color=#FF5A4A>Bu silah {ClassName(c)} içindir</color>";
+
+        public static string ClassName(HeroClass c)
+        {
+            switch (c)
+            {
+                case HeroClass.Warrior: return "Savaşçı";
+                case HeroClass.Mage: return "Büyücü";
+                case HeroClass.Archer: return "Okçu";
+                default: return "Sınıfsız";
+            }
+        }
+
+        public static string ClassDescription(HeroClass c)
+        {
+            switch (c)
+            {
+                case HeroClass.Warrior:
+                    return "Kalın zırh, sağlam yürek.\n<color=#3CCB5A>Can +%30, Savunma +%35</color>\nKılıç, balta, gürz, çekiç\n" +
+                           "Büyüleri: güçlü darbe, iyileşme, tavanı omuzlama, ganimet hırsı";
+                case HeroClass.Mage:
+                    return "Kadim bilginin ve kaderin efendisi.\n<color=#3CCB5A>Saldırı +%20, Şans +%6, Mana +50</color> <color=#FF9A2E>Can -%10</color>\n" +
+                           "Değnek, asa, küre, kitap\nBüyüleri: ateş topu, KEHANET (göçüğü önceden gör), altın simyası";
+                case HeroClass.Archer:
+                    return "Keskin göz, hızlı el.\n<color=#3CCB5A>Kritik +%8, Bulgu +%3, Kazı gücü +%15</color>\nYay, arbalet, hançer, mızrak\n" +
+                           "Büyüleri: ok yağmuru, izci gözü, kesin kritik, ganimet avı";
+                default: return "";
+            }
+        }
+
+        // ---------------- Büyüler ----------------
+
+        public const string TabSpells = "Büyü Kitabı";
+        public const string ManaLabel = "MANA";
+        public static string ManaText(double mana, double max) => $"{(int)mana} / {(int)max}";
+
+        public static string SpellName(string id)
+        {
+            switch (id)
+            {
+                case "w_cleave": return "Yarma Darbesi";
+                case "w_iron_will": return "Demir İrade";
+                case "w_shoulder": return "Kaya Omuz";
+                case "w_warcry": return "Savaş Narası";
+                case "w_greed": return "Yağma Hırsı";
+                case "w_titan": return "Titan Kalkanı";
+                case "m_fireball": return "Ateş Topu";
+                case "m_foresight": return "Kehanet";
+                case "m_alchemy": return "Altın Simyası";
+                case "m_frost": return "Buz Kalkanı";
+                case "m_arcane_eye": return "Arkan Göz";
+                case "m_timebend": return "Zamanı Bük";
+                case "a_volley": return "Ok Yağmuru";
+                case "a_scout": return "İzci Gözü";
+                case "a_eagle": return "Kartal Gözü";
+                case "a_pathfinder": return "Yol Bulucu";
+                case "a_hunt": return "Ganimet Avı";
+                case "a_deadeye": return "Ölüm Atışı";
+                default: return id;
+            }
+        }
+
+        /// <summary>Büyünün ne yaptığı (sayılar tanımdan).</summary>
+        public static string SpellDescription(SpellDefinition s)
+        {
+            switch (s.effect)
+            {
+                case SpellEffect.StrikeMult: return $"Savaş: saldırı gücünün <b>{s.value * 100:0}%</b>'i kadar tek vuruş";
+                case SpellEffect.MultiStrike: return $"Savaş: hemen <b>{(int)s.value}</b> ok birden";
+                case SpellEffect.Heal: return $"Canının <b>%{Pct(s.value)}</b>'ini yenile";
+                case SpellEffect.SafeFloors: return $"Sonraki <b>{s.duration}</b> katta göçük riski <b>-%{Pct(s.value)}</b>";
+                case SpellEffect.RewardFloors: return $"Sonraki <b>{s.duration}</b> katın ödülü <b>x{s.value:0.#}</b>";
+                case SpellEffect.BankEarnings: return $"Risk altındaki kazancın <b>%{Pct(s.value)}</b>'i hemen cebe (göçükte bile kaybolmaz)";
+                case SpellEffect.Foresight: return "Sonraki katın kaderini gör: <b>göçecek mi, güvenli mi?</b>";
+                case SpellEffect.FindBoost: return $"Sonraki katta bulgu garantili, nadirliği <b>+{(int)s.value}</b> basamak";
+                case SpellEffect.GuaranteedFinds: return $"Sonraki <b>{s.duration}</b> katta bulgu garantili";
+                case SpellEffect.Ward: return $"Canavarın sonraki <b>{s.duration}</b> vuruşu <b>-%{Pct(s.value)}</b> hasar";
+                case SpellEffect.CritCharges: return $"Sonraki <b>{s.duration}</b> vuruş kesin kritik";
+                case SpellEffect.CalmBoss: return $"Savaş: bossun öfkesi sıfırlanır, canının <b>%{Pct(s.value)}</b>'i yenilenir";
+                case SpellEffect.LootHunt: return $"Sonraki zaferde en az 1 eşya, nadirliği <b>+{(int)s.value}</b>";
+                default: return "";
+            }
+        }
+
+        public static string SpellWhen(SpellDefinition s) =>
+            s.CombatOnly ? "<color=#FF9A2E>savaşta</color>" : s.DigOnly ? "<color=#8FD3FF>kazarken</color>" : "<color=#9AA0B4>her an</color>";
+
+        public static string SpellTooltip(SpellDefinition s, bool known, int hotkey)
+        {
+            if (!known) return $"<b>???</b>\nSeviye {s.unlockLevel}'de öğrenilir.";
+            string key = hotkey > 0 ? $"   <color=#9AA0B4>[{hotkey}]</color>" : "";
+            return $"<b>{SpellName(s.id)}</b>{key}\n{SpellDescription(s)}\n<color=#6FA8FF>{(int)s.manaCost} mana</color> · {SpellWhen(s)}";
+        }
+
+        public static string SpellBookHeader(HeroClass c, double maxMana, double perFloor, double perKill) =>
+            $"<b>{ClassName(c).ToUpper()} BÜYÜ KİTABI</b>\n<size=75%><color=#9AA0B4>Mana {(int)maxMana}. Tura yarı dolu başlarsın; " +
+            $"her katta +{(int)perFloor}, her öldürmede +{(int)perKill}. Derine inmek = daha çok büyü.</color></size>";
+
+        public static string SpellBookRow(SpellDefinition s, bool known) =>
+            known
+                ? $"<b>{SpellName(s.id)}</b>  <color=#6FA8FF>{(int)s.manaCost} mana</color>  {SpellWhen(s)}\n<size=85%>{SpellDescription(s)}</size>"
+                : $"<color=#666677><b>???</b>\n<size=85%>Seviye {s.unlockLevel}'de öğrenilir</size></color>";
+
+        public static string SpellsLearned(List<SpellDefinition> spells)
+        {
+            if (spells == null || spells.Count == 0) return null;
+            string text = $"<color=#B080FF>YENİ BÜYÜ!</color>";
+            foreach (SpellDefinition s in spells) text += $"\n<b>{SpellName(s.id)}</b>: {SpellDescription(s)}";
+            return text;
+        }
+
+        public static string ForesightResult(bool bust) =>
+            bust ? "<color=#FF3B3B>KEHANET: Sonraki kat GÖÇECEK!</color> Yüzeye dön ya da kaderine meydan oku."
+                 : "<color=#3CCB5A>KEHANET: Sonraki kat GÜVENLİ.</color> Kaz!";
+        public static string SpellBanked(double value) => $"<color=#3CCB5A>+{Num(value)} cebe aktarıldı</color> (artık güvende)";
+        public static string SpellHealed(double value) => $"<color=#3CCB5A>+{Num(value)} can</color>";
+        public static string SpellCast(SpellDefinition s) => $"<color=#B080FF>{SpellName(s.id)}!</color> {SpellDescription(s)}";
 
         /// <summary>Eşya detayında: "Kudret 132" ve kuşanırsan toplamın nasıl değişeceği.</summary>
         public static string KudretCompare(double itemKudret, double totalNow, double totalWith, bool equipped)

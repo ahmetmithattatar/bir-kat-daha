@@ -78,6 +78,31 @@ nadirlik açılışı sadece ilk seferde uzun, özellikler seviyeyle açılsın,
 - **Hissiyat:** hit-stop (kritik 0.05 sn, öldürme 0.07, boss 0.15; `RunFeedbackDirector` FxTime.Speed'i tek yerden yönetir),
   altınlar sayaca kavisle uçar (`FxLayerView.CoinsTo`), sarı+ bulguda ganimet ışını, titreyen meşale ışığı, süzülen toz.
 
+## Sınıflar, büyüler, görsel zenginlik (10. tur kararları)
+Kullanıcı isteği: daha sofistike karakter, nadirlik/Kudret görünüşe yansısın, güçlendirme ödüllendirici olsun, Diablo/WoW gibi eşya sevenlere
+hitap etsin, yükseltme/yetenekler ikonlu olsun, class sistemi + spell book (seviyeyle yeni büyü, büyüler savaş dışı şeylere de etki etsin).
+- **Sınıflar (`Core/Classes.cs`, `HeroClass`, kayıtta sayı, `saveVersion` 7):** ilk girişte ve her Yeni Çağda seçim ekranı (`ClassSelectView`).
+  Savaşçı (can x1.3, savunma x1.35), Büyücü (saldırı x1.2, şans +0.06, mana +50, can x0.9), Okçu (kritik +%8, bulgu +%3, kazı x1.15).
+  **Silahlar sınıfa özel:** 27 silah, sınıf başına 9 (`GearBaseDefinition.heroClass`). Sadece kendi sınıfının silahı düşer ve kuşanılır.
+  Yeni şablonlar: değnek, küre, kitap, arbalet.
+- **Mana ve büyüler (`ClassBalance`, `GameSession.Spells.cs`):** mana 100 (+sınıf), tura yarı dolu başlar, kat başı +12, öldürme +18.
+  Derine inmek = büyü yakıtı (risk almayı ödüllendirir). Süreler saniye değil kat/vuruş sayısı (Core zaman bilmez). Her sınıf 6 büyü, Sv 1/3/5/8/11/14.
+  Savaşçı: Yarma Darbesi (x3 vuruş), Demir İrade (%40 can), Kaya Omuz (3 kat risk -%40), Savaş Narası (boss öfkesi sıfır), Yağma Hırsı
+  (2 kat ödül x2), Titan Kalkanı (4 vuruş -%80). Büyücü: Ateş Topu, **Kehanet** (sonraki katın göçük zarı ŞİMDİ atılır, sonuç söylenir),
+  Altın Simyası (risk altındakinin %25'i cebe), Buz Kalkanı, Arkan Göz (garantili bulgu +2 nadirlik), Zamanı Bük (2 kat risk -%60).
+  Okçu: Ok Yağmuru (4 vuruş), İzci Gözü (2 kat garantili bulgu), Kartal Gözü (5 kesin kritik), Yol Bulucu (4 kat risk -%30), Ganimet Avı
+  (sonraki zaferde eşya, +1 nadirlik), Ölüm Atışı (x5). Büyü çubuğu sol alt HUD (kısayol 1-6), Büyü Kitabı sekmesi (öğrenilmemiş: kara siluet + "???").
+  Seviye penceresi yeni büyüyü yazar. Kehanet sonucu Kumar terazisinde yazar. Büyü etkileri tur etkileri satırında (mor).
+- **Görünüş (Diablo/WoW hissi):** `GearArt.Decorate` hem ikonlara hem karakter katmanlarına uygulanır: lacivert+ süs taşları nadirlik renginde,
+  turuncu+ kontur parlar, +4 altın parıltı, +7 cilalı metal, +10 altın kaplama. Mavi+ eşya ilk ek statından sıfat alır ("Destansı Keskin Kısa Kılıç").
+  Karakter: sınıf kıyafeti (cübbe + sivri şapka / başlık + sadak / alın bandı, kask-zırh yokken), silah arkasında güçlendirme parıltısı,
+  **Kudret rütbesi** (Çaylak → Madenci → Yiğit → Kahraman → Efsane → Yarı Tanrı → Ölümsüz, `UIStrings.KudretRank`) ayak altı ışık halkası ve
+  yükselen kıvılcımlar (toplam güçlendirme 40+ ise altın). Kudret kartı rütbeyi yazar.
+- **Güçlendirme ödüllendirici:** örs vuruşları (seviyeyle uzayan gerilim, kıvılcım), başarıda ikon yeni görünüşüne geçer, büyük "+N" patlar,
+  eşiklerde (4/7/10) ekranda başlık; kırılınca parçalanma. Eşya kutularında güçlendirme parıltısı + köşede "+N".
+- **İkonlar (`Art/IconArt`):** 30 piktogram (kazma, kalkan, göz, alev...) x renk = yükseltme, yetenek, büyü, sınıf, Kadim ikonları.
+- **Config uyarısı:** silah listesi `BalanceConfig.asset`'e yazılı olduğundan yeni sınıf silahları için asset **Reset** gerekir.
+
 ## Bağımlılık ve uzun oyun sistemleri (5. tur kararları)
 - **Oto-kazı 7. turda KALDIRILDI** (kullanıcı isteği; `AutoDigView` silindi, kayıtta `autoDig` yok).
 - **Geçitler:** Keşif katının bossu yenilince (`conqueredMilestones`) sonraki turlara o kattan başlanabilir (atlanan katların ödülü yok).
@@ -225,11 +250,13 @@ Assets/Scripts/
     GameSession.Prestige.cs  Yeni Çağ, Yadigar, Kadim yükseltmeler
     GameSession.Insight.cs   Savaş gücü, tehdit, boss katına ulaşma, kumar oranı (hiçbir şeyi değiştirmez)
     GameSession.Progression.cs  XP, seviye, özellik kilitleri (IsUnlocked), yetenek ağacı (öğren, sıfırla, toplam bonus)
+    GameSession.Spells.cs  Sınıf seçimi, sınıf statları, mana, büyü kitabı, Cast (büyü etkileri)
+    Classes.cs         HeroClass, SpellEffect, SpellDefinition, ClassDefinition, ClassBalance (3 sınıf, 18 büyü), SpellResult
     Progression.cs     Feature, ProgressionBalance, TalentBranch/Effect/Definition, TalentBalance (21 düğüm), TalentBonuses
     Prestige.cs        PrestigeType, PrestigeBalance
     Gear.cs            GearSlot, StatType, StatValue, GearItem
     CombatData.cs      CombatBalance (savaş/ekipman sayıları), MonsterDefinition, GearBaseDefinition, sonuç tipleri
-    DefaultContent.cs  Varsayılan içerik: 18 silah, 47 zırh/takı tabanı, 41 canavar
+    DefaultContent.cs  Varsayılan içerik: 27 silah (sınıf başına 9), 47 zırh/takı tabanı, 41 canavar
     CharacterStats.cs  Taban + kuşanılan eşyalar = toplam statlar (sınırlarla)
     RunState.cs        Tek turun durumu (tur bonusları, bulgular, can) + AdvanceResult
     FindType.cs        Bulgu türleri + FindResult
@@ -244,12 +271,17 @@ Assets/Scripts/
     UIStrings.cs       Ekrandaki tüm metinler (tema/çeviri burada)
     RarityStyle.cs     Nadirlik isimleri ve renkleri
     FantasyTexts.cs    Canavar/boss/silah/malzeme/yuva/stat adları (id -> Türkçe), eşya stat metinleri
+    Art/               IconArt (yükseltme/yetenek/büyü/sınıf ikonları), CharacterArt (karakter katmanları + sınıf kıyafeti),
     Art/               PixelArt (sprite/doku üretimi), SpriteLibrary (bulgu ikonları), DepthTheme (bölge renkleri),
                        MonsterArt (14 şablon x renk), GearArt (10 silah şablonu, 7 zırh/takı şablonu x malzeme rengi)
     UI/                TopBarView, RunPanelView, FindCollectionView + FindMiniCardView, UpgradePanelView, UpgradeRowView:
                        sadece gösterir, olay yayar. DigView (kazı + savaş sahnesi), UIParticleSpawner, FxLayerView, RevealPopupView, UIFx: efektler
                        EquipmentView + GearSlotView + ItemDetailView: ekipman sekmesi. PrestigePanelView + PrestigeRowView: Yeni Çağ sekmesi.
+                       ClassSelectView: sınıf seçimi. SpellBarView + SpellButtonView: büyü çubuğu. SpellBookView: Büyü Kitabı sekmesi.
+                       RiskGaugeView: Kumar terazisi.
                        TalentTreeView + TalentNodeView: yetenek sekmesi. FxTime: animasyon hız çarpanı (hit-stop)
+                       ClassSelectView: sınıf seçimi. SpellBarView + SpellButtonView: büyü çubuğu. SpellBookView: Büyü Kitabı.
+                       RiskGaugeView: Kumar terazisi.
   Editor/
     PrototypeSceneBuilder.cs
 Assets/Config/BalanceConfig.asset   (menü ilk çalıştığında oluşur)

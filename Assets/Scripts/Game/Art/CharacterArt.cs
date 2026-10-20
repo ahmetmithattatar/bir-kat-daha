@@ -88,6 +88,43 @@ namespace RiskLoop.Game.Art
                 "........................", "........................", "........................", "........................",
                 "........................", "........................", "........................", "........................",
                 "........................", "........................", "..........AAAA..........", "..........KCCK.........." } },
+
+            // ---- Sınıf kıyafetleri (eşya yokken de sınıf belli olsun) ----
+
+            // Büyücü cübbesi: göğüsten ayağa, ortada süs şeridi (C), belde kuşak
+            { "robe", new[] {
+                "........................", "........................", "........................", "........................",
+                "........................", "........................", "........................", "........................",
+                "........................", "........................", "......KKKKAAAAKKKK......", ".....KAAAAACCAAAAAK.....",
+                "....KAAKAAACCAAAKAAK....", "....KAAKAAACCAAAKAAK....", "....KAAKAAACCAAAKAAK....", "....KAAKAAACCAAAKAAK....",
+                "....KAAKCCCCCCCCKAAK....", "....KaaKAAACCAAAKaaK....", "....KAAKAAACCAAAKAAK....", ".......KAAACCAAAK.......",
+                "......KAAAACCAAAAK......", "......KAAAACCAAAAK......", "......KAaAACCAAaAK......", ".....KAAaAACCAAaAAK.....",
+                ".....KAAaAACCAAaAAK.....", ".....KAAAAACCAAAAAK.....", "....KAAAAAACCAAAAAAK....", "....KCCCCCCCCCCCCCCK....",
+                "....KKKKKKKKKKKKKKKK...." } },
+
+            // Büyücü şapkası (kask yokken): sivri tepe, geniş kenar, gözler açık
+            { "wizard_hat", new[] {
+                "..........KKK...........", ".........KAACK..........", "......KKKKKKKKKKKK......", ".....KAAAAAAAAAAAAK.....",
+                "......KKKKKKKKKKKK......" } },
+
+            // Okçu başlığı (kask yokken): yüzü çerçeveler, omuza iner
+            { "hood", new[] {
+                "........................", ".........KKKKKK.........", "........KAAAAAAK........", ".......KAAKKKKAAK.......",
+                ".......KAK....KAK.......", ".......KAK....KAK.......", ".......KAK....KAK.......", ".......KAAK..KAAK.......",
+                "........KAAKKAAK........", ".........KAAAAK.........", "......KKKAAAAAAKKK......" } },
+
+            // Okçu sadağı (sırtta, gövdenin arkasında): oklar ve tüyleri
+            { "quiver", new[] {
+                "........................", "........................", "........................", "........................",
+                "................K.K.K...", "................KCKCK...", "................KAAAK...", "................KAAAK...",
+                "................KAAAK...", "................KAaAK...", "................KAAAK...", "................KAAAK...",
+                "................KAaAK...", "................KAAAK...", "................KaaaK...", "................KKKKK..." } },
+
+            // Savaşçı alın bandı (kask yokken)
+            { "headband", new[] {
+                "........................", "........................", "........................", "........KCCCCCCK........",
+                "...............KCK......", "................KK......" } },
+
         };
 
         private static readonly Color32 Outline = new Color32(0x14, 0x10, 0x10, 0xFF);
@@ -118,6 +155,24 @@ namespace RiskLoop.Game.Art
                 { 'C', Hex(accent) },
             };
             return PixelArt.FromRows($"char_{layer}_{main}_{shade}_{accent}", Pad(Layers[layer]), palette);
+        }
+
+        /// <summary>
+        /// Eşya katmanı, nadirlik ve güçlendirme süsleriyle (GearArt.Decorate ile aynı kural):
+        /// lacivert+ süsler nadirlik renginde, turuncu+ kontur parlar, +7 metal parlar, +10 altın kaplama.
+        /// </summary>
+        public static Sprite Layer(string layer, string main, string shade, string accent, int tier, int enhance)
+        {
+            var palette = new Dictionary<char, Color32>
+            {
+                { 'K', Outline },
+                { 'W', new Color32(0xFF, 0xFF, 0xF8, 0xFF) },
+                { 'A', Hex(main) },
+                { 'a', Hex(shade) },
+                { 'C', Hex(accent) },
+            };
+            string suffix = GearArt.Decorate(palette, tier, enhance);
+            return PixelArt.FromRows($"char_{layer}_{main}_{shade}_{accent}{suffix}", Pad(Layers[layer]), palette);
         }
 
         /// <summary>Tüm katmanlar 24x32 olsun diye eksik satırları boş satırla tamamla.</summary>

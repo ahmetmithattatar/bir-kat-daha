@@ -1,5 +1,6 @@
 using System;
 using RiskLoop.Core;
+using RiskLoop.Game.Art;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,12 +14,14 @@ namespace RiskLoop.Game.UI
         [SerializeField] private TMP_Text infoText;
         [SerializeField] private Button buyButton;
         [SerializeField] private TMP_Text buyButtonText;
+        [SerializeField] private Image icon;   // Yükseltmenin resmi (kazma, kiriş, kalkan...)
 
         public event Action<UpgradeType> BuyClicked;
 
         private void Awake()
         {
             buyButton.onClick.AddListener(() => BuyClicked?.Invoke(upgradeType));
+            icon.sprite = IconArt.Upgrade(upgradeType);
         }
 
         public void Refresh(GameSession session)

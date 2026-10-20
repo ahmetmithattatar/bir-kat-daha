@@ -43,6 +43,7 @@ namespace RiskLoop.Core
             Progress.bestStep = 0;
             Progress.bestRunValue = 0;
             Progress.money = PrestigeStartingMoney;
+            Progress.heroClass = (int)HeroClass.None;   // Yeni çağ, yeni sınıf seçimi
             CurrentRun = null;
             return gained;
         }

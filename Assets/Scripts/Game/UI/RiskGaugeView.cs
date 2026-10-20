@@ -97,7 +97,10 @@ namespace RiskLoop.Game.UI
 
             winText.text = UIStrings.GaugeWin(win);
             loseText.text = lose > 0 ? UIStrings.GaugeLose(lose) : UIStrings.GaugeNothingToLose;
-            verdictText.text = UIStrings.GambleVerdict(session.NextGambleExpectedValue(), win, lose);
+            bool? foresight = session.ForesightSaysBust;
+            verdictText.text = foresight.HasValue
+                ? (foresight.Value ? "<color=#FF3B3B>KEHANET: GÖÇECEK</color>" : "<color=#3CCB5A>KEHANET: GÜVENLİ</color>")
+                : UIStrings.GambleVerdict(session.NextGambleExpectedValue(), win, lose);
             tooltip.SetText(RunTooltips.Gamble(session));
 
             // Nabız: risk büyüdükçe ve kaybedilecek bir şey varken

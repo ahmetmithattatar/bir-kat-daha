@@ -27,6 +27,7 @@ namespace RiskLoop.Game
         [SerializeField] private RunPanelView runPanel;
         [SerializeField] private UpgradePanelView upgradePanel;
         [SerializeField] private RunFeedbackDirector feedback;
+        [SerializeField] private ClassSelectView classSelect;
 
         [Header("Test")]
         [Tooltip("0 = her seferinde farklı. Başka bir sayı = aynı zar dizisi (hata ayıklamak için).")]
@@ -59,7 +60,7 @@ namespace RiskLoop.Game
                 enabled = false;
                 return;
             }
-            if (topBar == null || runPanel == null || upgradePanel == null || feedback == null)
+            if (topBar == null || runPanel == null || upgradePanel == null || feedback == null || classSelect == null)
             {
                 Debug.LogError("GameController: UI referanslarından biri boş. Sahneyi RiskLoop > Build Prototype Scene ile yeniden kur.", this);
                 enabled = false;
@@ -71,6 +72,8 @@ namespace RiskLoop.Game
 
             runPanel.AdvanceClicked += OnAdvanceClicked;
             runPanel.CashOutClicked += OnCashOutClicked;
+            runPanel.CastClicked += OnCastClicked;
+            classSelect.Chosen += OnClassChosen;
             upgradePanel.StartRunClicked += OnStartRunClicked;
             upgradePanel.BuyClicked += OnBuyClicked;
             upgradePanel.EquipClicked += OnEquipClicked;
@@ -111,10 +114,17 @@ namespace RiskLoop.Game
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
+            if (classSelect.IsOpen) return;   // Sınıf seçilmeden oyun başlamaz
             if (InputLocked || Time.unscaledTime < _keysLockedUntil) return;
 
             if (_session.IsRunActive)
             {
+                // 1-6: büyü kısayolları
+                for (int i = 0; i < SpellKeys.Length; i++)
+                {
+                    if (keyboard[SpellKeys[i]].wasPressedThisFrame) CastByIndex(i);
+                }
+
                 bool digHeld = keyboard.downArrowKey.isPressed || keyboard.sKey.isPressed || keyboard.spaceKey.isPressed;
                 bool surfacePressed = keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame;
 
@@ -162,6 +172,8 @@ namespace RiskLoop.Game
             if (_session == null) return;  // Awake erken çıktıysa abonelik de yok
             runPanel.AdvanceClicked -= OnAdvanceClicked;
             runPanel.CashOutClicked -= OnCashOutClicked;
+            runPanel.CastClicked -= OnCastClicked;
+            classSelect.Chosen -= OnClassChosen;
             upgradePanel.StartRunClicked -= OnStartRunClicked;
             upgradePanel.BuyClicked -= OnBuyClicked;
             upgradePanel.EquipClicked -= OnEquipClicked;
@@ -192,6 +204,11 @@ namespace RiskLoop.Game
         private void OnStartRunClicked()
         {
             if (InputLocked || _session.IsRunActive) return;
+            if (!_session.HasClass)
+            {
+                classSelect.Show();
+                return;
+            }
             _session.StartRun(upgradePanel.SelectedStartStep);
             feedback.OnRunStarted(_session);
             runPanel.ShowMessage(UIStrings.RunStarted);
@@ -397,6 +414,7 @@ namespace RiskLoop.Game
             Save();
             upgradePanel.ShowResult(UIStrings.PrestigeDone(age + 1, gained));
             RefreshAll();
+            classSelect.Show();   // Yeni çağ: sınıf yeniden seçilir
         }
 
         private void OnBuyPrestigeClicked(PrestigeType type)
@@ -406,6 +424,61 @@ namespace RiskLoop.Game
                 Save();
                 RefreshAll();
             }
+        }
+
+        // ---------------- Sınıf ve büyüler ----------------
+
+#if ENABLE_INPUT_SYSTEM
+        private static readonly Key[] SpellKeys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5, Key.Digit6 };
+#endif
+
+        private void OnClassChosen(HeroClass heroClass)
+        {
+            if (!_session.ChooseClass(heroClass)) return;
+            Save();
+            classSelect.Hide();
+            upgradePanel.ShowResult(UIStrings.ClassChosen(heroClass));
+            RefreshAll();
+        }
+
+        /// <summary>Kısayol: bilinen büyülerin sırasıyla 1-6.</summary>
+        private void CastByIndex(int index)
+        {
+            var known = _session.KnownSpells;
+            if (index < known.Count) OnCastClicked(known[index].id);
+        }
+
+        private void OnCastClicked(string id)
+        {
+            if (InputLocked || !_session.IsRunActive || !_session.CanCast(id)) return;
+            StartCoroutine(CastRoutine(id));
+        }
+
+        /// <summary>Büyü: kural Core'da (Cast), sahne yönetmende. Vuruşlu büyü canavarı öldürürse zafer sahnesi.</summary>
+        private IEnumerator CastRoutine(string id)
+        {
+            SetSequence(true);
+            MonsterInstance monster = _session.CurrentRun.Monster;
+            SpellResult result = _session.Cast(id);
+            if (!result.Success)
+            {
+                SetSequence(false);
+                yield break;
+            }
+
+            runPanel.PunchSpell(id);
+            if (result.Banked > 0) Save();   // Cebe aktarılan para kaybolmasın
+            yield return feedback.PlaySpell(result, monster, _session);
+
+            if (result.HasAttack && result.Attack.Killed)
+            {
+                yield return feedback.PlayVictory(result.Attack.Victory, _session);
+                Save();
+            }
+
+            topBar.Refresh(_session);
+            runPanel.Refresh(_session);
+            SetSequence(false);
         }
 
         // ---------------- Yetenek ağacı ----------------
@@ -474,6 +547,7 @@ namespace RiskLoop.Game
             upgradePanel.gameObject.SetActive(true);
             topBar.SetResetVisible(true);
             RefreshAll();
+            if (!_session.HasClass) classSelect.Show();   // İlk giriş ya da Yeni Çağ: önce sınıf
         }
 
         private void RefreshAll()

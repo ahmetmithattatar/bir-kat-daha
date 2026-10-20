@@ -36,6 +36,21 @@ namespace RiskLoop.Core
         public int Kills { get; internal set; }
         public bool DiedToMonster { get; internal set; }           // Tur canavar yüzünden mi bitti?
 
+        // ---- Büyüler (sınıf sistemi) ----
+        public double Mana { get; internal set; }
+        public double MaxMana { get; internal set; }
+        public int SafeFloors { get; internal set; }              // Kalan korumalı kat (risk azalır)
+        public double SafeFloorsFactor { get; internal set; }     // Korumalı katta risk x(1 - bu)
+        public int RewardFloors { get; internal set; }            // Kalan ödüllü kat
+        public double RewardFloorsMult { get; internal set; } = 1.0;
+        public int FindBoostTiers { get; internal set; }          // Sonraki bulguya eklenecek nadirlik (0 = yok)
+        public int WardHits { get; internal set; }                // Kalan korunan canavar vuruşu
+        public double WardFactor { get; internal set; }           // Korunan vuruşta hasar x(1 - bu)
+        public int CritCharges { get; internal set; }             // Kalan kesin kritik vuruş
+        public int LootHuntTiers { get; internal set; } = -1;     // Sonraki zaferde garantili ganimet (+nadirlik), -1 = yok
+        internal double ForesightRoll = -1;                       // Kehanet: önceden atılmış göçük zarı (-1 = yok)
+        public bool HasForesight => ForesightRoll >= 0;
+
         // Turda düşen eşyalar: risk altında. Yüzeye dönünce envantere girer, göçük/ölümde kaybolur
         public List<GearItem> PendingLoot { get; } = new List<GearItem>();
         public int LootAutoSold { get; internal set; }             // Envanter doluydu, otomatik satıldı

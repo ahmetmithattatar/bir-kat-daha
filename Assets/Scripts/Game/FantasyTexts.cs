@@ -106,6 +106,9 @@ namespace RiskLoop.Game
             { "great_axe", "Çift Ağızlı Balta" }, { "war_hammer", "Savaş Çekici" }, { "soul_scythe", "Ruh Tırpanı" },
             { "rune_sword", "Runik Kılıç" }, { "crystal_staff", "Kristal Asa" }, { "dragon_spear", "Ejder Mızrağı" },
             { "shadow_blades", "Gölge Hançerleri" }, { "volcanic_greatsword", "Volkanik Büyük Kılıç" }, { "void_scythe", "Hiçlik Tırpanı" },
+            { "apprentice_wand", "Çırak Değneği" }, { "ember_wand", "Kor Değneği" }, { "frost_orb", "Ayaz Küresi" },
+            { "arcane_tome", "Arkan Kitap" }, { "star_staff", "Yıldız Asası" }, { "short_bow", "Kısa Yay" },
+            { "crossbow", "Arbalet" }, { "storm_bow", "Fırtına Yayı" }, { "phoenix_bow", "Anka Yayı" },
         };
 
         private static readonly Dictionary<string, string> MaterialNames = new Dictionary<string, string>
@@ -168,6 +171,31 @@ namespace RiskLoop.Game
         }
 
         /// <summary>Kırmızı ve mor eşyanın efsanevi adı (yoksa null).</summary>
+        // Ek statın verdiği sıfat (eşya adının önüne)
+        private static readonly Dictionary<StatType, string> AffixPrefixes = new Dictionary<StatType, string>
+        {
+            { StatType.Attack, "Öfkeli" }, { StatType.Health, "Dayanıklı" }, { StatType.Defense, "Sağlam" },
+            { StatType.CritChance, "Keskin" }, { StatType.CritDamage, "Vahşi" }, { StatType.CaveResist, "Dağ Yürekli" },
+            { StatType.FindChance, "Kâşif" }, { StatType.Luck, "Uğurlu" }, { StatType.GoldBonus, "Altın Dokunuşlu" },
+            { StatType.DigPower, "Cüce İşi" },
+        };
+
+        // Taban başına taban stat sayısı: eşyanın stat listesinde ondan sonrakiler ek (rastgele) statlardır
+        private static Dictionary<string, int> _baseStatCounts;
+
+        /// <summary>İlk ek statın sıfatı (yoksa null).</summary>
+        private static string AffixPrefix(GearItem item)
+        {
+            if (_baseStatCounts == null)
+            {
+                _baseStatCounts = new Dictionary<string, int>();
+                foreach (GearBaseDefinition g in DefaultContent.GearBases()) _baseStatCounts[g.id] = g.stats.Length;
+            }
+            int baseCount = _baseStatCounts.TryGetValue(item.baseId, out int n) ? n : item.stats.Count;
+            if (item.stats.Count <= baseCount) return null;
+            return AffixPrefixes.TryGetValue(item.stats[baseCount].stat, out string p) ? p : null;
+        }
+
         public static string LegendName(GearItem item)
         {
             if (item.tier < LegendaryTier) return null;
@@ -184,10 +212,16 @@ namespace RiskLoop.Game
         }
 
         /// <summary>Tam ad, nadirlik renginde: "+3 Efsanevi Katana", efsanevilerde "Mitik Ork Yaran".</summary>
+        /// <summary>
+        /// Eşyanın tam adı (Diablo tarzı): "+7 Destansı Keskin Kısa Kılıç". Mavi ve üstünde ilk ek statı bir sıfat verir
+        /// (Keskin = kritik, Öfkeli = saldırı...). Kırmızı/mor eşyalar efsanevi isim alır.
+        /// </summary>
         public static string GearName(GearItem item)
         {
             string legend = LegendName(item);
-            string name = legend != null ? $"{RarityStyle.Name(item.tier)} {legend}" : $"{RarityStyle.Name(item.tier)} {BaseName(item)}";
+            string prefix = item.tier >= 2 ? AffixPrefix(item) : null;
+            string body = legend ?? (prefix != null ? $"{prefix} {BaseName(item)}" : BaseName(item));
+            string name = $"{RarityStyle.Name(item.tier)} {body}";
             if (item.enhance > 0) name = $"+{item.enhance} {name}";
             return RarityStyle.Colored(name, item.tier);
         }

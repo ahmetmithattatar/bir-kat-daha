@@ -38,6 +38,7 @@ namespace RiskLoop.Game
         private static readonly Color CashGreen = new Color(0.24f, 0.8f, 0.35f);
         private static readonly Color CritYellow = new Color(1f, 0.85f, 0.2f);
         private static readonly Color XpBlue = new Color(0.55f, 0.85f, 1f);
+        private static readonly Color SpellPurple = new Color(0.7f, 0.45f, 1f);
 
         private int _hits;               // Bu duvara kaç vuruş yapıldı
         private int _swingsNeeded = 3;   // Bu duvar kaç vuruşta yıkılır (kazı gücü / duvar sertliği)
@@ -159,6 +160,53 @@ namespace RiskLoop.Game
             {
                 fx.FloatText(dmg, Color.white, 40f, digView.MonsterAnchor);
             }
+        }
+
+        /// <summary>
+        /// Büyü sahnesi: mor flaş + büyünün adı, sonra etkisine göre: vuruş (silah iner, büyük hasar sayısı),
+        /// kehanet (yeşil GÜVENLİ / kırmızı GÖÇECEK), iyileşme, cebe aktarma, ya da kısa açıklama.
+        /// </summary>
+        public IEnumerator PlaySpell(SpellResult r, MonsterInstance monster, GameSession session)
+        {
+            SpellDefinition s = r.Spell;
+            fx.Flash(SpellPurple, 0.18f, 0.35f);
+            fx.Banner(UIStrings.SpellName(s.id).ToUpper() + "!", SpellPurple, 0.45f);
+            fx.Burst(monster != null ? digView.MonsterAnchor : digView.WallAnchor, SpellPurple, 26, 650f);
+            runPanel.ShowMessage(UIStrings.SpellCast(s));
+
+            if (r.HasAttack && monster != null)
+            {
+                yield return digView.WeaponSwing();
+                digView.MonsterHit(monster, true);
+                string dmg = UIStrings.Num(Mathf.Max(1f, (float)r.TotalDamage));
+                string text = r.Hits > 1 ? $"{r.Hits}x  {dmg}!" : $"{dmg}!";
+                fx.FloatText(text, CritYellow, 66f, digView.MonsterAnchor);
+                fx.Shake(14f, 0.2f);
+                HitStop(0.08f);
+            }
+
+            switch (s.effect)
+            {
+                case SpellEffect.Foresight:
+                    Color c = r.ForesightBust ? DangerRed : CashGreen;
+                    fx.Flash(c, 0.3f, 0.6f);
+                    fx.Banner(r.ForesightBust ? "GÖÇECEK!" : "GÜVENLİ!", c, 0.8f);
+                    runPanel.ShowMessage(UIStrings.ForesightResult(r.ForesightBust));
+                    break;
+                case SpellEffect.Heal:
+                case SpellEffect.CalmBoss:
+                    if (r.Healed > 0) fx.FloatText(UIStrings.SpellHealed(r.Healed), CashGreen, 42f, digView.PlayerHpAnchor);
+                    digView.SetPlayerHealth(session.CurrentRun.PlayerHealth, session.CurrentRun.PlayerMaxHealth);
+                    break;
+                case SpellEffect.BankEarnings:
+                    fx.FloatText($"+{UIStrings.Num(r.Banked)}", CashGreen, 52f, runPanel.RunValueAnchor);
+                    fx.CoinsTo(runPanel.RunValueAnchor, topBar.MoneyAnchor, 10, Gold);
+                    runPanel.ShowMessage(UIStrings.SpellBanked(r.Banked));
+                    break;
+            }
+
+            runPanel.Refresh(session);
+            yield return UIFx.Wait(0.25f);
         }
 
         /// <summary>Canavar vurdu: atılır, ekran kızarır, can barı düşer. Baret kurtardıysa pencere.</summary>
@@ -306,10 +354,20 @@ namespace RiskLoop.Game
 
             int level = session.Progress.level;
             var unlocked = new System.Collections.Generic.List<Feature>();
-            for (int l = level - levelsGained + 1; l <= level; l++) unlocked.AddRange(session.FeaturesUnlockedAt(l));
+            var spells = new System.Collections.Generic.List<SpellDefinition>();
+            for (int l = level - levelsGained + 1; l <= level; l++)
+            {
+                unlocked.AddRange(session.FeaturesUnlockedAt(l));
+                spells.AddRange(session.SpellsUnlockedAt(l));
+            }
+
+            // Yeni özellik ve yeni büyü aynı pencerede (ikisi de varsa alt alta)
+            string news = UIStrings.FeaturesUnlocked(unlocked);
+            string newSpells = UIStrings.SpellsLearned(spells);
+            if (newSpells != null) news = news == null ? newSpells : news + "\n" + newSpells;
 
             fx.Banner(UIStrings.LevelUpHeader, XpBlue, 0.6f);
-            yield return popup.ShowLevelUp(level, UIStrings.FeaturesUnlocked(unlocked), session.TalentPointsAvailable, fx);
+            yield return popup.ShowLevelUp(level, news, session.TalentPointsAvailable, fx);
         }
 
         /// <summary>Bu tur, şimdiye kadarki en değerli turu geçtiyse bir kez duyur.</summary>

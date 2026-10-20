@@ -32,7 +32,7 @@ namespace RiskLoop.Core
             var candidates = new List<GearBaseDefinition>();
             foreach (GearBaseDefinition g in c.gearBases)
             {
-                if (g.slot == slot && step >= g.minStep) candidates.Add(g);
+                if (g.slot == slot && step >= g.minStep && IsDroppableForClass(g)) candidates.Add(g);
             }
             if (candidates.Count == 0)
             {
@@ -146,7 +146,7 @@ namespace RiskLoop.Core
         {
             if (!CanManageGear) return false;
             GearItem item = Progress.inventory.Find(i => i.uid == uid);
-            if (item == null) return false;
+            if (item == null || !CanUseItem(item)) return false;   // Başka sınıfın silahı kuşanılamaz
 
             GearItem old = GetEquipped(item.slot);
             Progress.inventory.Remove(item);

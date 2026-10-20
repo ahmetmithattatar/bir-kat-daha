@@ -11,7 +11,7 @@ namespace RiskLoop.Game.UI
     /// <summary>
     /// Turlar arası ekran.
     ///   Sol sütun: son turun sonucu, (ekipman sekmesinde) seçili eşyanın detayı, geçit seçici, "Kazıya başla".
-    ///   Sağ sütun: sekmeler -> "Yükseltmeler" | "Yetenekler" | "Ekipman" | "Yeni Çağ".
+    ///   Sağ sütun: sekmeler -> "Yükseltmeler" | "Yetenekler" | "Büyü Kitabı" | "Ekipman" | "Yeni Çağ".
     /// Sekmeler, yükseltmeler ve geçit seçici seviyeyle açılır; açılana kadar GÖRÜNMEZ (açılınca oyuna yeni bir boyut gelir).
     /// (Kaydı sıfırla butonu yanlışlıkla basılmasın diye üst barda: TopBarView.)
     /// </summary>
@@ -30,17 +30,21 @@ namespace RiskLoop.Game.UI
         [SerializeField] private Button upgradesTab;
         [SerializeField] private Button equipmentTab;
         [SerializeField] private Button talentsTab;
+        [SerializeField] private Button spellsTab;
         [SerializeField] private Button prestigeTab;
         [SerializeField] private Image upgradesTabImage;
         [SerializeField] private Image equipmentTabImage;
         [SerializeField] private Image talentsTabImage;
+        [SerializeField] private Image spellsTabImage;
         [SerializeField] private Image prestigeTabImage;
         [SerializeField] private TMP_Text equipmentTabLabel;
         [SerializeField] private TMP_Text talentsTabLabel;
+        [SerializeField] private TMP_Text spellsTabLabel;
         [SerializeField] private TMP_Text prestigeTabLabel;
         [SerializeField] private GameObject upgradesRoot;
         [SerializeField] private GameObject equipmentRoot;
         [SerializeField] private GameObject talentsRoot;
+        [SerializeField] private GameObject spellsRoot;
         [SerializeField] private GameObject prestigeRoot;
 
         [Header("Ekipman ve Yeni Çağ")]
@@ -48,6 +52,7 @@ namespace RiskLoop.Game.UI
         [SerializeField] private ItemDetailView itemDetail;
         [SerializeField] private PrestigePanelView prestige;
         [SerializeField] private TalentTreeView talents;
+        [SerializeField] private SpellBookView spellBook;
 
         public event Action StartRunClicked;
         public event Action<UpgradeType> BuyClicked;
@@ -61,7 +66,7 @@ namespace RiskLoop.Game.UI
         public event Action<string> LearnTalentClicked;
         public event Action RespecClicked;
 
-        private enum Tab { Upgrades, Talents, Equipment, Prestige }
+        private enum Tab { Upgrades, Talents, Spells, Equipment, Prestige }
 
         private static readonly Color TabActive = new Color(0.22f, 0.45f, 0.80f);
         private static readonly Color TabInactive = new Color(0.25f, 0.25f, 0.30f);
@@ -89,6 +94,7 @@ namespace RiskLoop.Game.UI
             upgradesTab.onClick.AddListener(() => SetTab(Tab.Upgrades));
             equipmentTab.onClick.AddListener(() => SetTab(Tab.Equipment));
             talentsTab.onClick.AddListener(() => SetTab(Tab.Talents));
+            spellsTab.onClick.AddListener(() => SetTab(Tab.Spells));
             prestigeTab.onClick.AddListener(() => SetTab(Tab.Prestige));
 
             equipment.ItemSelected += OnItemSelected;
@@ -128,6 +134,7 @@ namespace RiskLoop.Game.UI
             itemDetail.Show(session, _selectedUid >= 0 ? session.FindItem(_selectedUid) : null);
             prestige.Refresh(session);
             talents.Refresh(session);
+            if (session.HasClass) spellBook.Refresh(session);
             RefreshTabs(session);
 
             Feature? next = session.NextLockedFeature;
@@ -185,6 +192,7 @@ namespace RiskLoop.Game.UI
             _tab = tab;
             upgradesRoot.SetActive(tab == Tab.Upgrades);
             talentsRoot.SetActive(tab == Tab.Talents);
+            spellsRoot.SetActive(tab == Tab.Spells);
             equipmentRoot.SetActive(tab == Tab.Equipment);
             prestigeRoot.SetActive(tab == Tab.Prestige);
             itemDetail.gameObject.SetActive(tab == Tab.Equipment);
@@ -196,6 +204,7 @@ namespace RiskLoop.Game.UI
             switch (tab)
             {
                 case Tab.Talents: return session.IsUnlocked(Feature.Talents);
+                case Tab.Spells: return session.HasClass;
                 case Tab.Equipment: return session.IsUnlocked(Feature.Equipment);
                 case Tab.Prestige: return session.IsUnlocked(Feature.Prestige);
                 default: return true;
@@ -210,9 +219,12 @@ namespace RiskLoop.Game.UI
 
             upgradesTabImage.color = _tab == Tab.Upgrades ? TabActive : TabInactive;
             // Başka sekme yokken tek başına "Yükseltmeler" sekmesi gereksiz
-            upgradesTabImage.gameObject.SetActive(session.IsUnlocked(Feature.Talents) || session.IsUnlocked(Feature.Equipment));
+            upgradesTabImage.gameObject.SetActive(session.HasClass || session.IsUnlocked(Feature.Talents) || session.IsUnlocked(Feature.Equipment));
             SetTabVisual(session, Tab.Talents, Feature.Talents, talentsTabImage, talentsTabLabel,
                          session.TalentPointsAvailable > 0 ? $"{UIStrings.TabTalents} <color=#FFE03A>({session.TalentPointsAvailable})</color>" : UIStrings.TabTalents);
+            spellsTabImage.gameObject.SetActive(session.HasClass);
+            spellsTabImage.color = _tab == Tab.Spells ? TabActive : TabInactive;
+            spellsTabLabel.text = UIStrings.TabSpells;
             SetTabVisual(session, Tab.Equipment, Feature.Equipment, equipmentTabImage, equipmentTabLabel, UIStrings.TabEquipment);
             SetTabVisual(session, Tab.Prestige, Feature.Prestige, prestigeTabImage, prestigeTabLabel, UIStrings.TabPrestige);
         }

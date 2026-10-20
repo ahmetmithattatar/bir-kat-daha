@@ -25,6 +25,7 @@ namespace RiskLoop.Game.UI
 
         /// <summary>Uçan "+XP" yazıları buradan çıkar.</summary>
         public RectTransform LevelAnchor => levelText.rectTransform;
+        public RectTransform MoneyAnchor => moneyText.rectTransform;
 
         private float _confirmUntil = -1f;  // Bu zamana kadar ikinci basış sıfırlar
 

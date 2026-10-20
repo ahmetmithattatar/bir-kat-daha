@@ -27,28 +27,43 @@ namespace RiskLoop.Core
         {
             var list = new List<GearBaseDefinition>();
 
-            // ---- Silahlar (18). Ağırlık derinle artar: derinde yeni silahlar daha sık düşer ----
-            void W(string id, int minStep, params StatValue[] stats) =>
-                list.Add(new GearBaseDefinition(id, GearSlot.Weapon, minStep, 1.0 + minStep / 10.0, 1.0, stats));
+            // ---- Silahlar (27): her sınıfın 9 silahı. Sadece kendi sınıfının silahı düşer ve kuşanılır.
+            //      Ağırlık derinle artar: derinde yeni silahlar daha sık düşer ----
+            void W(string id, HeroClass cls, int minStep, params StatValue[] stats) =>
+                list.Add(new GearBaseDefinition(id, GearSlot.Weapon, minStep, 1.0 + minStep / 10.0, 1.0, stats) { heroClass = cls });
 
-            W("dagger", 1, S(StatType.Attack, 4.2), S(StatType.CritChance, 0.06));
-            W("shortsword", 1, S(StatType.Attack, 6));
-            W("spiked_club", 1, S(StatType.Attack, 6.6));
-            W("hand_axe", 6, S(StatType.Attack, 7.2), S(StatType.CritDamage, 0.15));
-            W("war_mace", 10, S(StatType.Attack, 6.9), S(StatType.Defense, 2));
-            W("spear", 10, S(StatType.Attack, 6.6), S(StatType.CritChance, 0.04));
-            W("longbow", 16, S(StatType.Attack, 6), S(StatType.FindChance, 0.03));
-            W("mage_staff", 16, S(StatType.Attack, 6), S(StatType.Luck, 0.05));
-            W("katana", 24, S(StatType.Attack, 7.2), S(StatType.CritChance, 0.06));
-            W("great_axe", 24, S(StatType.Attack, 9), S(StatType.CritDamage, 0.2));
-            W("war_hammer", 32, S(StatType.Attack, 9.6));
-            W("soul_scythe", 36, S(StatType.Attack, 7.8), S(StatType.CritDamage, 0.35));
-            W("rune_sword", 40, S(StatType.Attack, 8.1), S(StatType.CritChance, 0.05), S(StatType.Luck, 0.03));
-            W("crystal_staff", 44, S(StatType.Attack, 7.5), S(StatType.Luck, 0.08));
-            W("dragon_spear", 52, S(StatType.Attack, 9.3), S(StatType.CritChance, 0.06));
-            W("shadow_blades", 56, S(StatType.Attack, 7.2), S(StatType.CritChance, 0.12));
-            W("volcanic_greatsword", 64, S(StatType.Attack, 10.8), S(StatType.CritDamage, 0.25));
-            W("void_scythe", 72, S(StatType.Attack, 10.2), S(StatType.CritDamage, 0.4));
+            // Savaşçı: kılıç, balta, gürz, çekiç
+            W("shortsword", HeroClass.Warrior, 1, S(StatType.Attack, 6));
+            W("spiked_club", HeroClass.Warrior, 1, S(StatType.Attack, 6.6));
+            W("hand_axe", HeroClass.Warrior, 6, S(StatType.Attack, 7.2), S(StatType.CritDamage, 0.15));
+            W("war_mace", HeroClass.Warrior, 10, S(StatType.Attack, 6.9), S(StatType.Defense, 2));
+            W("katana", HeroClass.Warrior, 24, S(StatType.Attack, 7.2), S(StatType.CritChance, 0.06));
+            W("great_axe", HeroClass.Warrior, 24, S(StatType.Attack, 9), S(StatType.CritDamage, 0.2));
+            W("war_hammer", HeroClass.Warrior, 32, S(StatType.Attack, 9.6));
+            W("rune_sword", HeroClass.Warrior, 40, S(StatType.Attack, 8.1), S(StatType.CritChance, 0.05), S(StatType.Luck, 0.03));
+            W("volcanic_greatsword", HeroClass.Warrior, 64, S(StatType.Attack, 10.8), S(StatType.CritDamage, 0.25));
+
+            // Büyücü: değnek, asa, küre, kitap, tırpan
+            W("apprentice_wand", HeroClass.Mage, 1, S(StatType.Attack, 5.6), S(StatType.Luck, 0.04));
+            W("ember_wand", HeroClass.Mage, 8, S(StatType.Attack, 6.6), S(StatType.CritDamage, 0.2));
+            W("mage_staff", HeroClass.Mage, 16, S(StatType.Attack, 6.6), S(StatType.Luck, 0.05));
+            W("frost_orb", HeroClass.Mage, 22, S(StatType.Attack, 7), S(StatType.Defense, 2), S(StatType.Luck, 0.05));
+            W("arcane_tome", HeroClass.Mage, 30, S(StatType.Attack, 7.5), S(StatType.FindChance, 0.04));
+            W("soul_scythe", HeroClass.Mage, 36, S(StatType.Attack, 7.8), S(StatType.CritDamage, 0.35));
+            W("crystal_staff", HeroClass.Mage, 44, S(StatType.Attack, 7.5), S(StatType.Luck, 0.08));
+            W("star_staff", HeroClass.Mage, 60, S(StatType.Attack, 9.6), S(StatType.Luck, 0.1));
+            W("void_scythe", HeroClass.Mage, 72, S(StatType.Attack, 10.2), S(StatType.CritDamage, 0.4));
+
+            // Okçu: hançer, yay, arbalet, mızrak
+            W("dagger", HeroClass.Archer, 1, S(StatType.Attack, 4.2), S(StatType.CritChance, 0.06));
+            W("short_bow", HeroClass.Archer, 1, S(StatType.Attack, 5.4), S(StatType.CritChance, 0.05));
+            W("spear", HeroClass.Archer, 10, S(StatType.Attack, 6.6), S(StatType.CritChance, 0.04));
+            W("longbow", HeroClass.Archer, 16, S(StatType.Attack, 6.6), S(StatType.FindChance, 0.03));
+            W("crossbow", HeroClass.Archer, 28, S(StatType.Attack, 8), S(StatType.CritDamage, 0.2));
+            W("storm_bow", HeroClass.Archer, 46, S(StatType.Attack, 8.4), S(StatType.CritChance, 0.08));
+            W("dragon_spear", HeroClass.Archer, 52, S(StatType.Attack, 9.3), S(StatType.CritChance, 0.06));
+            W("shadow_blades", HeroClass.Archer, 56, S(StatType.Attack, 7.2), S(StatType.CritChance, 0.12));
+            W("phoenix_bow", HeroClass.Archer, 66, S(StatType.Attack, 10.2), S(StatType.CritChance, 0.08), S(StatType.FindChance, 0.03));
 
             // ---- Kazmalar (8): kazı gücü + derinde ek kazı statları. Yeni kazma = duvarlar daha az vuruşta yıkılır ----
             void P(string id, int minStep, params StatValue[] stats) =>

@@ -49,6 +49,7 @@ namespace RiskLoop.Core
         public int minStep;       // Bu kattan itibaren düşebilir (daha iyi malzemeler derinde)
         public double weight;
         public double statMult;   // Malzeme kalitesi (bez 0.8 ... hiçlik 2.0)
+        public HeroClass heroClass;   // Silahlar: hangi sınıfın (None = herkes). Başka sınıfın silahı düşmez ve kuşanılamaz
         public StatValue[] stats;
 
         public GearBaseDefinition() { }
@@ -250,6 +251,7 @@ namespace RiskLoop.Core
     public struct MonsterHitResult
     {
         public double Damage;
+        public bool Warded;            // Kalkan büyüsü hasarı azalttı
         public bool PlayerDied;        // Tur bitti (göçük gibi)
         public double LostEarnings;
         public double InsurancePayout;

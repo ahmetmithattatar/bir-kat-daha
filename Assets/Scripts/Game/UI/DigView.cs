@@ -414,7 +414,7 @@ namespace RiskLoop.Game.UI
         public void SetWeapon(GearItem weapon)
         {
             weaponRoot.gameObject.SetActive(weapon != null);
-            if (weapon != null) weaponImage.sprite = GearArt.WeaponSprite(weapon.baseId);
+            if (weapon != null) weaponImage.sprite = GearArt.WeaponSprite(weapon);
         }
 
         /// <summary>Oyuncu can barı: yeşilden kırmızıya.</summary>

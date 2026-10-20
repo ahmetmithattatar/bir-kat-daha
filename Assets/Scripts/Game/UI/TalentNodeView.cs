@@ -1,5 +1,6 @@
 using System;
 using RiskLoop.Core;
+using RiskLoop.Game.Art;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -20,6 +21,7 @@ namespace RiskLoop.Game.UI
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private TMP_Text rankText;
         [SerializeField] private TooltipTrigger tooltip;
+        [SerializeField] private Image icon;
 
         public event Action<string> Clicked;
 
@@ -50,6 +52,8 @@ namespace RiskLoop.Game.UI
             bool maxed = rank >= t.maxRank;
             bool canLearn = session.CanLearnTalent(t);
 
+            icon.sprite = IconArt.Talent(t.id);
+            icon.color = open ? (rank > 0 ? Color.white : new Color(0.75f, 0.75f, 0.8f)) : new Color(0.25f, 0.25f, 0.3f);
             nameText.text = UIStrings.TalentName(t.id);
             rankText.text = $"{rank}/{t.maxRank}";
             nameText.color = open ? Color.white : new Color(0.5f, 0.5f, 0.55f);

@@ -104,8 +104,15 @@ namespace RiskLoop.Game
             if (run.SafetyFactor < 1) t += $"Kaya x{run.SafetyFactor:0.00}  ";
             if (run.SafetyFactor > 1) t += $"<color=#FF9A2E>Lanet x{run.SafetyFactor:0.00}</color>  ";
             if (run.RunLuck > 0) t += $"Tılsım +%{UIStrings.Pct(run.RunLuck)}  ";
-            if (run.GuaranteedFinds > 0) t += $"<color=#FFE03A>Harita {run.GuaranteedFinds}</color>";
-            return t.Length > 0 ? t : "<color=#888899>Etki yok</color>";
+            if (run.GuaranteedFinds > 0) t += $"<color=#FFE03A>Bulgu garanti {run.GuaranteedFinds}</color>  ";
+            // Büyü etkileri (mor)
+            if (run.SafeFloors > 0) t += $"<color=#B080FF>Koruma {run.SafeFloors} kat</color>  ";
+            if (run.RewardFloors > 0) t += $"<color=#B080FF>Ödül x{run.RewardFloorsMult:0.#} {run.RewardFloors} kat</color>  ";
+            if (run.WardHits > 0) t += $"<color=#B080FF>Kalkan {run.WardHits}</color>  ";
+            if (run.CritCharges > 0) t += $"<color=#B080FF>Kritik {run.CritCharges}</color>  ";
+            if (run.FindBoostTiers > 0) t += $"<color=#B080FF>Arkan Göz</color>  ";
+            if (run.LootHuntTiers >= 0) t += $"<color=#B080FF>Ganimet Avı</color>  ";
+            return t.TrimEnd();   // Boşsa satır gizlenir
         }
 
     }

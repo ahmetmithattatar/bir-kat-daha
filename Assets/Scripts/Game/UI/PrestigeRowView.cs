@@ -1,5 +1,6 @@
 using System;
 using RiskLoop.Core;
+using RiskLoop.Game.Art;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,12 +14,14 @@ namespace RiskLoop.Game.UI
         [SerializeField] private TMP_Text infoText;
         [SerializeField] private Button buyButton;
         [SerializeField] private TMP_Text buyText;
+        [SerializeField] private Image icon;
 
         public event Action<PrestigeType> BuyClicked;
 
         private void Awake()
         {
             buyButton.onClick.AddListener(() => BuyClicked?.Invoke(type));
+            icon.sprite = IconArt.Prestige(type);
         }
 
         public void Refresh(GameSession session)

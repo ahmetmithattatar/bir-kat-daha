@@ -204,6 +204,7 @@ namespace RiskLoop.Core
 
         // --- Oyuncu seviyesi ve kademeli açılan özellikler ---
         public ProgressionBalance progression = new ProgressionBalance();
+        public ClassBalance classes = new ClassBalance();   // Sınıflar, mana, büyüler
 
         // --- Yetenek ağacı ---
         public TalentBalance talents = new TalentBalance();

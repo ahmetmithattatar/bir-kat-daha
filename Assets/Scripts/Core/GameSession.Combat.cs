@@ -63,14 +63,26 @@ namespace RiskLoop.Core
         public AttackResult Attack()
         {
             if (!InCombat) throw new InvalidOperationException("Savaş yok.");
+            return DoAttack(1.0, forceCrit: false);
+        }
+
+        /// <summary>Bir vuruş. damageMult: büyü çarpanı (Yarma Darbesi x3 gibi). Kartal Gözü yükü varsa kesin kritik.</summary>
+        private AttackResult DoAttack(double damageMult, bool forceCrit)
+        {
 
             CharacterStats stats = Stats;
             CombatBalance c = Balance.combat;
             MonsterInstance monster = CurrentRun.Monster;
 
             bool crit = _random.NextDouble() < stats.CritChance;                                    // ZAR: kritik
+            if (CurrentRun.CritCharges > 0)
+            {
+                crit = true;   // Kartal Gözü (zar yine atılır: zar sırası değişmesin)
+                CurrentRun.CritCharges--;
+            }
+            if (forceCrit) crit = true;
             double variance = 1.0 + (_random.NextDouble() * 2.0 - 1.0) * c.damageVariance;         // ZAR: hasar oynaması
-            double damage = stats.Attack * variance * (crit ? stats.CritDamage : 1.0);
+            double damage = stats.Attack * variance * (crit ? stats.CritDamage : 1.0) * damageMult;
             if (monster.Kind != MonsterKind.Normal) damage *= 1.0 + Talents.BossDamage;   // Kral Katili
 
             monster.Health -= damage;
@@ -100,9 +112,16 @@ namespace RiskLoop.Core
             double variance = 1.0 + (_random.NextDouble() * 2.0 - 1.0) * c.damageVariance;         // ZAR: hasar oynaması
             double enrage = 1.0 + c.enrageAttackPerStack * monster.EnrageStacks;
             double damage = RiskMath.DamageAfterDefense(c, monster.Attack * enrage * variance, Stats.Defense);
+            bool warded = false;
+            if (CurrentRun.WardHits > 0)
+            {
+                damage *= 1.0 - CurrentRun.WardFactor;   // Titan Kalkanı / Buz Kalkanı
+                if (--CurrentRun.WardHits == 0) CurrentRun.WardFactor = 0;
+                warded = true;
+            }
 
             CurrentRun.PlayerHealth -= damage;
-            var result = new MonsterHitResult { Damage = damage };
+            var result = new MonsterHitResult { Damage = damage, Warded = warded };
 
             if (CurrentRun.PlayerHealth <= 0)
             {
@@ -145,6 +164,7 @@ namespace RiskLoop.Core
 
             CurrentRun.Monster = null;
             CurrentRun.Kills++;
+            GainMana(CB.manaPerKill);
             Progress.monstersKilled++;
             if (monster.Kind != MonsterKind.Normal) Progress.bossesKilled++;
 
@@ -188,6 +208,14 @@ namespace RiskLoop.Core
                     drops = c.bossDrops;
                     minTier = monster.Milestone != null ? monster.Milestone.minTier : 3;
                     break;
+            }
+
+            // Ganimet Avı büyüsü: en az 1 eşya, nadirlik yukarı
+            if (CurrentRun.LootHuntTiers >= 0)
+            {
+                drops = Math.Max(drops, 1);
+                minTier = Math.Min(Math.Max(minTier, 1) + CurrentRun.LootHuntTiers, Balance.rarityTiers.Length - 1);
+                CurrentRun.LootHuntTiers = -1;
             }
 
             if (!IsUnlocked(Feature.Equipment)) drops = 0;   // Ekipman henüz açılmadıysa eşya düşmez

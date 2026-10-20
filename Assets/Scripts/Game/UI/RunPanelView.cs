@@ -36,6 +36,9 @@ namespace RiskLoop.Game.UI
         [Header("Kumar terazisi")]
         [SerializeField] private RiskGaugeView riskGauge;
 
+        [Header("Büyüler")]
+        [SerializeField] private SpellBarView spellBar;
+
         [Header("Diğer metinler")]
         [SerializeField] private TMP_Text messageText;
         [SerializeField] private TMP_Text keyHintText;       // Kazıda ve savaşta farklı
@@ -55,6 +58,7 @@ namespace RiskLoop.Game.UI
         // GameController bu olaylara abone olur. (Python'daki callback listesi gibi düşün.)
         public event Action AdvanceClicked;
         public event Action CashOutClicked;
+        public event Action<string> CastClicked;
 
         // Efektlerin nereden çıkacağını bilmesi için (uçan yazılar vs.)
         public RectTransform RunValueAnchor => runValueText.rectTransform;
@@ -71,6 +75,7 @@ namespace RiskLoop.Game.UI
             advanceButton.onClick.AddListener(() => AdvanceClicked?.Invoke());
             cashOutButton.onClick.AddListener(() => CashOutClicked?.Invoke());
             digView.SwingClicked += () => AdvanceClicked?.Invoke();
+            spellBar.CastClicked += id => CastClicked?.Invoke(id);
         }
 
         private void Update()
@@ -101,7 +106,12 @@ namespace RiskLoop.Game.UI
             // ---- Sade kartlar: sadece açık olan özellikler, en fazla 4 ----
             bool gear = session.IsUnlocked(Feature.Equipment);
             chips[ChipKudret].gameObject.SetActive(gear);
-            if (gear) chips[ChipKudret].Set(UIStrings.KudretLabel, UIStrings.Num(session.Kudret), RunTooltips.Warn, RunTooltips.Kudret(session));
+            if (gear)
+            {
+                int rank = UIStrings.KudretRank(session.Kudret);
+                chips[ChipKudret].Set($"{UIStrings.KudretLabel} · {UIStrings.KudretRankName(rank).ToUpper()}", UIStrings.Num(session.Kudret),
+                                      UIStrings.KudretRankColor(rank), RunTooltips.Kudret(session));
+            }
 
             if (combat)
             {
@@ -129,6 +139,7 @@ namespace RiskLoop.Game.UI
             buffsTip.SetText(RunTooltips.Buffs(session));
 
             riskGauge.Refresh(session);
+            spellBar.Refresh(session);
 
             // Savaş durumuna göre etiketler. KAZ butonu riski de söyler: basmadan önce bir daha görsün.
             keyHintText.text = combat ? UIStrings.KeyHintCombat : UIStrings.KeyHintRun;
@@ -147,6 +158,9 @@ namespace RiskLoop.Game.UI
             _hasCashOutStep = run != null && step > run.StartStep;
             cashOutButton.interactable = _hasCashOutStep && advanceButton.interactable;
         }
+
+        /// <summary>Kullanılan büyünün butonu "pat" der.</summary>
+        public void PunchSpell(string id) => spellBar.PunchSpell(id);
 
         public void ShowMessage(string message)
         {
