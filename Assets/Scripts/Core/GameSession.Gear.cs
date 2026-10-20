@@ -90,6 +90,36 @@ namespace RiskLoop.Core
             }
         }
 
+        // ---------------- Kudret (eşya puanı) ----------------
+
+        /// <summary>Tek eşyanın Kudret puanı (malzeme kalitesi taban tanımından okunur).</summary>
+        public double KudretOf(GearItem item)
+        {
+            if (item == null) return 0;
+            GearBaseDefinition def = Balance.combat.FindGearBase(item.baseId);
+            return RiskMath.GearKudret(Balance.combat, item, def != null ? def.statMult : 1.0);
+        }
+
+        /// <summary>Kuşanılan bütün eşyaların toplam Kudret'i.</summary>
+        public double Kudret
+        {
+            get
+            {
+                double total = 0;
+                foreach (GearItem item in Progress.equipped) total += KudretOf(item);
+                return total;
+            }
+        }
+
+        /// <summary>Bu eşyayı kuşansam toplam Kudret ne olur? (Aynı yuvadaki eşyanın yerine geçer.)</summary>
+        public double KudretWith(GearItem item)
+        {
+            if (item == null) return Kudret;
+            GearItem current = GetEquipped(item.slot);
+            if (current != null && current.uid == item.uid) return Kudret;
+            return Kudret - KudretOf(current) + KudretOf(item);
+        }
+
         // ---------------- Envanter ----------------
 
         public GearItem GetEquipped(GearSlot slot)

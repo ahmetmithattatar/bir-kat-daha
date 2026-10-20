@@ -51,6 +51,8 @@ namespace RiskLoop.EditorTools
         // Tam ekran HUD ölçüleri
         private const float TopBarHeight = 90;
         private const float HudSideWidth = 460;
+        private const float GaugeHeight = 178;
+        private const float GaugeWidth = 760;   // Dar tutulur: kazma ve silah iki yanında görünsün
 
         [MenuItem("RiskLoop/Build Prototype Scene")]
         public static void Build()
@@ -250,6 +252,12 @@ namespace RiskLoop.EditorTools
 
             DigView digView = BuildDigView(panel);
 
+            // Kalp atışı: riskle nabız gibi atan kırmızı ekran kenarı (sahnenin üstünde, HUD'ların altında; tıklamayı engellemez)
+            RectTransform heartbeatRt = CreateUIObject("Heartbeat", panel);
+            Stretch(heartbeatRt);
+            Image heartbeat = AddImage(heartbeatRt, new Color(0.9f, 0.05f, 0.05f, 0f));
+            heartbeat.raycastTarget = false;
+
             // ---- Sol HUD: istatistikler ----
             RectTransform left = CreateHudPanel("LeftHud", panel, new Vector2(0f, 1f), new Vector2(20f, -(TopBarHeight + 14f)), HudSideWidth);
 
@@ -269,34 +277,19 @@ namespace RiskLoop.EditorTools
             runValue.color = new Color(1f, 0.88f, 0.23f);
             TMP_Text breakdown = CreateText("RunValueBreakdownText", topTexts, "", 18, 34, TextAlignmentOptions.MidlineLeft);
 
-            // 12 stat kartı (2 sütun). Açıklamaları fareyle üstüne gelince.
+            // Sade kartlar (2 sütun, en fazla 4). Sadece açık özellikler görünür; ızgara görünenlere göre boy alır.
             RectTransform chipGrid = CreateUIObject("StatChips", left);
-            SetHeight(chipGrid, 6 * 58 + 5 * 6);
             var chipLayout = chipGrid.gameObject.AddComponent<GridLayoutGroup>();
             chipLayout.cellSize = new Vector2(205, 58);
             chipLayout.spacing = new Vector2(6, 6);
             chipLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             chipLayout.constraintCount = 2;
-            chipLayout.childAlignment = TextAnchor.UpperCenter;
+            chipLayout.childAlignment = TextAnchor.UpperLeft;
             var chips = new StatChipView[RunPanelView.ChipCount];
             for (int i = 0; i < chips.Length; i++) chips[i] = BuildStatChip(chipGrid, i);
 
-            // Risk çubuğu: gri arka plan + soldan dolan renkli şerit
-            RectTransform bar = CreateUIObject("RiskBar", left);
-            AddImage(bar, BarBackColor).raycastTarget = false;
-            SetHeight(bar, 18);
-            RectTransform fill = CreateUIObject("Fill", bar);
-            fill.anchorMin = Vector2.zero;
-            fill.anchorMax = new Vector2(0.1f, 1f);
-            fill.offsetMin = Vector2.zero;
-            fill.offsetMax = Vector2.zero;
-            Image fillImage = AddImage(fill, Color.green);
-            fillImage.raycastTarget = false;
-
-            // Kısa satırlar (açıklamaları fareyle)
-            TMP_Text gamble = CreateTipText("GambleText", left, 20, 34, out TooltipTrigger gambleTip);
+            // Tur etkileri (sadece varsa görünür, açıklaması fareyle)
             TMP_Text buffs = CreateTipText("BuffsText", left, 18, 30, out TooltipTrigger buffsTip);
-            TMP_Text milestone = CreateTipText("MilestoneText", left, 20, 34, out TooltipTrigger milestoneTip);
 
             // ---- Sağ üst HUD: bu turun bulguları ----
             RectTransform rightTop = CreateHudPanel("CollectionHud", panel, new Vector2(1f, 1f), new Vector2(-20f, -(TopBarHeight + 14f)), HudSideWidth);
@@ -309,25 +302,28 @@ namespace RiskLoop.EditorTools
             TMP_Text hint = CreateText("KeyHintText", rightBottom, UIStrings.KeyHintRun, 16, 42);
             hint.color = HintColor;
 
-            // ---- Alt orta: mesaj (sahnenin altında, iki HUD'un arasında) ----
+            // ---- Alt orta: Kumar terazisi (bir sonraki hamlenin riski ve ödülü, büyük) ----
+            RiskGaugeView gauge = BuildRiskGauge(panel, heartbeat);
+
+            // ---- Mesaj: terazinin hemen üstünde ----
             RectTransform messageRt = CreateUIObject("MessageText", panel);
             messageRt.anchorMin = messageRt.anchorMax = new Vector2(0.5f, 0f);
             messageRt.pivot = new Vector2(0.5f, 0f);
-            messageRt.sizeDelta = new Vector2(860, 96);
-            messageRt.anchoredPosition = new Vector2(0f, 24f);
-            AddImage(messageRt, new Color(0f, 0f, 0f, 0.45f)).raycastTarget = false;
+            messageRt.sizeDelta = new Vector2(GaugeWidth, 66);
+            messageRt.anchoredPosition = new Vector2(0f, 20f + GaugeHeight + 10f);
+            AddImage(messageRt, new Color(0f, 0f, 0f, 0.35f)).raycastTarget = false;
             RectTransform messageTextRt = CreateUIObject("Text", messageRt);
             Stretch(messageTextRt);
-            messageTextRt.offsetMin = new Vector2(16, 6);
-            messageTextRt.offsetMax = new Vector2(-16, -6);
+            messageTextRt.offsetMin = new Vector2(16, 4);
+            messageTextRt.offsetMax = new Vector2(-16, -4);
             var message = messageTextRt.gameObject.AddComponent<TextMeshProUGUI>();
-            message.fontSize = 28;
+            message.fontSize = 24;
             message.alignment = TextAlignmentOptions.Center;
             message.color = Color.white;
             message.raycastTarget = false;
             message.enableAutoSizing = true;
-            message.fontSizeMax = 28;
-            message.fontSizeMin = 17;
+            message.fontSizeMax = 24;
+            message.fontSizeMin = 15;
 
             var view = panel.gameObject.AddComponent<RunPanelView>();
             SetRef(view, "avatar", avatar);
@@ -335,15 +331,10 @@ namespace RiskLoop.EditorTools
             SetRef(view, "runValueText", runValue);
             SetRef(view, "runValueBreakdownText", breakdown);
             SetRefArray(view, "chips", chips);
-            SetRef(view, "gambleText", gamble);
-            SetRef(view, "gambleTip", gambleTip);
             SetRef(view, "buffsText", buffs);
             SetRef(view, "buffsTip", buffsTip);
-            SetRef(view, "milestoneText", milestone);
-            SetRef(view, "milestoneTip", milestoneTip);
+            SetRef(view, "riskGauge", gauge);
             SetRef(view, "messageText", message);
-            SetRef(view, "riskBarFill", fill);
-            SetRef(view, "riskBarFillImage", fillImage);
             SetRef(view, "collection", collection);
             SetRef(view, "digView", digView);
             SetRef(view, "advanceButton", advance);
@@ -351,6 +342,71 @@ namespace RiskLoop.EditorTools
             SetRef(view, "keyHintText", hint);
             SetRef(view, "advanceLabel", advanceLabel);
             SetRef(view, "cashOutLabel", cashOutLabel);
+            return view;
+        }
+
+        /// <summary>
+        /// Kumar terazisi: alt ortada yarı saydam panel.
+        ///   üst satır : "GÖÇÜK RİSKİ" | büyük "%18" | yorum ("KUMAR")
+        ///   çubuk     : risk kadar dolu, renk yeşil → sarı → kırmızı
+        ///   alt satır : "KAZANIRSAN +1.2K" | "KAYBEDERSEN -8.4K"
+        /// heartbeat: tam ekran kırmızı kenar (nabız), terazi yönetir.
+        /// </summary>
+        private static RiskGaugeView BuildRiskGauge(Transform parent, Image heartbeat)
+        {
+            RectTransform root = CreateHudPanel("RiskGauge", parent, new Vector2(0.5f, 0f), new Vector2(0f, 20f), GaugeWidth);
+            var fitter = root.GetComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+            root.sizeDelta = new Vector2(GaugeWidth, GaugeHeight);
+            root.pivot = new Vector2(0.5f, 0f);
+            var layout = root.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(24, 24, 8, 10);
+            layout.spacing = 6;
+
+            RectTransform top = CreateUIObject("Top", root);
+            SetHeight(top, 72);
+            AddHorizontalLayout(top, spacing: 10);
+            TMP_Text title = CreateText("Title", top, UIStrings.GaugeRiskTitle, 22, 72, TextAlignmentOptions.MidlineLeft);
+            title.color = HintColor;
+            FillRemainingWidth(title);
+            TMP_Text risk = CreateText("Risk", top, "%0", 64, 72);
+            risk.fontStyle = FontStyles.Bold;
+            SetFixedWidth(risk, 230);
+            TMP_Text verdict = CreateText("Verdict", top, "", 30, 72, TextAlignmentOptions.MidlineRight);
+            verdict.fontStyle = FontStyles.Bold;
+            FillRemainingWidth(verdict);
+
+            RectTransform bar = CreateUIObject("Bar", root);
+            SetHeight(bar, 16);
+            AddImage(bar, BarBackColor).raycastTarget = false;
+            RectTransform fill = CreateUIObject("Fill", bar);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = new Vector2(0.1f, 1f);
+            fill.offsetMin = Vector2.zero;
+            fill.offsetMax = Vector2.zero;
+            Image fillImage = AddImage(fill, Color.green);
+            fillImage.raycastTarget = false;
+
+            RectTransform bottom = CreateUIObject("Bottom", root);
+            SetHeight(bottom, 58);
+            AddHorizontalLayout(bottom, spacing: 10);
+            TMP_Text win = CreateText("Win", bottom, "", 30, 58, TextAlignmentOptions.MidlineLeft);
+            FillRemainingWidth(win);
+            TMP_Text lose = CreateText("Lose", bottom, "", 30, 58, TextAlignmentOptions.MidlineRight);
+            FillRemainingWidth(lose);
+
+            var tip = root.gameObject.AddComponent<TooltipTrigger>();
+            var view = root.gameObject.AddComponent<RiskGaugeView>();
+            SetRef(view, "root", root);
+            SetRef(view, "titleText", title);
+            SetRef(view, "riskText", risk);
+            SetRef(view, "verdictText", verdict);
+            SetRef(view, "barFill", fill);
+            SetRef(view, "barFillImage", fillImage);
+            SetRef(view, "winText", win);
+            SetRef(view, "loseText", lose);
+            SetRef(view, "heartbeat", heartbeat);
+            SetRef(view, "tooltip", tip);
             return view;
         }
 

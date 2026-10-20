@@ -60,7 +60,8 @@ namespace RiskLoop.Game.UI
         public void Refresh(GameSession session, long selectedUid)
         {
             avatar.Refresh(session);
-            statsText.text = $"Savaş gücün: <b>{session.CurrentPowerLevel}. kat</b> seviyesi\n" + FantasyTexts.CharacterSummary(session.Stats);
+            statsText.text = $"{UIStrings.KudretLabel}: <color=#FFE03A><b>{UIStrings.Num(session.Kudret)}</b></color>   " +
+                             $"Savaş gücü: {session.CurrentPowerLevel}. kat\n" + FantasyTexts.CharacterSummary(session.Stats);
 
             var slots = (GearSlot[])Enum.GetValues(typeof(GearSlot));
             for (int i = 0; i < equippedSlots.Length && i < slots.Length; i++)

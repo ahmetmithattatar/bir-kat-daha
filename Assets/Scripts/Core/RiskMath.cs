@@ -318,6 +318,19 @@ namespace RiskLoop.Core
             return baseStat.value * materialMult * rarity * Math.Pow(c.gearStatGrowth, lvl - 1);
         }
 
+        /// <summary>
+        /// Bir eşyanın Kudret puanı (en az kudretPerLevel). Statların gerçek büyümesiyle tutarlı:
+        /// bir nadirlik basamağı ~1.5 kat, +10 güçlendirme ~5 kat derinden düşmüş eşya kadar değerli.
+        /// </summary>
+        public static double GearKudret(CombatBalance c, GearItem item, double materialMult)
+        {
+            if (item == null) return 0;
+            double growthLog = Math.Log(c.gearStatGrowth);
+            double quality = materialMult * GearRarityMult(c, item.tier) * item.EnhanceMult(c.enhanceStatBonus);
+            double equivalentLevel = Math.Max(item.itemLevel, 1) + Math.Log(quality) / growthLog + GearAffixCount(item.tier) * c.kudretPerAffix;
+            return Math.Round(c.kudretPerLevel * Math.Max(1.0, equivalentLevel));
+        }
+
         /// <summary>Ek rastgele stat sayısı: tier / 2 (mor = 4).</summary>
         public static int GearAffixCount(int tier) => Math.Max(0, tier / 2);
 

@@ -84,11 +84,8 @@ namespace RiskLoop.Game.UI
             levelText.text = UIStrings.ItemLevelLine(item, _equipped);
             statsText.text = FantasyTexts.GearStatLines(item, current, c.enhanceStatBonus);
 
-            // Bu eşya ilerlemeyi ne kadar değiştirir? (tek sayı: savaş gücü; kazmada duvar vuruşu)
-            int powerNow = session.CurrentPowerLevel;
-            string compare = _equipped
-                ? $"Savaş gücü: {powerNow}. kat seviyesi"
-                : UIStrings.PowerCompare(powerNow, session.PowerLevelWith(item));
+            // Bu eşya ne kadar güçlü? Tek sayı: Kudret (ve kuşanırsan toplam Kudret'in nasıl değişeceği; kazmada duvar vuruşu)
+            string compare = UIStrings.KudretCompare(session.KudretOf(item), session.Kudret, session.KudretWith(item), _equipped);
             if (item.slot == GearSlot.Pickaxe && !_equipped)
             {
                 int step = Mathf.Max(1, session.Progress.bestStep);

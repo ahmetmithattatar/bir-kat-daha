@@ -60,27 +60,6 @@ namespace RiskLoop.Game
             return $"Sonraki kat: +{Num(reward)}    {find}\n{monster}";
         }
 
-        public static string Insurance(double fraction)
-        {
-            return fraction > 0
-                ? $"Sigorta: göçükte risk altındakinin %{Pct(fraction)} kadarı kurtarılır"
-                : "Sigorta yok";
-        }
-
-        /// <summary>Bu turun bulgu etkileri: kazanç bonusu, risk çarpanı.</summary>
-        public static string RunBuffs(RunState run)
-        {
-            if (run == null) return "";
-
-            string text = "";
-            if (run.ProfitBonus > 0) text += $"   Kazanç +%{Pct(run.ProfitBonus)}";
-            if (run.SafetyFactor < 1) text += $"   Risk x{run.SafetyFactor:0.00}";
-            if (run.SafetyFactor > 1) text += $"   <color={AtRiskColor}>Lanet: risk x{run.SafetyFactor:0.00}</color>";
-            if (run.RunLuck > 0) text += $"   Şans +%{Pct(run.RunLuck)}";
-            if (run.GuaranteedFinds > 0) text += $"   <color={Gold}>Harita: {run.GuaranteedFinds} kat</color>";
-            return text;
-        }
-
         public static string CollectionTitle(int count) => count > 0 ? $"Bu turun bulguları ({count})" : "Bu turda henüz bulgu yok";
 
         // ---------------- Bölge bossları (keşif katları) ----------------
@@ -100,17 +79,6 @@ namespace RiskLoop.Game
             string name = ZoneBossNames[i % ZoneBossNames.Length];
             int cycle = i / ZoneBossNames.Length;
             return cycle == 0 ? name : $"Derin {name} {cycle + 1}";
-        }
-
-        public static string NextMilestone(MilestoneDefinition milestone, int currentStep, bool discovered)
-        {
-            if (milestone == null) return $"<color={Gold}>Bütün keşifleri tamamladın. Efsanesin!</color>";
-
-            int remaining = milestone.step - currentStep;
-            string minTier = RarityStyle.Colored(RarityStyle.Name(milestone.minTier), milestone.minTier);
-            string when = remaining == 1 ? $"<color={Gold}>SONRAKİ KAT!</color>" : $"{remaining} kat kaldı";
-            string name = discovered ? MilestoneName(milestone.step) : "???";  // Keşfedilmemişin adı gizli: merak
-            return $"Sonraki keşif: <b>{name}</b> ({milestone.step}. kat, {when})\nGarantili bulgu, en az {minTier}";
         }
 
         // ---------------- Kazı anı mesajları (havuzdan rastgele) ----------------
@@ -326,9 +294,6 @@ namespace RiskLoop.Game
 
         public static string DefeatTitle() => Pick(DefeatTitles);
 
-        public static string CombatSummary(CharacterStats s) =>
-            $"Saldırı {Num(s.Attack)}   Savunma {Num(s.Defense)}   Kritik %{Pct(s.CritChance)}";
-
         // ---------------- Tur sonu ----------------
         public static string CashedOut(RunState run, bool fled) =>
             (fled ? "Canavardan kaçıp yüzeye döndün! " : "Yüzeye döndün! ") +
@@ -384,41 +349,6 @@ namespace RiskLoop.Game
         }
 
         public static string Enrage(int stacks) => $"ÖFKE {stacks}! Saldırı +%{stacks * 20}";
-
-        // ---------------- Güç ve risk göstergesi ----------------
-
-        public static string ThreatName(ThreatLevel t)
-        {
-            switch (t)
-            {
-                case ThreatLevel.Easy: return "<color=#3CCB5A>Kolay</color>";
-                case ThreatLevel.Medium: return "<color=#FFE03A>Orta</color>";
-                case ThreatLevel.Hard: return "<color=#FF9A2E>Zor</color>";
-                default: return "<color=#FF3B3B>ÖLÜMCÜL</color>";
-            }
-        }
-
-        /// <summary>"Gücün: 14. kat seviyesi · Bu kat: Kolay"</summary>
-        public static string PowerLine(int powerLevel, ThreatLevel threat, bool inCombat) =>
-            $"Savaş gücün: <b>{powerLevel}. kat</b> seviyesi   {(inCombat ? "Bu savaş" : "Sonraki kat")}: {ThreatName(threat)}";
-
-        /// <summary>Göçük açısından ortalama kaç kat daha.</summary>
-        public static string FloorsLeft(double floors) =>
-            floors >= 40 ? "Göçük riski: çok uzun süre dayanırsın" : $"Göçük hesabıyla ortalama <b>{floors:0.0}</b> kat daha dayanırsın";
-
-        /// <summary>Kumar satırı: kazanırsan / kaybedersen / olasılık + yorum.</summary>
-        public static string Gamble(double win, double lose, double chance, double ev)
-        {
-            string loseText = lose <= 0 ? $"<color={Gold}>0</color>" : $"<color={AtRiskColor}>{Num(lose)}</color>";
-            string verdict;
-            if (lose <= 0) verdict = $"<color=#3CCB5A>Güvenli adım</color>";
-            else if (ev >= 0) verdict = "<color=#3CCB5A>Değer</color>";
-            else if (ev > -win) verdict = $"<color={Gold}>Kumar</color>";
-            else verdict = "<color=#FF3B3B>Çılgınlık</color>";
-            return $"Kazanırsan <color=#3CCB5A>+{Num(win)}</color> · Kaybedersen {loseText} (%{Pct(chance)})  {verdict}";
-        }
-
-        public static string SwingsLine(int swings) => $"Duvar: {swings} vuruş";
 
         // ---------------- Seviye, açılan özellikler ----------------
 
@@ -601,10 +531,43 @@ namespace RiskLoop.Game
             : current >= downgradeFrom ? $"<color=#FF9A2E>Başarısızlıkta seviye düşer</color>"
             : "Başarısızlıkta kayıp yok";
 
-        public static string PowerCompare(int now, int with) =>
-            with == now ? $"Savaş gücü: {now}. kat (değişmez)"
-            : with > now ? $"Savaş gücü: {now} → <color=#3CCB5A>{with}. kat</color>"
-            : $"Savaş gücü: {now} → <color=#FF5A4A>{with}. kat</color>";
+        // ---------------- Kudret (eşya puanı) ----------------
+
+        public const string KudretLabel = "KUDRET";
+
+        /// <summary>Eşya detayında: "Kudret 132" ve kuşanırsan toplamın nasıl değişeceği.</summary>
+        public static string KudretCompare(double itemKudret, double totalNow, double totalWith, bool equipped)
+        {
+            string head = $"Kudret <b>{Num(itemKudret)}</b>";
+            if (equipped) return head + $"   (toplam {Num(totalNow)})";
+            double diff = totalWith - totalNow;
+            if (Math.Abs(diff) < 0.5) return head + $"   toplam {Num(totalNow)} (değişmez)";
+            string color = diff > 0 ? "#3CCB5A" : "#FF5A4A";
+            string arrow = diff > 0 ? "▲" : "▼";
+            return head + $"   toplam {Num(totalNow)} → <color={color}>{Num(totalWith)} {arrow}{(diff > 0 ? "+" : "")}{Num(diff)}</color>";
+        }
+
+        // ---------------- Kumar terazisi ----------------
+
+        public const string GaugeRiskTitle = "GÖÇÜK RİSKİ";
+        public const string GaugeCombatTitle = "BU SAVAŞ";
+        public static string GaugeWin(double win) => $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>";
+        public static string GaugeLose(double lose) => $"<size=70%>KAYBEDERSEN</size>\n<color=#FF4A3A><b>-{Num(lose)}</b></color>";
+        public const string GaugeNothingToLose = "<size=70%>KAYBEDERSEN</size>\n<color=#9AA0B4><b>henüz bir şey yok</b></color>";
+        public static string GaugeFlee(double value) => $"<size=70%>KAÇARSAN</size>\n<color=#3CCB5A><b>{Num(value)} cebe</b></color>";
+        public static string GaugeDie(double lose) => $"<size=70%>ÖLÜRSEN</size>\n<color=#FF4A3A><b>-{Num(lose)}</b></color>";
+
+        /// <summary>Bir sonraki inişin yorumu. ev: beklenen değer.</summary>
+        public static string GambleVerdict(double ev, double win, double lose)
+        {
+            if (lose <= 0) return "<color=#3CCB5A>GÜVENLİ</color>";
+            if (ev >= 0) return "<color=#3CCB5A>DEĞER</color>";
+            if (ev > -win) return $"<color={Gold}>KUMAR</color>";
+            return "<color=#FF3B3B>ÇILGINLIK</color>";
+        }
+
+        /// <summary>KAZ butonu: altında küçük göçük yüzdesi (basmadan önce bir daha görsün).</summary>
+        public static string AdvanceButtonWithRisk(double risk) => $"{AdvanceButton}\n<size=40%>göçük %{Pct(risk)}</size>";
 
         public static string SwingsCompare(int now, int with) =>
             with == now ? "" : with < now ? $"   Duvar: {now} → <color=#3CCB5A>{with} vuruş</color>" : $"   Duvar: {now} → <color=#FF5A4A>{with} vuruş</color>";

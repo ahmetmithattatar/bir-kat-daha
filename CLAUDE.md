@@ -62,9 +62,16 @@ nadirlik açılışı sadece ilk seferde uzun, özellikler seviyeyle açılsın,
   eşya kasmak, güçlendirmek anlamlı. Zamanlayıcı `GameController`'da, görsel öfke çubuğu can barının altında.
 - **Göçük moral bozmasın:** Talihsizlik telafisi (her göçük/yenilgi +%12 nadirlik, maks 5 kademe, başarılı dönüşte sıfır) +
   Enkazdan kurtarma (turun en nadir eşyası %50 ihtimalle envantere).
-- **Arayüz sadeleşti:** tur ekranı sol HUD = karakter + derinlik + turun değeri + 12 stat kartı (RİSK, "N. KAT BOSS" ulaşma %, GÜÇ, TEHDİT, DAYANMA,
-  SONRAKİ, BULGU, CANAVAR, SİGORTA, DUVAR, ŞANS, SALDIRI) + kısa kumar/etki/keşif satırları. Ayrıntı fareyle üstüne gelince
-  (`TooltipTrigger` → `TooltipView`). Metinler `RunTooltips.cs`'de.
+- **Arayüz sadeleşti (9. tur):** yeni oyuncu sayı yağmuruna boğulmasın. Sol HUD = karakter + derinlik + turun değeri + en fazla 4 kart:
+  KUDRET (ekipman açılınca), "N. KAT BOSS" ulaşma % (savaşta "BU SAVAŞ" tehdidi), SİGORTA (açılınca), TELAFİ (sadece birikmişse)
+  + tur etkileri satırı (sadece varsa). Ayrıntı fareyle (`TooltipTrigger` → `TooltipView`, metinler `RunTooltips.cs`).
+- **Kumar terazisi (`RiskGaugeView`, alt orta):** risk/ödül döngüsünün kalbi sol köşede bir stat olmasın diye ortaya alındı. Büyük göçük yüzdesi
+  (yeşil → sarı → kırmızı, risk belirgin artınca "pat"), çubuk, "KAZANIRSAN +X" | "KAYBEDERSEN -Y", yorum (GÜVENLİ / DEĞER / KUMAR / ÇILGINLIK).
+  Savaşta: tehdit, "KAÇARSAN X cebe" | "ÖLÜRSEN -Y". **Kalp atışı:** risk %8'den %45'e çıktıkça ekran kenarı kırmızı nabız gibi atar
+  (60 → 150 bpm, çift vuruş), kaybedecek bir şey yoksa atmaz; panel de nabızla hafifçe büyür. KAZ butonunun altında da "göçük %X" yazar.
+- **Kudret (eşya puanı, gear score):** eşyanın "eşdeğer seviyesi" * 10: `itemLevel + ln(malzeme * 1.22^tier * güçlendirme) / ln(1.14) + 1.5 * ek stat`
+  (`RiskMath.GearKudret`, `kudretPerLevel`, `kudretPerAffix`). Toplam = kuşanılanlar. Doğrusal: iki eşya tek bakışta karşılaştırılır.
+  Eşya detayında "Kudret 132, toplam 940 → 985 ▲+45", ekipman sekmesinde ve sol HUD'da toplam.
 - **Karakter (`AvatarView`, `Art/CharacterArt`):** 24x32 pixel art, katmanlı. Giyilenler malzeme renginde üstünde görünür,
   yeşil+ kaskta boynuz / zırhta omuzluk, kırmızı+ zırhta pelerin, en nadir parçanın renginde aura (kırmızı+ dönen hüzme), elde silah,
   sırtta kazma, nefes salınımı. Ekipman sekmesinde büyük, kazıda küçük.

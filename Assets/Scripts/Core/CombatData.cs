@@ -136,6 +136,13 @@ namespace RiskLoop.Core
         public double sellBase = 5;                    // Satış = sellBase * gearStatGrowth^(lvl-1) * (1+tier)^1.5 * güçlendirme
         public int inventoryCap = 32;
 
+        // --- Kudret (eşya puanı, WoW'daki gear score gibi) ---
+        // Eşyanın "eşdeğer seviyesi": itemLevel + log(malzeme * nadirlik * güçlendirme) / log(gearStatGrowth) + ek stat * kudretPerAffix.
+        // Yani nadirlik, malzeme ve güçlendirme "kaç kat derinden düşmüş gibi" sayılır. Kudret = kudretPerLevel * eşdeğer seviye.
+        // Toplam Kudret = kuşanılan eşyaların toplamı. Doğrusal büyür: oyuncu iki eşyayı tek bakışta karşılaştırır.
+        public double kudretPerLevel = 10;
+        public double kudretPerAffix = 1.5;
+
         // --- Güçlendirme (+1 .. +10). Shaiya tarzı: şans düşer, yüksek seviyede başarısızlık acıtır ---
         // Her seviye tüm statları +%10. Ücret = satış değeri * enhanceCostMult * enhanceCostGrowth^seviye
         // Başarısızlık: seviye >= enhanceDowngradeFrom ise 1 düşer; seviye >= enhanceBreakFrom ise eşya KIRILIR (yok olur).
