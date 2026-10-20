@@ -21,9 +21,9 @@ namespace RiskLoop.EditorTools
     /// Sadece editörde çalışır, oyunun build'ine girmez ("Editor" klasöründe olduğu için).
     ///
     /// Düzen PC için YATAY (16:9, referans 1920x1080):
-    ///   Üst bar:        Para | Rekor | Kaydı sıfırla
-    ///   Tur ekranı:     sol sütun istatistikler  | sağ sütun bulgu kartı, mesaj, butonlar
-    ///   Yükseltme ekr.: sol sütun sonuç + başla   | sağ sütun 7 yükseltme
+    ///   Üst bar:        Para | Seviye + XP | Rekor | Kaydı sıfırla (yarı saydam, her zaman üstte)
+    ///   Tur ekranı:     TAM EKRAN kazı sahnesi + üstünde yarı saydam HUD (sol istatistik, sağ bulgular/butonlar, alt mesaj)
+    ///   Yükseltme ekr.: sol sütun sonuç + başla   | sağ sütun sekmeler (Yükseltmeler, Yetenekler, Ekipman, Yeni Çağ)
     ///
     /// Sahneyi elle değiştirdikten sonra bunu tekrar çalıştırırsan değişikliklerin silinir.
     /// </summary>
@@ -46,6 +46,11 @@ namespace RiskLoop.EditorTools
         private static readonly Color MutedColor = new Color(0.35f, 0.35f, 0.40f);
         private static readonly Color BarBackColor = new Color(0.25f, 0.25f, 0.30f);
         private static readonly Color HintColor = new Color(0.6f, 0.6f, 0.68f);
+        private static readonly Color HudColor = new Color(0.04f, 0.04f, 0.07f, 0.62f);   // Sahnenin üstündeki yarı saydam paneller
+
+        // Tam ekran HUD ölçüleri
+        private const float TopBarHeight = 90;
+        private const float HudSideWidth = 460;
 
         [MenuItem("RiskLoop/Build Prototype Scene")]
         public static void Build()
@@ -129,25 +134,27 @@ namespace RiskLoop.EditorTools
             Stretch(background);
             AddImage(background, BackgroundColor).raycastTarget = false;
 
-            // --- Kök düzen: ortada 1920 genişliğinde alan. Üstte bar, altta ekranlar ---
-            RectTransform root = CreateUIObject("Root", canvas);
-            root.anchorMin = new Vector2(0.5f, 0f);
-            root.anchorMax = new Vector2(0.5f, 1f);
-            root.sizeDelta = new Vector2(RefWidth, 0);
-            root.anchoredPosition = Vector2.zero;
-            AddVerticalLayout(root, spacing: 20, padding: 30);
+            // --- Dünya: sarsıntı efekti bunun hepsini sallar ---
+            RectTransform world = CreateUIObject("World", canvas);
+            Stretch(world);
 
-            TopBarView topBar = BuildTopBar(root);
+            // Tur ekranı TAM EKRAN: kazı sahnesi tüm ekranı kaplar, istatistik ve butonlar üstünde yarı saydam paneller
+            RunPanelView runPanel = BuildRunPanel(world);
 
-            RectTransform screens = CreateUIObject("Screens", root);
-            screens.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
-
-            RunPanelView runPanel = BuildRunPanel(screens);
+            // Yükseltme ekranı: üst barın altında, ortada 1920 genişliğinde (geniş ekranda kenarlar boş kalır)
+            RectTransform screens = CreateUIObject("Screens", world);
+            screens.anchorMin = new Vector2(0.5f, 0f);
+            screens.anchorMax = new Vector2(0.5f, 1f);
+            screens.offsetMin = new Vector2(-(RefWidth - 60) / 2f, 30f);
+            screens.offsetMax = new Vector2((RefWidth - 60) / 2f, -(TopBarHeight + 20f));
             UpgradePanelView upgradePanel = BuildUpgradePanel(screens);
+
+            // Üst bar en son: her iki ekranın da üstünde (tur ekranında yarı saydam şerit)
+            TopBarView topBar = BuildTopBar(world);
 
             // Üst katmanlar (sıra önemli: sonra eklenen üstte çizilir)
             RevealPopupView popup = BuildRevealPopup(canvas);
-            FxLayerView fx = BuildFxLayer(canvas, root);
+            FxLayerView fx = BuildFxLayer(canvas, world);
             BuildTooltip(canvas);   // En üstte: her şeyin üzerinde görünsün
 
             // --- GameController + hissiyat yönetmeni ---
@@ -157,6 +164,7 @@ namespace RiskLoop.EditorTools
             SetRef(director, "popup", popup);
             SetRef(director, "runPanel", runPanel);
             SetRef(director, "digView", runPanel.GetComponentInChildren<DigView>(true));
+            SetRef(director, "topBar", topBar);
 
             var controller = controllerGo.AddComponent<GameController>();
             SetRef(controller, "balanceConfig", config);
@@ -166,38 +174,84 @@ namespace RiskLoop.EditorTools
             SetRef(controller, "feedback", director);
         }
 
-        /// <summary>Üst bar: para | rekor | kaydı sıfırla (sağ üst köşe, kazı butonlarından uzakta).</summary>
+        /// <summary>
+        /// Üst bar (ekranın en üstü, yarı saydam şerit): para | seviye + XP çubuğu | rekor | kaydı sıfırla.
+        /// Sıfırla sağ üst köşede, kazı butonlarından uzakta.
+        /// </summary>
         private static TopBarView BuildTopBar(Transform parent)
         {
-            const float barHeight = 80;
             RectTransform bar = CreateUIObject("TopBar", parent);
-            SetHeight(bar, barHeight);
-            AddHorizontalLayout(bar, spacing: 30);
+            bar.anchorMin = new Vector2(0f, 1f);
+            bar.anchorMax = new Vector2(1f, 1f);
+            bar.pivot = new Vector2(0.5f, 1f);
+            bar.sizeDelta = new Vector2(0f, TopBarHeight);
+            AddImage(bar, HudColor).raycastTarget = false;
+            var layout = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 30;
+            layout.padding = new RectOffset(30, 30, 8, 8);
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
 
-            TMP_Text money = CreateText("MoneyText", bar, "Para: 0", 52, barHeight, TextAlignmentOptions.MidlineLeft);
+            float h = TopBarHeight - 16;
+            TMP_Text money = CreateText("MoneyText", bar, "Para: 0", 46, h, TextAlignmentOptions.MidlineLeft);
             money.fontStyle = FontStyles.Bold;
             FillRemainingWidth(money);
 
-            TMP_Text record = CreateText("RecordText", bar, "Rekor", 34, barHeight, TextAlignmentOptions.MidlineRight);
-            SetFixedWidth(record, 320);
+            // Seviye: "Seviye 7" + altında ince XP çubuğu ve "XP 120 / 300"
+            RectTransform level = CreateUIObject("Level", bar);
+            SetHeight(level, h);
+            SetFixedWidth(level, 420);
+            AddVerticalLayout(level, spacing: 2, padding: 0);
+            TMP_Text levelText = CreateText("LevelText", level, "Seviye 1", 30, 36, TextAlignmentOptions.MidlineLeft);
+            levelText.fontStyle = FontStyles.Bold;
+            levelText.color = new Color(0.55f, 0.85f, 1f);
+            RectTransform xpBar = CreateUIObject("XpBar", level);
+            SetHeight(xpBar, 12);
+            AddImage(xpBar, BarBackColor).raycastTarget = false;
+            RectTransform xpFill = CreateUIObject("Fill", xpBar);
+            xpFill.anchorMin = Vector2.zero;
+            xpFill.anchorMax = new Vector2(0.1f, 1f);
+            xpFill.offsetMin = Vector2.zero;
+            xpFill.offsetMax = Vector2.zero;
+            AddImage(xpFill, new Color(0.35f, 0.7f, 1f)).raycastTarget = false;
+            TMP_Text xpText = CreateText("XpText", level, "", 16, 18, TextAlignmentOptions.MidlineLeft);
+            xpText.color = HintColor;
 
-            Button reset = CreateButton("ResetSaveButton", bar, UIStrings.ResetSaveButton, MutedColor, barHeight, 26, out TMP_Text resetText);
-            SetFixedWidth(reset, 220);
+            TMP_Text record = CreateText("RecordText", bar, "Rekor", 30, h, TextAlignmentOptions.MidlineRight);
+            SetFixedWidth(record, 300);
+
+            Button reset = CreateButton("ResetSaveButton", bar, UIStrings.ResetSaveButton, MutedColor, 56, 22, out TMP_Text resetText);
+            SetFixedWidth(reset, 200);
 
             var view = bar.gameObject.AddComponent<TopBarView>();
             SetRef(view, "moneyText", money);
             SetRef(view, "recordText", record);
+            SetRef(view, "levelText", levelText);
+            SetRef(view, "xpText", xpText);
+            SetRef(view, "xpBarFill", xpFill);
             SetRef(view, "resetButton", reset);
             SetRef(view, "resetButtonText", resetText);
             return view;
         }
 
+        /// <summary>
+        /// Tam ekran tur ekranı. Kazı sahnesi tüm ekranı kaplar; üstünde yarı saydam HUD panelleri:
+        ///   sol üst: karakter, derinlik, turun değeri, 12 stat kartı, risk çubuğu, kısa satırlar
+        ///   sağ üst: bu turun bulguları     sağ alt: KAZ / Yüzeye dön butonları     alt orta: mesaj
+        /// Ortası (duvar, canavar, bulgu) hep açık kalır: oyuncunun görüşünü kapatmaz.
+        /// </summary>
         private static RunPanelView BuildRunPanel(Transform parent)
         {
-            RectTransform panel = CreatePanelWithColumns("RunPanel", parent);
+            RectTransform panel = CreateUIObject("RunPanel", parent);
+            Stretch(panel);
 
-            // ---- Sol sütun: istatistikler ----
-            RectTransform left = CreateColumn("LeftColumn", panel, flexibleWidth: 0.9f);
+            DigView digView = BuildDigView(panel);
+
+            // ---- Sol HUD: istatistikler ----
+            RectTransform left = CreateHudPanel("LeftHud", panel, new Vector2(0f, 1f), new Vector2(20f, -(TopBarHeight + 14f)), HudSideWidth);
 
             // Üst satır: karakter + derinlik + turun değeri (az yazı, büyük sayı)
             RectTransform top = CreateUIObject("Top", left);
@@ -217,10 +271,10 @@ namespace RiskLoop.EditorTools
 
             // 12 stat kartı (2 sütun). Açıklamaları fareyle üstüne gelince.
             RectTransform chipGrid = CreateUIObject("StatChips", left);
-            SetHeight(chipGrid, 6 * 62 + 5 * 8);
+            SetHeight(chipGrid, 6 * 58 + 5 * 6);
             var chipLayout = chipGrid.gameObject.AddComponent<GridLayoutGroup>();
-            chipLayout.cellSize = new Vector2(215, 62);
-            chipLayout.spacing = new Vector2(8, 8);
+            chipLayout.cellSize = new Vector2(205, 58);
+            chipLayout.spacing = new Vector2(6, 6);
             chipLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             chipLayout.constraintCount = 2;
             chipLayout.childAlignment = TextAnchor.UpperCenter;
@@ -230,7 +284,7 @@ namespace RiskLoop.EditorTools
             // Risk çubuğu: gri arka plan + soldan dolan renkli şerit
             RectTransform bar = CreateUIObject("RiskBar", left);
             AddImage(bar, BarBackColor).raycastTarget = false;
-            SetHeight(bar, 22);
+            SetHeight(bar, 18);
             RectTransform fill = CreateUIObject("Fill", bar);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(0.1f, 1f);
@@ -240,26 +294,40 @@ namespace RiskLoop.EditorTools
             fillImage.raycastTarget = false;
 
             // Kısa satırlar (açıklamaları fareyle)
-            TMP_Text gamble = CreateTipText("GambleText", left, 22, 40, out TooltipTrigger gambleTip);
-            TMP_Text buffs = CreateTipText("BuffsText", left, 20, 34, out TooltipTrigger buffsTip);
-            TMP_Text milestone = CreateTipText("MilestoneText", left, 22, 40, out TooltipTrigger milestoneTip);
-            CreateFlexibleSpacer(left);
+            TMP_Text gamble = CreateTipText("GambleText", left, 20, 34, out TooltipTrigger gambleTip);
+            TMP_Text buffs = CreateTipText("BuffsText", left, 18, 30, out TooltipTrigger buffsTip);
+            TMP_Text milestone = CreateTipText("MilestoneText", left, 20, 34, out TooltipTrigger milestoneTip);
 
-            // ---- Orta sütun: birinci şahıs kazı sahnesi + mesaj ----
-            RectTransform center = CreateColumn("CenterColumn", panel, flexibleWidth: 1.5f);
-            DigView digView = BuildDigView(center);
-            TMP_Text message = CreateText("MessageText", center, "", 30, 110);
+            // ---- Sağ üst HUD: bu turun bulguları ----
+            RectTransform rightTop = CreateHudPanel("CollectionHud", panel, new Vector2(1f, 1f), new Vector2(-20f, -(TopBarHeight + 14f)), HudSideWidth);
+            FindCollectionView collection = BuildFindCollection(rightTop);
 
-            // ---- Sağ sütun: bulgu koleksiyonu, oto-kazı, butonlar ----
-            RectTransform right = CreateColumn("RightColumn", panel, flexibleWidth: 1f);
-
-            FindCollectionView collection = BuildFindCollection(right);
-            AutoDigView auto = BuildAutoDig(right);
-            CreateFlexibleSpacer(right);
-            Button advance = CreateButton("AdvanceButton", right, UIStrings.AdvanceButton, AdvanceColor, 110, 54, out TMP_Text advanceLabel);
-            Button cashOut = CreateButton("CashOutButton", right, UIStrings.CashOutButton, CashOutColor, 76, 36, out TMP_Text cashOutLabel);
-            TMP_Text hint = CreateText("KeyHintText", right, UIStrings.KeyHintRun, 18, 46);
+            // ---- Sağ alt HUD: butonlar ----
+            RectTransform rightBottom = CreateHudPanel("ButtonsHud", panel, new Vector2(1f, 0f), new Vector2(-20f, 20f), HudSideWidth);
+            Button advance = CreateButton("AdvanceButton", rightBottom, UIStrings.AdvanceButton, AdvanceColor, 104, 52, out TMP_Text advanceLabel);
+            Button cashOut = CreateButton("CashOutButton", rightBottom, UIStrings.CashOutButton, CashOutColor, 70, 32, out TMP_Text cashOutLabel);
+            TMP_Text hint = CreateText("KeyHintText", rightBottom, UIStrings.KeyHintRun, 16, 42);
             hint.color = HintColor;
+
+            // ---- Alt orta: mesaj (sahnenin altında, iki HUD'un arasında) ----
+            RectTransform messageRt = CreateUIObject("MessageText", panel);
+            messageRt.anchorMin = messageRt.anchorMax = new Vector2(0.5f, 0f);
+            messageRt.pivot = new Vector2(0.5f, 0f);
+            messageRt.sizeDelta = new Vector2(860, 96);
+            messageRt.anchoredPosition = new Vector2(0f, 24f);
+            AddImage(messageRt, new Color(0f, 0f, 0f, 0.45f)).raycastTarget = false;
+            RectTransform messageTextRt = CreateUIObject("Text", messageRt);
+            Stretch(messageTextRt);
+            messageTextRt.offsetMin = new Vector2(16, 6);
+            messageTextRt.offsetMax = new Vector2(-16, -6);
+            var message = messageTextRt.gameObject.AddComponent<TextMeshProUGUI>();
+            message.fontSize = 28;
+            message.alignment = TextAlignmentOptions.Center;
+            message.color = Color.white;
+            message.raycastTarget = false;
+            message.enableAutoSizing = true;
+            message.fontSizeMax = 28;
+            message.fontSizeMin = 17;
 
             var view = panel.gameObject.AddComponent<RunPanelView>();
             SetRef(view, "avatar", avatar);
@@ -273,7 +341,6 @@ namespace RiskLoop.EditorTools
             SetRef(view, "buffsTip", buffsTip);
             SetRef(view, "milestoneText", milestone);
             SetRef(view, "milestoneTip", milestoneTip);
-            SetRef(view, "autoDig", auto);
             SetRef(view, "messageText", message);
             SetRef(view, "riskBarFill", fill);
             SetRef(view, "riskBarFillImage", fillImage);
@@ -285,6 +352,31 @@ namespace RiskLoop.EditorTools
             SetRef(view, "advanceLabel", advanceLabel);
             SetRef(view, "cashOutLabel", cashOutLabel);
             return view;
+        }
+
+        /// <summary>
+        /// Yarı saydam HUD paneli: verilen köşeye yapışır, yüksekliği içeriğine göre (ContentSizeFitter).
+        /// Arka planı tıklamayı yakalar: panele tıklamak yanlışlıkla kazma vurmaz.
+        /// </summary>
+        private static RectTransform CreateHudPanel(string name, Transform parent, Vector2 corner, Vector2 offset, float width)
+        {
+            RectTransform rt = CreateUIObject(name, parent);
+            rt.anchorMin = rt.anchorMax = corner;
+            rt.pivot = corner;
+            rt.sizeDelta = new Vector2(width, 0f);
+            rt.anchoredPosition = offset;
+            AddImage(rt, HudColor);
+            var layout = rt.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 8;
+            layout.padding = new RectOffset(14, 14, 12, 12);
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            var fitter = rt.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            return rt;
         }
 
         /// <summary>Stat kartı: koyu kutu + solda renkli şerit + üstte soluk etiket + altta büyük değer + ipucu.</summary>
@@ -455,55 +547,17 @@ namespace RiskLoop.EditorTools
             SetRef(view, "group", group);
         }
 
-        /// <summary>Oto-kazı paneli: aç/kapat butonu + 2x2 durma kuralı butonu.</summary>
-        private static AutoDigView BuildAutoDig(Transform parent)
-        {
-            RectTransform root = CreateUIObject("AutoDig", parent);
-            SetHeight(root, 56 + 8 + 2 * 44 + 8);
-            AddVerticalLayout(root, spacing: 8, padding: 0);
-
-            Button toggle = CreateButton("AutoToggle", root, UIStrings.AutoOff, MutedColor, 56, 28, out TMP_Text toggleLabel);
-
-            RectTransform grid = CreateUIObject("Rules", root);
-            SetHeight(grid, 2 * 44 + 8);
-            var gridLayout = grid.gameObject.AddComponent<GridLayoutGroup>();
-            gridLayout.cellSize = new Vector2(236, 44);
-            gridLayout.spacing = new Vector2(8, 8);
-            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            gridLayout.constraintCount = 2;
-            gridLayout.childAlignment = TextAnchor.UpperCenter;
-
-            Button shields = CreateButton("StopShields", grid, "", BarBackColor, 44, 18, out TMP_Text shieldsLabel);
-            Button risk = CreateButton("StopRisk", grid, "", BarBackColor, 44, 18, out TMP_Text riskLabel);
-            Button tier = CreateButton("StopTier", grid, "", BarBackColor, 44, 18, out TMP_Text tierLabel);
-            Button fight = CreateButton("AutoFight", grid, "", BarBackColor, 44, 18, out TMP_Text fightLabel);
-            foreach (TMP_Text l in new[] { shieldsLabel, riskLabel, tierLabel, fightLabel }) l.fontStyle = FontStyles.Normal;
-
-            var view = root.gameObject.AddComponent<AutoDigView>();
-            SetRef(view, "toggleButton", toggle);
-            SetRef(view, "toggleImage", toggle.GetComponent<Image>());
-            SetRef(view, "toggleLabel", toggleLabel);
-            SetRef(view, "shieldsButton", shields);
-            SetRef(view, "shieldsLabel", shieldsLabel);
-            SetRef(view, "riskButton", risk);
-            SetRef(view, "riskLabel", riskLabel);
-            SetRef(view, "tierButton", tier);
-            SetRef(view, "tierLabel", tierLabel);
-            SetRef(view, "fightButton", fight);
-            SetRef(view, "fightLabel", fightLabel);
-            return view;
-        }
-
         /// <summary>
         /// Birinci şahıs kazı sahnesi. Katmanlar (alttan üste):
-        /// tünel halkaları, tavan çatlağı, delik, duvar (+çatlak +kat yazısı), bulgu (+hüzme +parıltı), baret,
+        /// tünel halkaları, tavan çatlağı, delik, duvar (+çatlak +kat yazısı), bulgu (+hüzme +parıltı),
         /// karartma, göçük taşları, parçacıklar, kazma | sahne dışında: kenar karartma, tıklama alanı.
         /// Sprite'lar oyun açılınca kodla üretilir (DigView.Awake / SetDepth), burada sadece yerleri kurulur.
         /// </summary>
         private static DigView BuildDigView(Transform parent)
         {
+            // Tüm ekranı kaplar (HUD panelleri üstünde durur)
             RectTransform view = CreateUIObject("DigView", parent);
-            SetHeight(view, 700);
+            Stretch(view);
             AddImage(view, Color.black).raycastTarget = false;
             view.gameObject.AddComponent<RectMask2D>();  // Taşan parçacık ve hüzmeleri keser
 
@@ -513,7 +567,7 @@ namespace RiskLoop.EditorTools
             // Tünel: iç içe 4 çerçeve, içe doğru koyulaşır (derinlik hissi)
             RectTransform tunnel = CreateUIObject("TunnelRoot", scene);
             Stretch(tunnel);
-            float[] insets = { 0f, 50f, 95f, 135f };
+            float[] insets = { 0f, 110f, 210f, 300f };
             var rings = new Image[insets.Length];
             for (int i = 0; i < insets.Length; i++)
             {
@@ -529,20 +583,20 @@ namespace RiskLoop.EditorTools
             ceiling.anchorMin = new Vector2(0f, 1f);
             ceiling.anchorMax = new Vector2(1f, 1f);
             ceiling.pivot = new Vector2(0.5f, 1f);
-            ceiling.sizeDelta = new Vector2(0f, 110f);
+            ceiling.sizeDelta = new Vector2(0f, 170f);
             Image ceilingImage = AddImage(ceiling, new Color(1f, 1f, 1f, 0f));
             ceilingImage.raycastTarget = false;
 
             // Meşale ışığı: duvarı aydınlatan sıcak, titreyen parıltı (renk ve titreme DigView.Update'te)
-            Image torchGlow = AddCentered("TorchGlow", scene, new Vector2(760, 640));
+            Image torchGlow = AddCentered("TorchGlow", scene, new Vector2(1150, 950));
 
-            Image hole = AddCentered("Hole", scene, new Vector2(380, 380));
+            Image hole = AddCentered("Hole", scene, new Vector2(520, 520));
 
             // Ganimet ışını: bulgudan yukarı uzanan dikey parıltı (nadir bulgularda açılır)
             RectTransform beamRt = CreateUIObject("LootBeam", scene);
             beamRt.anchorMin = beamRt.anchorMax = new Vector2(0.5f, 0.5f);
             beamRt.pivot = new Vector2(0.5f, 0f);
-            beamRt.sizeDelta = new Vector2(110, 560);
+            beamRt.sizeDelta = new Vector2(150, 800);
             beamRt.anchoredPosition = new Vector2(0f, -60f);
             Image lootBeam = AddImage(beamRt, Color.white);
             lootBeam.raycastTarget = false;
@@ -550,7 +604,7 @@ namespace RiskLoop.EditorTools
             // Duvar
             RectTransform wall = CreateUIObject("WallRoot", scene);
             wall.anchorMin = wall.anchorMax = new Vector2(0.5f, 0.5f);
-            wall.sizeDelta = new Vector2(470, 440);
+            wall.sizeDelta = new Vector2(640, 600);
             RectTransform wallImgRt = CreateUIObject("WallImage", wall);
             Stretch(wallImgRt);
             Image wallImage = AddImage(wallImgRt, Color.white);
@@ -568,7 +622,7 @@ namespace RiskLoop.EditorTools
             labelRt.sizeDelta = new Vector2(0f, 60f);
             labelRt.anchoredPosition = new Vector2(0f, -12f);
             var depthLabel = labelRt.gameObject.AddComponent<TextMeshProUGUI>();
-            depthLabel.fontSize = 34;
+            depthLabel.fontSize = 44;
             depthLabel.fontStyle = FontStyles.Bold;
             depthLabel.alignment = TextAlignmentOptions.Center;
             depthLabel.color = new Color(1f, 1f, 1f, 0.35f);  // Kayaya kazınmış gibi soluk
@@ -577,11 +631,11 @@ namespace RiskLoop.EditorTools
             // Canavar: kap (ölçeklenmez) > gövde (aura + görsel, büyür/sarsılır) + üstte isim ve can barı
             RectTransform monster = CreateUIObject("MonsterRoot", scene);
             monster.anchorMin = monster.anchorMax = new Vector2(0.5f, 0.5f);
-            monster.sizeDelta = new Vector2(320, 320);
-            monster.anchoredPosition = new Vector2(0f, -30f);
+            monster.sizeDelta = new Vector2(440, 440);
+            monster.anchoredPosition = new Vector2(0f, -40f);
             RectTransform monsterBody = CreateUIObject("MonsterBody", monster);
             Stretch(monsterBody);
-            Image aura = AddCentered("Aura", monsterBody, new Vector2(520, 520));
+            Image aura = AddCentered("Aura", monsterBody, new Vector2(700, 700));
             RectTransform monsterImgRt = CreateUIObject("MonsterImage", monsterBody);
             Stretch(monsterImgRt);
             Image monsterImage = AddImage(monsterImgRt, Color.white);
@@ -611,14 +665,11 @@ namespace RiskLoop.EditorTools
             // Bulgu (delikten çıkan)
             RectTransform item = CreateUIObject("ItemRoot", scene);
             item.anchorMin = item.anchorMax = new Vector2(0.5f, 0.5f);
-            item.sizeDelta = new Vector2(200, 200);
-            Image rays = AddCentered("Rays", item, new Vector2(440, 440));
-            Image glow = AddCentered("Glow", item, new Vector2(260, 260));
-            Image itemImage = AddCentered("Item", item, new Vector2(170, 170));
+            item.sizeDelta = new Vector2(240, 240);
+            Image rays = AddCentered("Rays", item, new Vector2(540, 540));
+            Image glow = AddCentered("Glow", item, new Vector2(320, 320));
+            Image itemImage = AddCentered("Item", item, new Vector2(210, 210));
             itemImage.preserveAspect = true;
-
-            Image helmet = AddCentered("Helmet", scene, new Vector2(170, 170));
-            helmet.preserveAspect = true;
 
             RectTransform darkRt = CreateUIObject("DarkOverlay", scene);
             Stretch(darkRt);
@@ -639,25 +690,25 @@ namespace RiskLoop.EditorTools
             var spawner = particlesRt.gameObject.AddComponent<UIParticleSpawner>();
             SetRef(spawner, "template", template);
 
-            // Kazma: sağ alt köşe, dönme noktası sapın ucu
+            // Kazma: sağ altta, sağ HUD panelinin solunda (panelin altında kalmasın). Dönme noktası sapın ucu
             RectTransform pickaxe = CreateUIObject("PickaxeRoot", scene);
             pickaxe.anchorMin = pickaxe.anchorMax = new Vector2(1f, 0f);
             pickaxe.pivot = new Vector2(0.5f, 0.08f);
-            pickaxe.sizeDelta = new Vector2(300, 300);
-            pickaxe.anchoredPosition = new Vector2(-170f, -40f);
+            pickaxe.sizeDelta = new Vector2(380, 380);
+            pickaxe.anchoredPosition = new Vector2(-(HudSideWidth + 230f), -50f);
             RectTransform pickaxeImgRt = CreateUIObject("PickaxeImage", pickaxe);
             Stretch(pickaxeImgRt);
             Image pickaxeImage = AddImage(pickaxeImgRt, Color.white);
             pickaxeImage.preserveAspect = true;
             pickaxeImage.raycastTarget = false;
 
-            // Silah: sol alt köşe (diğer el), kazmanın aynası
+            // Silah: sol altta, sol HUD panelinin sağında (diğer el), kazmanın aynası
             RectTransform weapon = CreateUIObject("WeaponRoot", scene);
             weapon.anchorMin = weapon.anchorMax = new Vector2(0f, 0f);
             // Dönme noktası kabzada (kılıç çiziminde sol alt), ekranın biraz yukarısında: kalkık durur, vuruşta canavara iner
             weapon.pivot = new Vector2(0.15f, 0.12f);
-            weapon.sizeDelta = new Vector2(300, 300);
-            weapon.anchoredPosition = new Vector2(70f, 40f);
+            weapon.sizeDelta = new Vector2(380, 380);
+            weapon.anchoredPosition = new Vector2(HudSideWidth + 110f, 40f);
             RectTransform weaponImgRt = CreateUIObject("WeaponImage", weapon);
             Stretch(weaponImgRt);
             Image weaponImage = AddImage(weaponImgRt, Color.white);
@@ -670,13 +721,13 @@ namespace RiskLoop.EditorTools
             Image vignette = AddImage(vignetteRt, Color.black);
             vignette.raycastTarget = false;
 
-            // Oyuncu can barı: sahnenin üst kenarı (kazma ve silahın üstüne binmesin)
-            Image playerHpFill = BuildBar("PlayerHpBar", view, new Vector2(420, 30), Vector2.zero,
+            // Oyuncu can barı: üst barın hemen altında, ortada
+            Image playerHpFill = BuildBar("PlayerHpBar", view, new Vector2(520, 32), Vector2.zero,
                                           new Color(0.25f, 0.8f, 0.3f), out TMP_Text playerHpText);
             RectTransform playerBar = (RectTransform)playerHpFill.transform.parent;
             playerBar.anchorMin = playerBar.anchorMax = new Vector2(0.5f, 1f);
             playerBar.pivot = new Vector2(0.5f, 1f);
-            playerBar.anchoredPosition = new Vector2(0f, -14f);
+            playerBar.anchoredPosition = new Vector2(0f, -(TopBarHeight + 16f));
 
             RectTransform catcherRt = CreateUIObject("ClickCatcher", view);
             Stretch(catcherRt);
@@ -702,7 +753,6 @@ namespace RiskLoop.EditorTools
             SetRef(dig, "itemImage", itemImage);
             SetRef(dig, "pickaxeRoot", pickaxe);
             SetRef(dig, "pickaxeImage", pickaxeImage);
-            SetRef(dig, "helmetImage", helmet);
             SetRef(dig, "vignette", vignette);
             SetRef(dig, "darkOverlay", dark);
             SetRef(dig, "fallenRocksRoot", rocks);
@@ -775,19 +825,19 @@ namespace RiskLoop.EditorTools
         {
             const int columns = 3;
             const int slotCount = 9;
-            const float gridHeight = 3 * 108 + 2 * 8;
+            const float gridHeight = 3 * 100 + 2 * 8;
 
             RectTransform root = CreateUIObject("FindCollection", parent);
-            SetHeight(root, 40 + 8 + gridHeight);
+            SetHeight(root, 34 + 8 + gridHeight);
             AddVerticalLayout(root, spacing: 8, padding: 0);
 
-            TMP_Text title = CreateText("CollectionTitle", root, "", 26, 40);
+            TMP_Text title = CreateText("CollectionTitle", root, "", 22, 34);
             title.color = HintColor;
 
             RectTransform grid = CreateUIObject("Grid", root);
             SetHeight(grid, gridHeight);
             var gridLayout = grid.gameObject.AddComponent<GridLayoutGroup>();
-            gridLayout.cellSize = new Vector2(150, 108);
+            gridLayout.cellSize = new Vector2(136, 100);
             gridLayout.spacing = new Vector2(8, 8);
             gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             gridLayout.constraintCount = columns;
@@ -821,13 +871,13 @@ namespace RiskLoop.EditorTools
             inner.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
 
             RectTransform iconRt = CreateUIObject("Icon", inner);
-            SetHeight(iconRt, 44);
+            SetHeight(iconRt, 38);
             Image icon = AddImage(iconRt, Color.white);
             icon.preserveAspect = true;
             icon.raycastTarget = false;
-            TMP_Text type = CreateText("TypeText", inner, "", 22, 24);
+            TMP_Text type = CreateText("TypeText", inner, "", 20, 22);
             type.fontStyle = FontStyles.Bold;
-            TMP_Text value = CreateText("ValueText", inner, "", 20, 24);
+            TMP_Text value = CreateText("ValueText", inner, "", 18, 22);
 
             // Adet rozeti: sağ üst köşe, düzen grubunun dışında
             RectTransform badge = CreateUIObject("CountText", card);
@@ -970,9 +1020,11 @@ namespace RiskLoop.EditorTools
 
             // ---- Sol sütun: son turun sonucu, seçili eşya detayı, geçit seçici, başla butonu ----
             RectTransform left = CreateColumn("LeftColumn", panel, flexibleWidth: 1);
-            TMP_Text result = CreateText("ResultText", left, "", 26, 160);
+            TMP_Text result = CreateText("ResultText", left, "", 26, 140);
             ItemDetailView detail = BuildItemDetail(left);
             CreateFlexibleSpacer(left);
+            TMP_Text nextUnlock = CreateText("NextUnlockText", left, "", 22, 36);
+            nextUnlock.color = new Color(0.55f, 0.85f, 1f);
             Button startStep = CreateButton("StartStepButton", left, UIStrings.StartFrom(0), BarBackColor, 52, 24, out TMP_Text startStepLabel);
             Button startRun = CreateButton("StartRunButton", left, UIStrings.StartRunButton, AdvanceColor, 120, 56, out _);
             TMP_Text hint = CreateText("KeyHintText", left, UIStrings.KeyHintUpgrade, 22, 36);
@@ -984,11 +1036,13 @@ namespace RiskLoop.EditorTools
             RectTransform tabs = CreateUIObject("Tabs", right);
             SetHeight(tabs, 60);
             AddHorizontalLayout(tabs, spacing: 10);
-            Button upgradesTab = CreateButton("UpgradesTab", tabs, UIStrings.TabUpgrades, BuyColor, 60, 28, out _);
+            Button upgradesTab = CreateButton("UpgradesTab", tabs, UIStrings.TabUpgrades, BuyColor, 60, 26, out _);
             FillRemainingWidth(upgradesTab);
-            Button equipmentTab = CreateButton("EquipmentTab", tabs, UIStrings.TabEquipment, MutedColor, 60, 28, out _);
+            Button talentsTab = CreateButton("TalentsTab", tabs, UIStrings.TabTalents, MutedColor, 60, 26, out TMP_Text talentsTabLabel);
+            FillRemainingWidth(talentsTab);
+            Button equipmentTab = CreateButton("EquipmentTab", tabs, UIStrings.TabEquipment, MutedColor, 60, 26, out TMP_Text equipmentTabLabel);
             FillRemainingWidth(equipmentTab);
-            Button prestigeTab = CreateButton("PrestigeTab", tabs, UIStrings.TabPrestige, MutedColor, 60, 28, out _);
+            Button prestigeTab = CreateButton("PrestigeTab", tabs, UIStrings.TabPrestige, MutedColor, 60, 26, out TMP_Text prestigeTabLabel);
             FillRemainingWidth(prestigeTab);
 
             RectTransform content = CreateUIObject("TabContent", right);
@@ -1004,7 +1058,8 @@ namespace RiskLoop.EditorTools
                 rows.Add(BuildUpgradeRow(upgradesRoot, type));
             }
 
-            // Ekipman ve Yeni Çağ sekmeleri
+            // Yetenek, Ekipman ve Yeni Çağ sekmeleri
+            TalentTreeView talents = BuildTalentTree(content);
             EquipmentView equipment = BuildEquipmentView(content);
             PrestigePanelView prestige = BuildPrestigePanel(content);
 
@@ -1014,6 +1069,14 @@ namespace RiskLoop.EditorTools
             SetRef(view, "startRunButton", startRun);
             SetRef(view, "startStepButton", startStep);
             SetRef(view, "startStepLabel", startStepLabel);
+            SetRef(view, "nextUnlockText", nextUnlock);
+            SetRef(view, "talentsTab", talentsTab);
+            SetRef(view, "talentsTabImage", talentsTab.GetComponent<Image>());
+            SetRef(view, "talentsTabLabel", talentsTabLabel);
+            SetRef(view, "equipmentTabLabel", equipmentTabLabel);
+            SetRef(view, "prestigeTabLabel", prestigeTabLabel);
+            SetRef(view, "talentsRoot", talents.gameObject);
+            SetRef(view, "talents", talents);
             SetRef(view, "upgradesTab", upgradesTab);
             SetRef(view, "equipmentTab", equipmentTab);
             SetRef(view, "prestigeTab", prestigeTab);
@@ -1026,6 +1089,118 @@ namespace RiskLoop.EditorTools
             SetRef(view, "equipment", equipment);
             SetRef(view, "itemDetail", detail);
             SetRef(view, "prestige", prestige);
+            return view;
+        }
+
+        /// <summary>
+        /// Yetenekler sekmesi: üstte puan, 3 dal yan yana (her dalda 4 sıra düğüm), altta sıfırla.
+        /// Düğümler TalentBalance'taki varsayılan listeden kurulur; yeni yetenek eklenince sahneyi yeniden kur.
+        /// </summary>
+        private static TalentTreeView BuildTalentTree(Transform parent)
+        {
+            const float nodeWidth = 150;
+            const float nodeHeight = 78;
+            var balance = new TalentBalance();
+
+            RectTransform root = CreateUIObject("TalentsRoot", parent);
+            Stretch(root);
+            AddVerticalLayout(root, spacing: 10, padding: 0);
+
+            TMP_Text points = CreateText("PointsText", root, "", 30, 44);
+            TMP_Text message = CreateText("MessageText", root, "", 20, 28);
+            message.color = new Color(1f, 0.88f, 0.23f);
+
+            var branches = (TalentBranch[])System.Enum.GetValues(typeof(TalentBranch));
+            int maxRow = 0;
+            foreach (TalentDefinition t in balance.nodes) maxRow = Mathf.Max(maxRow, t.row);
+
+            RectTransform columns = CreateUIObject("Branches", root);
+            SetHeight(columns, 70 + (maxRow + 1) * (nodeHeight + 12));
+            AddHorizontalLayout(columns, spacing: 14);
+
+            var headers = new TMP_Text[branches.Length];
+            var nodes = new List<TalentNodeView>();
+            for (int b = 0; b < branches.Length; b++)
+            {
+                RectTransform column = CreateColumn($"Branch_{branches[b]}", columns, flexibleWidth: 1);
+                AddImage(column, new Color(0f, 0f, 0f, 0.25f)).raycastTarget = false;
+                headers[b] = CreateText("Header", column, UIStrings.BranchName(branches[b]), 24, 60);
+
+                for (int r = 0; r <= maxRow; r++)
+                {
+                    RectTransform row = CreateUIObject($"Row_{r}", column);
+                    SetHeight(row, nodeHeight);
+                    AddHorizontalLayout(row, spacing: 10);
+                    row.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+                    foreach (TalentDefinition t in balance.nodes)
+                    {
+                        if (t.branch == branches[b] && t.row == r) nodes.Add(BuildTalentNode(row, t, new Vector2(nodeWidth, nodeHeight)));
+                    }
+                }
+            }
+
+            CreateFlexibleSpacer(root);
+            Button respec = CreateButton("RespecButton", root, "", MutedColor, 56, 24, out TMP_Text respecLabel);
+
+            // Kilit perdesi: yetenekler açılmadan önce ağacın üstünü örter (düzenin dışında)
+            RectTransform lockRt = CreateUIObject("LockedOverlay", root);
+            lockRt.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            Stretch(lockRt);
+            AddImage(lockRt, new Color(0.05f, 0.05f, 0.08f, 0.88f));   // Tıklamayı yutar
+            RectTransform lockTextRt = CreateUIObject("Text", lockRt);
+            Stretch(lockTextRt);
+            var lockText = lockTextRt.gameObject.AddComponent<TextMeshProUGUI>();
+            lockText.fontSize = 34;
+            lockText.alignment = TextAlignmentOptions.Center;
+            lockText.color = HintColor;
+            lockText.raycastTarget = false;
+
+            var view = root.gameObject.AddComponent<TalentTreeView>();
+            SetRef(view, "pointsText", points);
+            SetRef(view, "messageText", message);
+            SetRefArray(view, "branchHeaders", headers);
+            SetRefArray(view, "nodes", nodes.ToArray());
+            SetRef(view, "respecButton", respec);
+            SetRef(view, "respecLabel", respecLabel);
+            SetRef(view, "lockedOverlay", lockRt.gameObject);
+            SetRef(view, "lockedText", lockText);
+            return view;
+        }
+
+        /// <summary>Tek yetenek düğümü: renkli çerçeve + koyu iç + ad + "0/5". Tıklanır, ipucu verir.</summary>
+        private static TalentNodeView BuildTalentNode(Transform parent, TalentDefinition t, Vector2 size)
+        {
+            RectTransform root = CreateUIObject($"Talent_{t.id}", parent);
+            SetHeight(root, size.y);
+            SetFixedWidth(root, size.x);
+            Image border = AddImage(root, Color.gray);   // raycastTarget açık: tıklama + ipucu
+
+            RectTransform innerRt = CreateUIObject("Inner", root);
+            Stretch(innerRt);
+            innerRt.offsetMin = new Vector2(4, 4);
+            innerRt.offsetMax = new Vector2(-4, -4);
+            Image background = AddImage(innerRt, BackgroundColor);
+            background.raycastTarget = false;
+
+            TMP_Text nameText = AddChipText(root, "Name", 19, new Vector2(8, 26), new Vector2(-8, -6), TextAlignmentOptions.Center);
+            nameText.fontStyle = FontStyles.Bold;
+            TMP_Text rankText = AddChipText(root, "Rank", 18, new Vector2(8, 6), new Vector2(-8, -48), TextAlignmentOptions.Center);
+            rankText.color = new Color(1f, 0.88f, 0.23f);
+
+            var button = root.gameObject.AddComponent<Button>();
+            button.targetGraphic = border;
+            button.transition = Selectable.Transition.None;   // Renkleri TalentNodeView yönetir
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
+
+            var tip = root.gameObject.AddComponent<TooltipTrigger>();
+            var view = root.gameObject.AddComponent<TalentNodeView>();
+            SetString(view, "talentId", t.id);
+            SetRef(view, "button", button);
+            SetRef(view, "background", background);
+            SetRef(view, "border", border);
+            SetRef(view, "nameText", nameText);
+            SetRef(view, "rankText", rankText);
+            SetRef(view, "tooltip", tip);
             return view;
         }
 
@@ -1481,6 +1656,19 @@ namespace RiskLoop.EditorTools
             {
                 prop.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
             }
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetString(Object target, string fieldName, string value)
+        {
+            var so = new SerializedObject(target);
+            SerializedProperty prop = so.FindProperty(fieldName);
+            if (prop == null)
+            {
+                Debug.LogError($"Alan bulunamadı: {target.GetType().Name}.{fieldName}");
+                return;
+            }
+            prop.stringValue = value;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

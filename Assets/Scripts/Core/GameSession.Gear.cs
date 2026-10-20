@@ -82,7 +82,7 @@ namespace RiskLoop.Core
                 }
                 else
                 {
-                    double value = RiskMath.GearSellValue(Balance.combat, item);
+                    double value = SellValue(item);
                     Progress.money += value;
                     CurrentRun.LootAutoSold++;
                     CurrentRun.LootAutoSoldValue += value;
@@ -141,7 +141,8 @@ namespace RiskLoop.Core
             return true;
         }
 
-        public double SellValue(GearItem item) => RiskMath.GearSellValue(Balance.combat, item);
+        /// <summary>Satış değeri (Pazarlıkçı yeteneğiyle artar).</summary>
+        public double SellValue(GearItem item) => RiskMath.GearSellValue(Balance.combat, item) * (1.0 + Talents.SellValue);
 
         /// <summary>Envanterdeki eşyayı sat. Satış fiyatını döndürür (satılamadıysa 0).</summary>
         public double Sell(long uid)
@@ -174,7 +175,7 @@ namespace RiskLoop.Core
         public double EnhanceCost(GearItem item) => RiskMath.EnhanceCost(Balance.combat, item);
         public double EnhanceChance(GearItem item) => RiskMath.EnhanceChance(Balance.combat, item);
         public bool CanEnhance(GearItem item) =>
-            CanManageGear && item != null && item.enhance < Balance.combat.enhanceMax && Progress.money >= EnhanceCost(item);
+            CanManageGear && IsUnlocked(Feature.Enhance) && item != null && item.enhance < Balance.combat.enhanceMax && Progress.money >= EnhanceCost(item);
 
         /// <summary>
         /// Eşyayı güçlendirmeyi dene (+1). Ücret her durumda ödenir.

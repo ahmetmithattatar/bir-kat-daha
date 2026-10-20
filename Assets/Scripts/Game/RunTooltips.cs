@@ -51,16 +51,18 @@ namespace RiskLoop.Game
                    $"ama bu derinliğin taban riski <b>%{UIStrings.Pct(floor)}</b>'in altına inemez.";
         }
 
-        public static string Shields(GameSession s)
+        public static string BossReach(GameSession s)
         {
-            int shields = s.CurrentRun != null ? s.CurrentRun.Shields : 0;
-            return $"<b>Baret</b> ({shields}/{s.Balance.maxShieldsPerRun})\nBir göçüğü yutar ve tur devam eder, " +
-                   $"ama enkaz risk altındaki kazancın <b>%{UIStrings.Pct(s.Balance.shieldEarningsLoss)}</b>'ini gömer.\n" +
-                   "Canavarlara karşı korumaz. Baret yoksa göçük turu bitirir.";
+            MilestoneDefinition m = s.NextMilestone;
+            int zone = RiskMath.ZoneOf(s.Balance, m != null ? m.step : 1);
+            return $"<b>Bölge bossuna ulaşma: %{UIStrings.Pct(s.ReachNextBossChance())}</b>\n" +
+                   $"Göçüğe yakalanmadan {(m != null ? m.step : 0)}. kattaki bossa varma ihtimalin. Her bölge 10 kat, sonunda bir boss.\n" +
+                   $"Bölge içinde risk kat kat artar, yeni bölgeye geçince (bossu yenince) {zone + 1}. bölgenin başında biraz düşer. Boss katında göçük olmaz.\n" +
+                   "Bossu yenemiyorsan: bu bölgeyi farmla (eşya + para), güçlen, tekrar dene.";
         }
 
         public static string Power(GameSession s) =>
-            $"<b>Savaş gücü: {s.CurrentPowerLevel}. kat seviyesi</b>\nNormal canavarları rahat, mini bossları sağ çıkarak yenebileceğin en derin kat.\n" +
+            $"<b>Savaş gücü: {s.CurrentPowerLevel}. kat seviyesi</b>\nNormal canavarları rahat, bölge bossunu sağ çıkarak yenebileceğin en derin kat.\n" +
             "Daha iyi eşya, güçlendirme ve Kralların Kanı bunu yükseltir. Bosslar uzayan savaşta öfkelenir: hasarın yetmezse takılırsın.";
 
         public static string Threat(GameSession s) =>
@@ -68,7 +70,7 @@ namespace RiskLoop.Game
             "Kolay < %20, Orta < %50, Zor < %100, Ölümcül: büyük ihtimalle ölürsün.";
 
         public static string FloorsLeft(GameSession s) =>
-            $"<b>Dayanma</b>\nGöçük riski ve baretlerinle ortalama <b>{s.ExpectedFloorsLeft():0.0}</b> kat daha inebilirsin (canavarlar hariç).\n" +
+            $"<b>Dayanma</b>\nGöçük riskiyle bir sonraki boss katına kadar ortalama <b>{s.ExpectedFloorsLeft():0.0}</b> kat daha inebilirsin (canavarlar hariç).\n" +
             "Bu sayı küçüldükçe her iniş daha büyük kumar.";
 
         public static string NextReward(GameSession s) =>
@@ -81,7 +83,7 @@ namespace RiskLoop.Game
 
         public static string MonsterChance(GameSession s) =>
             $"<b>Canavar şansı: %{UIStrings.Pct(System.Math.Min(1.0, s.NextMonsterChance))}</b>\nDuvarın ardından canavar çıkma ihtimali. Derinlikle artar.\n" +
-            "Keşif katlarında her zaman bir boss bekler. Canavar katın hazinesini korur: yenersen bulgu ve ganimet.";
+            "Her 10. katta bölge bossu bekler. Canavar katın hazinesini korur: yenersen bulgu ve ganimet.";
 
         public static string Insurance(GameSession s) =>
             $"<b>Sigorta: %{UIStrings.Pct(s.InsuranceFraction)}</b>\nGöçükte ya da yenilgide risk altındaki kazancın bu kadarı kurtarılır.";
@@ -103,7 +105,7 @@ namespace RiskLoop.Game
         {
             s.NextGamble(out double win, out double lose, out double chance);
             return $"<b>Sonraki iniş kumarı</b>\nKazanırsan <b>+{UIStrings.Num(win)}</b> (%{UIStrings.Pct(1 - chance)})\n" +
-                   $"Kaybedersen <b>{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) {(s.NextBustEndsRun ? "ve tur biter" : "(baret yutar, enkaz bir kısmını gömer)")}\n" +
+                   $"Kaybedersen <b>{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) ve tur biter (sigorta bir kısmını kurtarır)\n" +
                    $"Beklenen değer: {UIStrings.Num(s.NextGambleExpectedValue())}";
         }
 
@@ -114,9 +116,9 @@ namespace RiskLoop.Game
         public static string Milestone(GameSession s)
         {
             MilestoneDefinition m = s.NextMilestone;
-            if (m == null) return "Bütün keşif katlarını geçtin.";
+            if (m == null) return "";
             string tier = RarityStyle.Colored(RarityStyle.Name(m.minTier), m.minTier);
-            return $"<b>{UIStrings.MilestoneName(m.step)}</b> ({m.step}. kat)\nBir boss bekliyor. Yenersen: en az {tier} garantili bulgu, ganimet " +
+            return $"<b>{UIStrings.MilestoneName(m.step)}</b> ({m.step}. kat)\nBölge bossu bekliyor. Yenersen: en az {tier} garantili bulgu, ganimet " +
                    "ve bu kattan başlayabileceğin bir geçit. İlk kez ulaşınca ayrıca keşif ödülü.";
         }
 

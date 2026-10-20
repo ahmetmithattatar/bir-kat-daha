@@ -14,7 +14,7 @@ namespace RiskLoop.Core
         /// <summary>Şimdi Yeni Çağ başlatılırsa kazanılacak Yadigar.</summary>
         public double RelicsForPrestige => Math.Floor(Math.Pow(Progress.bestStep, P.relicExponent) / P.relicDivisor);
 
-        public bool CanPrestige => !IsRunActive && Progress.bestStep >= P.minStep && RelicsForPrestige > 0;
+        public bool CanPrestige => !IsRunActive && IsUnlocked(Feature.Prestige) && Progress.bestStep >= P.minStep && RelicsForPrestige > 0;
 
         /// <summary>Yeni Çağ başlangıç parası (Kadim Servet).</summary>
         public double PrestigeStartingMoney

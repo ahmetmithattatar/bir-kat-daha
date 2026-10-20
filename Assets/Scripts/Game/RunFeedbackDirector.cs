@@ -10,7 +10,6 @@ namespace RiskLoop.Game
     /// Oyun kuralı yok; sadece sıralama, zamanlama ve efekt seçimi.
     ///
     /// Bir kat = birkaç kazma vuruşu. Son vuruşta duvar titrer (riskle uzar), sonra zar sonucu sahnelenir:
-    ///   baret kırıldıysa -> baret sahnesi + pencere
     ///   duvar yıkılır -> canavar varsa savaş başlar | yoksa bulgu delikten çıkar -> tünelde ilerlenir
     ///   göçük -> tavan çöker, taşlar yığılır, ekran kararır
     /// Savaş: her vuruş PlayAttack, canavar vurunca PlayMonsterHit, ölünce PlayVictory (ödül + bulgu + ganimet).
@@ -21,6 +20,7 @@ namespace RiskLoop.Game
         [SerializeField] private RevealPopupView popup;
         [SerializeField] private RunPanelView runPanel;
         [SerializeField] private DigView digView;
+        [SerializeField] private TopBarView topBar;
 
         [Header("Kazı")]
         [Tooltip("Son vuruştan sonra duvarın titreme süresi: taban + risk * ek (gerilim).")]
@@ -28,22 +28,22 @@ namespace RiskLoop.Game
         [SerializeField] private float trembleRiskExtra = 0.7f;
 
         [Header("Bulgular")]
-        [Tooltip("Bu nadirlik ve üstü (3 = lacivert) açılır pencerede gösterilir. Altı koleksiyona uçar.")]
+        [Tooltip("Bu nadirlik ve üstü (3 = lacivert) İLK kez görüldüğünde uzun açılışla gösterilir.")]
         [SerializeField] private int popupMinTier = 3;
+        [Tooltip("Daha önce görülmüş bu nadirlik ve üstü (5 = sarı) hızlı kartla gösterilir. Altı adıyla uçar.")]
+        [SerializeField] private int quickCardMinTier = 5;
 
         private static readonly Color Gold = new Color(1f, 0.88f, 0.23f);
         private static readonly Color DangerRed = new Color(0.9f, 0.15f, 0.1f);
         private static readonly Color CashGreen = new Color(0.24f, 0.8f, 0.35f);
         private static readonly Color CritYellow = new Color(1f, 0.85f, 0.2f);
+        private static readonly Color XpBlue = new Color(0.55f, 0.85f, 1f);
 
         private int _hits;               // Bu duvara kaç vuruş yapıldı
         private int _swingsNeeded = 3;   // Bu duvar kaç vuruşta yıkılır (kazı gücü / duvar sertliği)
         private bool _bestRunAnnounced;  // "En değerli turun" bu turda zaten duyuruldu mu?
 
-        /// <summary>Oto-kazı açıkken: sıradan anlarda pencere açılmaz, sadece durma koşulundaki anlarda.</summary>
-        public bool AutoMode { get; set; }
-
-        /// <summary>Normal animasyon hızı (oto-kazıda 2.5). Hit-stop sırasında geçici olarak neredeyse durur.</summary>
+        /// <summary>Normal animasyon hızı. Hit-stop sırasında geçici olarak neredeyse durur.</summary>
         public float BaseSpeed { get; set; } = 1f;
 
         private float _hitStopUntil;   // Bu zamana kadar animasyonlar donuk (vuruş hissi)
@@ -59,9 +59,6 @@ namespace RiskLoop.Game
         {
             _hitStopUntil = Mathf.Max(_hitStopUntil, Time.unscaledTime + seconds);
         }
-
-        /// <summary>Oto-kazıda bu nadirlik ve üstü pencere açar (ve oto-kazıyı durdurur).</summary>
-        public int AutoStopTier { get; set; } = 4;
 
         /// <summary>Son vuruş yapıldı mı? (GameController buna bakıp zarı attırır.)</summary>
         public bool WallBroken => _hits >= _swingsNeeded;
@@ -100,19 +97,6 @@ namespace RiskLoop.Game
             _hits = 0;
             RunState run = session.CurrentRun;
 
-            // Baret göçüğü yuttu: sahnede baret taşları karşılar ve kırılır, sonra durduran pencere
-            if (r.ShieldUsed)
-            {
-                fx.Flash(DangerRed, 0.4f, 0.6f);
-                if (r.ShieldLoss > 0) fx.FloatText($"-{UIStrings.Num(r.ShieldLoss)}", DangerRed, 52f, runPanel.RunValueAnchor);
-                runPanel.ShowMessage(UIStrings.ShieldLoss(r.ShieldLoss));
-                yield return digView.ShieldSave();
-                // Oto-kazıda baret kalmışsa durdurmaz (banner yeter); son baret giderse her zaman pencere
-                if (!AutoMode || run.Shields == 0) yield return popup.ShowShieldBreak(run.Shields, fx);
-                else fx.Banner($"{UIStrings.ShieldBreakHeader} {UIStrings.ShieldsLeft(run.Shields)}", Gold, 0.4f);
-                StartCoroutine(UIFx.Punch(runPanel.BuffsAnchor, 0.3f, 0.4f));
-            }
-
             // Duvar yıkılır
             yield return digView.Shatter();
             StartCoroutine(UIFx.Punch(runPanel.DepthAnchor, 0.15f, 0.25f));
@@ -125,6 +109,7 @@ namespace RiskLoop.Game
             if (r.Encounter != null)
             {
                 if (r.IsMilestone) fx.Banner(UIStrings.MilestoneName(r.Step), Gold, 0.6f);
+                yield return PlayXp(r.XpGained, r.LevelsGained, session);
                 digView.HideWall();
                 runPanel.ShowMessage(UIStrings.MonsterAppears(r.Encounter));
                 if (r.Encounter.Kind != MonsterKind.Normal)
@@ -149,7 +134,9 @@ namespace RiskLoop.Game
             }
 
             runPanel.Refresh(session, r.HasFind ? r.Find : (FindResult?)null);
+            yield return PlayXp(r.XpGained, r.LevelsGained, session);
             yield return digView.Emerge(run.Step, session.NextBustChance);
+            if (RiskMath.IsBossFloor(session.Balance, run.Step + 1)) fx.Banner(UIStrings.BossAhead, DangerRed, 0.6f);
             AnnounceBestRun(session);
         }
 
@@ -181,14 +168,6 @@ namespace RiskLoop.Game
             fx.Flash(DangerRed, 0.25f, 0.35f);
             fx.FloatText($"-{UIStrings.Num(hit.Damage)}", DangerRed, 44f, digView.PlayerHpAnchor);
             digView.SetPlayerHealth(System.Math.Max(0, run.PlayerHealth), run.PlayerMaxHealth);
-
-            if (hit.ShieldUsed)
-            {
-                fx.Banner(UIStrings.ShieldRevive, Gold, 0.6f);
-                yield return digView.ShieldSave();
-                yield return popup.ShowShieldBreak(run.Shields, fx);
-                digView.SetPlayerHealth(run.PlayerHealth, run.PlayerMaxHealth);
-            }
         }
 
         /// <summary>Canavar öldü: ölüm, ödül, katın bulgusu ve ganimet tek tek açılır, sonra tünelde ilerlenir.</summary>
@@ -227,7 +206,7 @@ namespace RiskLoop.Game
                 yield return RevealFind(drop, m.Step, false, false, null);
             }
 
-            runPanel.Refresh(session);
+            yield return PlayXp(v.XpGained, v.LevelsGained, session);
             yield return digView.Emerge(run.Step, session.NextBustChance);
             AnnounceBestRun(session);
         }
@@ -282,34 +261,55 @@ namespace RiskLoop.Game
             digView.SetEnrage(progress, stacks);
         }
 
-        /// <summary>Oto-kazı durdu: oyuncunun dikkatini çek (kontrol sende).</summary>
-        public void AnnounceAutoStop(string text)
-        {
-            fx.Banner(text, Gold, 0.7f);
-            fx.Flash(Gold, 0.15f, 0.4f);
-        }
-
         // ---------------- Yardımcılar ----------------
 
-        /// <summary>Bulgu delikten fırlar; nadirse/keşif katıysa/ganimetse pencere, değilse uçan yazı; sonra koleksiyona uçar.</summary>
+        /// <summary>
+        /// Bulgu delikten fırlar, sonra koleksiyona uçar. Gösterim:
+        ///   Bu nadirlik İLK kez görülüyor (lacivert+) ya da keşif katı -> uzun açılış (renk tırmanışı, kapatana kadar bekler)
+        ///   Daha önce görülmüş nadirlik, sarı+ ya da canavar ganimeti (mavi+) -> hızlı kart (kendiliğinden kapanır)
+        ///   Diğerleri -> adıyla uçan yazı
+        /// Böylece heyecan ilk seferde yaşanır, üst üste gelen aynı nadirlik oyuncuyu bekletmez.
+        /// </summary>
         private IEnumerator RevealFind(FindResult find, int step, bool isMilestone, bool firstReach, string extraHype)
         {
             yield return digView.RevealFind(find);
 
-            // Oto-kazıda sadece durma eşiğindeki bulgular ve keşif katları pencere açar; sıradan anlar akıp geçer
-            bool bigMoment = AutoMode
-                ? find.Tier >= AutoStopTier || isMilestone
-                : find.Tier >= popupMinTier || isMilestone || (find.FromMonster && find.Tier >= 2);
-            if (bigMoment)
+            bool fullReveal = (find.FirstOfTier && find.Tier >= popupMinTier) || isMilestone;
+            bool quickCard = !fullReveal && (find.Tier >= quickCardMinTier || (find.FromMonster && find.Tier >= 2));
+            string header = UIStrings.FindPopupHeader(find, step, isMilestone, firstReach);
+
+            if (find.FirstOfTier && find.Tier >= popupMinTier)
             {
-                string header = UIStrings.FindPopupHeader(find, step, isMilestone, firstReach);
-                yield return popup.ShowFind(find, header, extraHype, fx);
+                string first = UIStrings.FirstOfTierLine(find.Tier);
+                extraHype = string.IsNullOrEmpty(extraHype) ? first : extraHype + "\n" + first;
             }
-            else
+            if (find.Twin)
             {
-                fx.FloatText(UIStrings.FindTitle(find), RarityStyle.TierColor(find.Tier), 34f + find.Tier * 4f, digView.ItemAnchor);
+                string twin = UIStrings.TwinFindLine;
+                extraHype = string.IsNullOrEmpty(extraHype) ? twin : extraHype + "\n" + twin;
             }
+
+            if (fullReveal) yield return popup.ShowFind(find, header, extraHype, fx);
+            else if (quickCard) yield return popup.ShowFindQuick(find, header, extraHype, fx);
+            else fx.FloatText(UIStrings.FindTitle(find), RarityStyle.TierColor(find.Tier), 34f + find.Tier * 4f, digView.ItemAnchor);
+
             yield return digView.FlyItemTo(runPanel.CollectionAnchor);
+        }
+
+        /// <summary>Kazanılan XP'yi uçur; seviye atlandıysa pencere (yeni özellik açıldıysa okuyana kadar bekler).</summary>
+        private IEnumerator PlayXp(double xp, int levelsGained, GameSession session)
+        {
+            if (xp > 0) fx.FloatText(UIStrings.XpGain(xp), XpBlue, 30f, topBar.LevelAnchor);
+            topBar.Refresh(session);
+            runPanel.Refresh(session);
+            if (levelsGained <= 0) yield break;
+
+            int level = session.Progress.level;
+            var unlocked = new System.Collections.Generic.List<Feature>();
+            for (int l = level - levelsGained + 1; l <= level; l++) unlocked.AddRange(session.FeaturesUnlockedAt(l));
+
+            fx.Banner(UIStrings.LevelUpHeader, XpBlue, 0.6f);
+            yield return popup.ShowLevelUp(level, UIStrings.FeaturesUnlocked(unlocked), session.TalentPointsAvailable, fx);
         }
 
         /// <summary>Bu tur, şimdiye kadarki en değerli turu geçtiyse bir kez duyur.</summary>

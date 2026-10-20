@@ -97,18 +97,27 @@ namespace RiskLoop.Core
 
         // --- Kazanç eğrisi ---
         // reward(step) = baseStepReward * stepMultiplierGrowth ^ (step - 1) * earningsBonus * (1 + runProfitBonus)
+        // 1.12: derine inmek belirgin kazandırır ama ekonomi (ve yükseltmeler) bir çağda patlamaz.
         public double baseStepReward = 10;
-        public double stepMultiplierGrowth = 1.25;
+        public double stepMultiplierGrowth = 1.12;
 
-        // --- Risk eğrisi ---
-        // chance(step) = clamp((baseBustChance + bustChancePerStep * (step - 1)) * safetyFactor * runSafetyFactor, floor(step), max)
-        // floor(step)  = minBustChance + bustFloorPerStep * (step - 1)
-        // Taban risk derinlikle artar: yükseltmeler sığ katları güvenli yapar ama derin katlar HEP tehlikeli kalır.
-        // Bu olmadan risk %1'e iner, derinlik sınırsızlaşır ve üstel ödül ekonomiyi patlatır.
-        public double baseBustChance = 0.05;
-        public double bustChancePerStep = 0.04;
+        // --- Bölgeler ---
+        // Oyun 10 katlık bölgelerden oluşur. Bölgenin son katında (10, 20, 30 ...) boss bekler.
+        // Göçük riski BÖLGE İÇİNDE artar (bölgenin 1. katı düşük, 9. katı yüksek); derin bölgeler riskle değil
+        // canavar gücüyle zorlaşır. Böylece takılan oyuncu o bölgeyi farmlayıp (eşya + para) bossu geçecek güce ulaşır.
+        public int zoneSize = 10;
+
+        // --- Risk eğrisi (bölge içinde) ---
+        // f = bölge içindeki kat (1..9), z = bölge (1..)
+        // raw(step)   = baseBustChance + bustChancePerZoneFloor * (f - 1) + bustChancePerZone * (z - 1)
+        // floor(step) = minBustChance + bustFloorPerZoneFloor * (f - 1) + bustFloorPerZone * (z - 1)
+        // chance      = clamp(raw * safetyFactor * runSafetyFactor * yetenek, floor, max).  Boss katında (f = 10) göçük yok.
+        public double baseBustChance = 0.04;
+        public double bustChancePerZoneFloor = 0.025;
+        public double bustChancePerZone = 0.01;
         public double minBustChance = 0.01;
-        public double bustFloorPerStep = 0.01;
+        public double bustFloorPerZoneFloor = 0.012;
+        public double bustFloorPerZone = 0.005;
         public double maxBustChance = 0.95;
 
         // --- Tur içi bulgu bonuslarının üst sınırları (ekonomi patlamasın diye) ---
@@ -118,17 +127,16 @@ namespace RiskLoop.Core
         // --- Bulgular ---
         // findChance(step) = clamp(findChanceBase + findChancePerStep * (step - 1) + findChanceUpgrade, 0, maxFindChance)
         public double findChanceBase = 0.30;
-        public double findChancePerStep = 0.015;
+        public double findChancePerStep = 0.005;
         public double maxFindChance = 0.90;
 
         // Şans: nadirlik ağırlıkları  weight(t) = tier.weight * (1 + luck) ^ t  ile kayar.
-        // luck = luckPerStep * step + luckUpgrade + ekipman + tılsım. Derine inmek nadir bulgu şansını artırır.
-        public double luckPerStep = 0.025;
+        // luck = luckPerStep * step + yükseltme + ekipman + tılsım + yetenek + telafi. Derine inmek nadir bulgu şansını artırır.
+        public double luckPerStep = 0.012;
         public double maxRunLuck = 1.5;          // Tılsımlardan gelen tur şansı en fazla bu kadar
 
         // 9 nadirlik: beyaz, açık mavi, mavi, lacivert, yeşil, sarı, turuncu, kırmızı, mor
         // Her seviye bir öncekinden ~3.3 kat NADİR ve belirgin güçlü: mor bir "jackpot" olmalı.
-        // Örnek: 5. katta mor ~%0.01, 30. katta en yüksek şansla ~%2.
         public RarityTierDefinition[] rarityTiers =
         {
             new RarityTierDefinition(100, 1.0),
@@ -146,18 +154,11 @@ namespace RiskLoop.Core
         //   Treasure / SafeCache: stepReward * baseValue * power * findValueBonus   (para)
         //   ProfitBoost:          baseValue * power  -> runProfitBonus'a eklenir    (ör. 0.04 * 3.2 = +%12.8)
         //   Safety:               min(baseValue * power, maxSafetyFindReduction) -> runSafetyFactor *= (1 - değer)
-        //   Shield:               tier >= shieldDoubleTier ise 2, değilse 1 baret
         public FindTypeDefinition treasureFind = new FindTypeDefinition(40, 1.5, 0);
         public FindTypeDefinition safeCacheFind = new FindTypeDefinition(20, 0.8, 0);
         public FindTypeDefinition profitBoostFind = new FindTypeDefinition(18, 0.04, 0);
         public FindTypeDefinition safetyFind = new FindTypeDefinition(15, 0.03, 0);
-        public FindTypeDefinition shieldFind = new FindTypeDefinition(4, 1, 3);
-
-        // --- Baret (yeniden dengelendi: güvence ama bedelsiz değil) ---
-        // Baret göçüğü yutar ama enkaz risk altındaki kazancın bir kısmını gömer: devam etmek hâlâ bir karar.
-        // Canavara karşı korumaz (savaş gücü önemli kalsın). Tur başına taşınabilecek baret sınırlı.
-        public double shieldEarningsLoss = 0.35;
-        public int maxShieldsPerRun = 3;
+        public double maxSafetyFindReduction = 0.5;
 
         // --- Talihsizlik telafisi (göçük moral bozmasın) ---
         // Her göçük/yenilgi sonraki turlara +nadirlik (birikir, sınırlı). Başarılı bir yüzeye dönüş sıfırlar.
@@ -166,10 +167,8 @@ namespace RiskLoop.Core
 
         // --- Enkazdan kurtarma: göçükte turun en nadir eşyası bu olasılıkla kurtulur (envanterde yer varsa) ---
         public double bustSalvageChance = 0.5;
-        public double maxSafetyFindReduction = 0.5;
-        public int shieldDoubleTier = 7;
 
-        // Yeni türler:
+        // Özel bulgular (oyuncu seviyesiyle açılır, bkz. progression):
         //   LuckCharm:      baseValue * power -> runLuck'a eklenir (bu turun kalanında daha nadir bulgular)
         //   FindStreak:     floor(baseValue + streakStepsPerTier * tier) adım boyunca bulgu garantili
         //   Multiplier:     min(baseValue * power, maxMultiplierFindBonus) -> risk altındaki kazanç *= (1 + değer)
@@ -185,24 +184,29 @@ namespace RiskLoop.Core
         public double cursedRiskIncrease = 0.15;      // Her lanetli hazine bu tur riski %15 artırır
         public double maxRunSafetyFactor = 1.6;       // Lanetler toplamda riski en fazla %60 artırır
 
-        // Keşif katları (kilometre taşları). Erken tatmin (3, 5), sonra "bir kat daha" gerilimi (10, 15, ...).
-        // Taban risk yüzünden 30+ katlar efsanevi hedeflerdir. İsimleri UIStrings.MilestoneName'de.
-        // Her keşif katında 5 bossluk havuz: her inişte biri rastgele gelir (mini ve büyük bosslar sırayla).
+        // Boss katları: her bölgenin son katı. Her birinde 5 bossluk havuz (her inişte biri rastgele gelir).
+        // Bölge isimleri UIStrings.ZoneName'de. Bossu yenmek: garantili bulgu (en az minTier), ganimet ve o bölgeden başlama geçidi.
         public MilestoneDefinition[] milestones =
         {
-            new MilestoneDefinition(3, 1, 2, "goblin_chief", "orc_captain", "rat_king", "slime_mother", "warg_alpha"),
-            new MilestoneDefinition(5, 2, 3, "bone_lord", "spider_matron", "wight_thane", "orc_warlord", "stone_troll"),
-            new MilestoneDefinition(10, 3, 5, "crystal_golem", "troll_king", "crystal_wyrm", "pale_queen", "myconid_elder"),
-            new MilestoneDefinition(15, 4, 6, "naga_queen", "lake_watcher", "drowned_king", "storm_spirit", "marsh_hag"),
-            new MilestoneDefinition(20, 5, 8, "forge_king", "black_orc_chief", "iron_troll_lord", "imp_lord", "ghost_king"),
-            new MilestoneDefinition(25, 6, 10, "fossil_wyrm", "barrow_king", "great_spider", "sand_wurm", "mummy_lord"),
-            new MilestoneDefinition(30, 7, 12, "elder_dragon", "gold_sleeper", "dragon_priest", "war_troll_king", "drake_mother"),
-            new MilestoneDefinition(35, 8, 15, "lava_titan", "black_rider", "hell_warg", "magma_mother", "demon_lord"),
-            new MilestoneDefinition(40, 8, 20, "core_devourer", "shadow_flame", "world_serpent", "root_watcher", "ancient_lich"),
+            new MilestoneDefinition(10, 2, 3, "goblin_chief", "orc_captain", "rat_king", "slime_mother", "warg_alpha"),
+            new MilestoneDefinition(20, 3, 4, "bone_lord", "spider_matron", "wight_thane", "orc_warlord", "stone_troll"),
+            new MilestoneDefinition(30, 3, 5, "crystal_golem", "troll_king", "crystal_wyrm", "pale_queen", "myconid_elder"),
+            new MilestoneDefinition(40, 4, 6, "naga_queen", "lake_watcher", "drowned_king", "storm_spirit", "marsh_hag"),
+            new MilestoneDefinition(50, 5, 8, "forge_king", "black_orc_chief", "iron_troll_lord", "imp_lord", "ghost_king"),
+            new MilestoneDefinition(60, 6, 10, "fossil_wyrm", "barrow_king", "great_spider", "sand_wurm", "mummy_lord"),
+            new MilestoneDefinition(70, 7, 12, "elder_dragon", "gold_sleeper", "dragon_priest", "war_troll_king", "drake_mother"),
+            new MilestoneDefinition(80, 8, 15, "lava_titan", "black_rider", "hell_warg", "magma_mother", "demon_lord"),
+            new MilestoneDefinition(90, 8, 20, "core_devourer", "shadow_flame", "world_serpent", "root_watcher", "ancient_lich"),
         };
 
         // --- Savaş, canavarlar, ekipman (ayrı sınıfta, çok sayı var) ---
         public CombatBalance combat = new CombatBalance();
+
+        // --- Oyuncu seviyesi ve kademeli açılan özellikler ---
+        public ProgressionBalance progression = new ProgressionBalance();
+
+        // --- Yetenek ağacı ---
+        public TalentBalance talents = new TalentBalance();
 
         // --- Yeni Çağ (prestij) ---
         public PrestigeBalance prestige = new PrestigeBalance();
@@ -220,8 +224,6 @@ namespace RiskLoop.Core
         public UpgradeDefinition luckUpgrade = new UpgradeDefinition(120, 1.62, 0.03, 25);
         // Terazi:   findValueBonus = (1 + effect) ^ level          -> 0.08 ile 30. seviye = x10
         public UpgradeDefinition findValueUpgrade = new UpgradeDefinition(90, 1.58, 0.08, 30);
-        // Baret:    startShields = round(effect * level)           -> her seviye +1 baret
-        public UpgradeDefinition startShieldUpgrade = new UpgradeDefinition(5000, 8, 1, 2);
 
         /// <summary>Yükseltme türüne göre tanımı döndürür.</summary>
         public UpgradeDefinition GetUpgrade(UpgradeType type)
@@ -234,7 +236,6 @@ namespace RiskLoop.Core
                 case UpgradeType.FindChance: return findChanceUpgrade;
                 case UpgradeType.Luck: return luckUpgrade;
                 case UpgradeType.FindValue: return findValueUpgrade;
-                case UpgradeType.StartShield: return startShieldUpgrade;
                 default: throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
         }
@@ -248,7 +249,6 @@ namespace RiskLoop.Core
                 case FindType.SafeCache: return safeCacheFind;
                 case FindType.ProfitBoost: return profitBoostFind;
                 case FindType.Safety: return safetyFind;
-                case FindType.Shield: return shieldFind;
                 case FindType.LuckCharm: return luckCharmFind;
                 case FindType.FindStreak: return findStreakFind;
                 case FindType.Multiplier: return multiplierFind;

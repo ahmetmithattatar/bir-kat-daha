@@ -10,7 +10,7 @@ namespace RiskLoop.Core
     {
         AncientGold,    // Kat ödülleri x(1+e)^lvl
         AncientLuck,    // Şans + e*lvl
-        AncientShield,  // Her tura +1 baret / seviye
+        AncientInsight, // Kazanılan deneyim (XP) x(1+e)^lvl
         AncientMight,   // Saldırı ve Can x(1+e)^lvl
         AncientWealth   // Yeni çağa başlangıç parası: e * 4^(lvl-1)
     }
@@ -24,13 +24,13 @@ namespace RiskLoop.Core
     [Serializable]
     public class PrestigeBalance
     {
-        public int minStep = 15;
+        public int minStep = 30;
         public double relicExponent = 1.6;
         public double relicDivisor = 10;
 
         public UpgradeDefinition ancientGold = new UpgradeDefinition(3, 1.5, 0.25, 30);
         public UpgradeDefinition ancientLuck = new UpgradeDefinition(4, 1.6, 0.05, 20);
-        public UpgradeDefinition ancientShield = new UpgradeDefinition(25, 3.0, 1, 1);
+        public UpgradeDefinition ancientInsight = new UpgradeDefinition(3, 1.5, 0.20, 20);
         public UpgradeDefinition ancientMight = new UpgradeDefinition(3, 1.5, 0.15, 30);
         public UpgradeDefinition ancientWealth = new UpgradeDefinition(5, 2.0, 500, 10);
 
@@ -40,7 +40,7 @@ namespace RiskLoop.Core
             {
                 case PrestigeType.AncientGold: return ancientGold;
                 case PrestigeType.AncientLuck: return ancientLuck;
-                case PrestigeType.AncientShield: return ancientShield;
+                case PrestigeType.AncientInsight: return ancientInsight;
                 case PrestigeType.AncientMight: return ancientMight;
                 case PrestigeType.AncientWealth: return ancientWealth;
                 default: throw new ArgumentOutOfRangeException(nameof(type), type, null);

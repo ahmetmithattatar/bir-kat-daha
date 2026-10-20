@@ -11,7 +11,7 @@ using UnityEngine.InputSystem;
 namespace RiskLoop.Game.UI
 {
     /// <summary>
-    /// Ekranın ortasında açılan büyük kart: nadir bulgu, keşif katı, baret kırılması.
+    /// Ekranın ortasında açılan büyük kart: nadir bulgu, keşif katı, seviye atlama.
     /// Oyuncu tıklayana ya da tuşa basana kadar açık kalır. Bu yüzden önemli anlar tuşa seri basarak kaçırılamaz.
     ///
     /// Bulgu açılışı: çerçeve beyazdan başlayıp gerçek nadirliğe kadar renk renk tırmanır (gerilim),
@@ -36,8 +36,10 @@ namespace RiskLoop.Game.UI
         [SerializeField] private float tierStepDuration = 0.11f;   // Renk tırmanışında her basamak
         [SerializeField] private float baseDismissDelay = 0.35f;   // Kapatılabilmesi için en az bekleme
         [SerializeField] private float dismissDelayPerTier = 0.08f;
+        [Tooltip("Hızlı açılışta kartın ekranda kalma süresi (daha önce görülmüş nadirlik).")]
+        [SerializeField] private float quickDuration = 0.9f;
 
-        private static readonly Color ShieldColor = new Color(1f, 0.6f, 0.15f);
+        private static readonly Color LevelColor = new Color(0.55f, 0.85f, 1f);
 
         private void Awake()
         {
@@ -102,30 +104,80 @@ namespace RiskLoop.Game.UI
             Hide();
         }
 
-        /// <summary>Baret kırıldı. Oyuncunun baretin gittiğini KESİN fark etmesi için durdurur.</summary>
-        public IEnumerator ShowShieldBreak(int shieldsLeft, FxLayerView fx)
+        /// <summary>
+        /// Hızlı açılış: bu nadirlik daha önce görüldüyse renk tırmanışı yok, kart doğrudan açılır ve kendiliğinden kapanır
+        /// (tıklayınca daha erken). Üst üste mavi eşya çıkınca oyuncu beklemekten sıkılmasın.
+        /// </summary>
+        public IEnumerator ShowFindQuick(FindResult find, string header, string extraHype, FxLayerView fx)
         {
             Open();
-            frame.color = ShieldColor;
-            headerText.text = UIStrings.ShieldBreakHeader;
-            titleText.text = UIStrings.ShieldBreakTitle();
+            Color tierColor = RarityStyle.TierColor(find.Tier);
+            frame.color = tierColor;
+            headerText.text = header;
+            titleText.text = UIStrings.FindTitle(find);
             titleText.color = Color.white;
-            descriptionText.text = UIStrings.ShieldsLeft(shieldsLeft);
-            hypeText.text = "";
+            descriptionText.text = UIStrings.FindDescription(find);
+            hypeText.text = extraHype ?? "";
             continueText.text = "";
 
-            // İkon: kırık baret (yan yatmış, sönük)
             iconImage.enabled = true;
-            iconImage.sprite = SpriteLibrary.HelmetSprite;
-            iconImage.color = new Color(1f, 0.75f, 0.6f, 0.85f);
-            iconImage.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -25f);
-            iconRays.enabled = false;
+            iconImage.sprite = SpriteLibrary.FindIcon(find);
+            iconImage.color = SpriteLibrary.FindIconTint(find);
+            iconRays.enabled = true;
+            iconRays.color = new Color(tierColor.r, tierColor.g, tierColor.b, 0.7f);
+            iconRays.rectTransform.localScale = Vector3.one * (0.7f + 0.08f * find.Tier);
 
-            StartCoroutine(UIFx.Punch(card, 0.2f, 0.35f));
-            fx.Burst(card, new Color(0.55f, 0.5f, 0.45f), 30, 750f);  // Taş parçaları
-            fx.Burst(card, ShieldColor, 14, 500f);                    // Baret parçaları
+            StartCoroutine(UIFx.Punch(card, 0.1f, 0.25f));
+            fx.Burst(card, tierColor, 8 + find.Tier * 3, 450f);
 
-            yield return WaitForDismiss(0.6f);
+            // Kendiliğinden kapanır; tık/tuş ile hemen geçilir
+            float t = 0f;
+            while (t < quickDuration)
+            {
+                t += Time.unscaledDeltaTime * FxTime.Speed;
+                if (t > 0.12f && DismissPressed()) break;
+                yield return null;
+            }
+            Hide();
+        }
+
+        /// <summary>
+        /// Seviye atlama. Yeni özellik açıldıysa oyuncu okuyana kadar bekler (ne açıldığını kaçırmasın),
+        /// açılmadıysa kısa gösterip geçer.
+        /// </summary>
+        public IEnumerator ShowLevelUp(int level, string unlockedText, int talentPoints, FxLayerView fx)
+        {
+            Open();
+            frame.color = LevelColor;
+            headerText.text = UIStrings.LevelUpHeader;
+            titleText.text = UIStrings.LevelTitle(level);
+            titleText.color = LevelColor;
+            descriptionText.text = UIStrings.LevelUpPoints(talentPoints);
+            hypeText.text = unlockedText ?? "";
+            continueText.text = "";
+
+            iconImage.enabled = false;
+            iconRays.enabled = true;
+            iconRays.color = new Color(LevelColor.r, LevelColor.g, LevelColor.b, 0.8f);
+            iconRays.rectTransform.localScale = Vector3.one * 1.1f;
+
+            StartCoroutine(UIFx.Punch(card, 0.25f, 0.35f));
+            fx.Burst(card, LevelColor, 40, 800f);
+            fx.Flash(LevelColor, 0.25f, 0.5f);
+
+            if (!string.IsNullOrEmpty(unlockedText))
+            {
+                yield return WaitForDismiss(0.6f);
+            }
+            else
+            {
+                float t = 0f;
+                while (t < quickDuration && !(t > 0.15f && DismissPressed()))
+                {
+                    t += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+            }
             Hide();
         }
 

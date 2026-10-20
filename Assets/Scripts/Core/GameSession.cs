@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace RiskLoop.Core
 {
@@ -6,21 +7,26 @@ namespace RiskLoop.Core
     /// Oyunun tüm kuralları burada. Unity'yi bilmez: butonları, metinleri, kaydı tanımaz.
     /// UI sadece bu sınıfın metotlarını çağırır ve özelliklerini okur.
     ///
-    /// Sınıf üç dosyaya bölünmüş ("partial class", aynı sınıfın parçaları):
-    ///   GameSession.cs         tur, kazı, bulgular, yükseltmeler
-    ///   GameSession.Combat.cs  canavarlar, vuruşlar, zafer ve ganimet
-    ///   GameSession.Gear.cs    eşya üretimi, envanter, kuşanma, satış
+    /// Sınıf birkaç dosyaya bölünmüş ("partial class", aynı sınıfın parçaları):
+    ///   GameSession.cs              tur, kazı, bulgular, yükseltmeler
+    ///   GameSession.Combat.cs       canavarlar, vuruşlar, zafer ve ganimet
+    ///   GameSession.Gear.cs         eşya üretimi, envanter, kuşanma, satış, güçlendirme
+    ///   GameSession.Progression.cs  XP, seviye, açılan özellikler, yetenek ağacı
+    ///   GameSession.Prestige.cs     Yeni Çağ
+    ///   GameSession.Insight.cs      güç/risk göstergeleri (hiçbir şeyi değiştirmez)
     ///
     /// Akış:  StartRun() -> Advance() ... (canavar çıkarsa Attack()/MonsterAttack() ... zafer) -> CashOut()
-    ///        Göçük ya da ölümde tur biter. Tur aktif değilken yükseltme alınır, eşya kuşanılır/satılır.
+    ///        Göçük ya da ölümde tur biter. Tur aktif değilken yükseltme alınır, eşya kuşanılır, yetenek seçilir.
     ///
     /// Zarların atılma SIRASI (Python simülasyonunda aynı sırayı kullan):
-    ///   Advance:       1) göçük  2) keşif katı değilse: canavar çıkar mı  3) çıktıysa: hangi canavar
-    ///                  canavar yoksa: 4) bulgu (keşif katında / harita varken atılmaz) 5) nadirlik 6) tür [7+ eşyaysa: RollGearItem]
+    ///   Advance:       1) göçük (boss katında yok)  2) boss katı değilse: canavar çıkar mı  3) çıktıysa: hangi canavar
+    ///                  canavar yoksa: 4) bulgu (boss katında / harita varken atılmaz) 5) nadirlik [+parlayış] 6) tür [+ikiz]
+    ///                  [eşyaysa: RollGearItem]
     ///   Attack:        1) kritik  2) hasar oynaması
     ///   MonsterAttack: 1) hasar oynaması
-    ///   Zafer:         katın bulgusu (yukarıdaki 4-6), sonra ganimet: [normal canavarsa düşme zarı] her eşya için nadirlik + RollGearItem
+    ///   Zafer:         katın bulgusu (4-6), sonra ganimet: [normal canavarsa düşme zarı] her eşya için nadirlik [+parlayış] + RollGearItem
     ///   RollGearItem:  yuva, taban, her ek stat için stat seçimi
+    ///   Göçük/ölüm:    enkazdan kurtarma (turda eşya varsa)
     /// </summary>
     public partial class GameSession
     {
@@ -39,16 +45,22 @@ namespace RiskLoop.Core
 
         public bool IsRunActive => CurrentRun != null && CurrentRun.Status == RunStatus.Active;
 
-        /// <summary>Karakterin kuşanılan eşyalarla ve Kadim Güç (prestij) ile toplam statları.</summary>
+        /// <summary>Karakterin kuşanılan eşyalar, yetenekler ve Kadim Güç (prestij) ile toplam statları.</summary>
         public CharacterStats Stats => StatsWith(Progress.equipped);
 
         /// <summary>Verilen eşya listesiyle statlar (eşya karşılaştırması için "bunu kuşansam" hesabı).</summary>
-        public CharacterStats StatsWith(System.Collections.Generic.IEnumerable<GearItem> equipped)
+        public CharacterStats StatsWith(IEnumerable<GearItem> equipped)
         {
             CharacterStats s = CharacterStats.Compute(Balance.combat, equipped);
+            TalentBonuses t = Talents;
             double might = Math.Pow(1.0 + Balance.prestige.ancientMight.effectPerLevel, Progress.GetPrestigeLevel(PrestigeType.AncientMight));
-            s.Attack *= might;
-            s.Health *= might;
+            s.Attack *= might * (1.0 + t.Attack);
+            s.Health *= might * (1.0 + t.Health);
+            s.Defense *= 1.0 + t.Defense;
+            s.DigPower *= 1.0 + t.DigPower;
+            s.CritChance += t.CritChance;
+            s.FindChance += t.FindChance;
+            s.ApplyCaps(Balance.combat);
             return s;
         }
 
@@ -68,27 +80,39 @@ namespace RiskLoop.Core
         private double RunSafetyFactor => CurrentRun != null ? CurrentRun.SafetyFactor : 1;
         private double RunLuck => CurrentRun != null ? CurrentRun.RunLuck : 0;
 
-        /// <summary>Mevcut derinlikteki toplam çarpan (ekipmandaki altın bonusu ve Kadim Altın dahil).</summary>
+        /// <summary>Şu anki bölge (1..). Tur yoksa ilk bölge.</summary>
+        public int CurrentZone => RiskMath.ZoneOf(Balance, CurrentStep + 1);
+
+        /// <summary>Mevcut derinlikteki toplam çarpan (ekipman, yetenek ve Kadim Altın dahil).</summary>
         public double CurrentMultiplier =>
-            RiskMath.TotalMultiplier(Balance, CurrentStep, Level(UpgradeType.Earnings), RunProfitBonus) * (1.0 + Stats.GoldBonus) * AncientGoldMult;
+            RiskMath.TotalMultiplier(Balance, CurrentStep, Level(UpgradeType.Earnings), RunProfitBonus)
+            * (1.0 + Stats.GoldBonus) * (1.0 + Talents.RewardBonus) * AncientGoldMult;
 
         /// <summary>
-        /// Bir sonraki inişte patlama olasılığı (0..1). Ekipmandaki göçük direnci riski azaltır,
-        /// ama derinliğin taban riskinin altına indiremez. Baret bunu değiştirmez, patlamayı yutar.
+        /// Bir sonraki inişte göçük olasılığı (0..1). Ekipmandaki göçük direnci ve yetenekler riski azaltır,
+        /// ama katın taban riskinin altına indiremez. Boss katında göçük yok.
         /// </summary>
-        public double NextBustChance =>
-            RiskMath.BustChance(Balance, CurrentStep + 1, Level(UpgradeType.Safety), RunSafetyFactor * (1.0 - Stats.CaveResist));
+        public double NextBustChance => BustChanceAt(CurrentStep + 1);
+
+        private double BustChanceAt(int step)
+        {
+            TalentBonuses t = Talents;
+            double factor = RunSafetyFactor * (1.0 - Stats.CaveResist) * (1.0 - Math.Min(t.RiskReduction, 0.6));
+            // Dağın Kalbi: bölgenin ilk yarısında risk ayrıca azalır
+            if (t.ZoneStartSafety > 0 && RiskMath.FloorInZone(Balance, step) <= Balance.zoneSize / 2) factor *= 1.0 - t.ZoneStartSafety;
+            return RiskMath.BustChance(Balance, step, Level(UpgradeType.Safety), factor);
+        }
 
         /// <summary>Bir sonraki inişte hayatta kalınırsa eklenecek kazanç.</summary>
         public double NextStepReward => RewardFor(CurrentStep + 1);
 
-        /// <summary>Bir sonraki inişte bulgu çıkma olasılığı. Kilometre taşı ya da harita varsa 1 (garantili).</summary>
+        /// <summary>Bir sonraki inişte bulgu çıkma olasılığı. Boss katı ya da harita varsa 1 (garantili).</summary>
         public double NextFindChance =>
             RiskMath.MilestoneAt(Balance, CurrentStep + 1) != null || (CurrentRun != null && CurrentRun.GuaranteedFinds > 0)
                 ? 1.0
                 : FindChanceAt(CurrentStep + 1);
 
-        /// <summary>Bir sonraki katta canavar çıkma olasılığı (keşif katında boss garantili = 1).</summary>
+        /// <summary>Bir sonraki katta canavar çıkma olasılığı (boss katında boss garantili = 1).</summary>
         public double NextMonsterChance
         {
             get
@@ -99,62 +123,63 @@ namespace RiskLoop.Core
             }
         }
 
-        /// <summary>Patlamada kurtarılacak oran (0..1).</summary>
-        public double InsuranceFraction => RiskMath.InsuranceFraction(Balance, Level(UpgradeType.Insurance));
+        /// <summary>Göçükte/yenilgide kurtarılacak oran (0..0.9). Sigorta yükseltmesi + yetenek.</summary>
+        public double InsuranceFraction =>
+            IsUnlocked(Feature.Insurance) || Talents.Insurance > 0
+                ? Math.Min(0.9, RiskMath.InsuranceFraction(Balance, Level(UpgradeType.Insurance)) + Talents.Insurance)
+                : 0;
 
-        /// <summary>Mevcut adımdan sonraki ilk kilometre taşı (yoksa null).</summary>
+        /// <summary>Mevcut adımdan sonraki ilk boss katı.</summary>
         public MilestoneDefinition NextMilestone => RiskMath.NextMilestone(Balance, CurrentStep);
 
         private double RewardFor(int step) =>
-            RiskMath.StepReward(Balance, step, Level(UpgradeType.Earnings), RunProfitBonus) * (1.0 + Stats.GoldBonus) * AncientGoldMult;
+            RiskMath.StepReward(Balance, step, Level(UpgradeType.Earnings), RunProfitBonus)
+            * (1.0 + Stats.GoldBonus) * (1.0 + Talents.RewardBonus) * AncientGoldMult;
 
         private double FindChanceAt(int step) =>
             Math.Min(RiskMath.FindChance(Balance, step, Level(UpgradeType.FindChance)) + Stats.FindChance, Balance.maxFindChance);
 
         private double LuckAt(int step) =>
-            RiskMath.Luck(Balance, step, Level(UpgradeType.Luck), RunLuck) + Stats.Luck
+            RiskMath.Luck(Balance, step, Level(UpgradeType.Luck), RunLuck) + Stats.Luck + Talents.Luck
             + Balance.prestige.ancientLuck.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientLuck)
             + PityLuck;
 
-        /// <summary>Talihsizlik telafisi: art arda göçük/yenilgilerden gelen ek şans.</summary>
-        public double PityLuck => Balance.pityLuckPerStack * Math.Min(Progress.pityStacks, Balance.maxPityStacks);
+        /// <summary>Talihsizlik telafisi: art arda göçük/yenilgilerden gelen ek şans (yetenekle güçlenir).</summary>
+        public double PityLuck =>
+            (Balance.pityLuckPerStack + Talents.PityBoost) * Math.Min(Progress.pityStacks, Balance.maxPityStacks);
 
-        /// <summary>Toplam şans (derinlik hariç kaynaklar): yükseltme + ekipman + kadim + tılsım + telafi. Gösterge için.</summary>
+        /// <summary>Toplam şans (derinlik hariç kaynaklar). Gösterge için.</summary>
         public double LuckBonus => LuckAt(1) - Balance.luckPerStep;
 
         // ---------------- Tur ----------------
 
-        /// <summary>Tura başlanabilecek katlar: 0 (yüzey) + bossu yenilmiş keşif katları (geçitler).</summary>
-        public System.Collections.Generic.List<int> AvailableStartSteps
+        /// <summary>Tura başlanabilecek katlar: 0 (yüzey) + bossu yenilmiş bölge sonları (geçitler, özellik açıksa).</summary>
+        public List<int> AvailableStartSteps
         {
             get
             {
-                var list = new System.Collections.Generic.List<int> { 0 };
-                foreach (MilestoneDefinition m in Balance.milestones)
-                {
-                    if (Progress.conqueredMilestones.Contains(m.step)) list.Add(m.step);
-                }
+                var list = new List<int> { 0 };
+                if (!IsUnlocked(Feature.Checkpoints)) return list;
+                Progress.conqueredMilestones.Sort();
+                foreach (int step in Progress.conqueredMilestones) list.Add(step);
                 return list;
             }
         }
 
         /// <summary>
-        /// Yeni tur. startStep > 0 ise o geçitten (bossu yenilmiş keşif katı) başlanır:
-        /// atlanan katların ödülü/bulgusu yoktur, risk ve canavarlar o derinlikten başlar.
+        /// Yeni tur. startStep > 0 ise o geçitten (bossu yenilmiş bölge sonu) başlanır:
+        /// atlanan katların ödülü/bulgusu yoktur, bir sonraki bölgeden kazmaya başlarsın.
         /// </summary>
         public void StartRun(int startStep = 0)
         {
             if (IsRunActive) throw new InvalidOperationException("Zaten aktif bir tur var.");
-            if (startStep < 0 || (startStep > 0 && !Progress.conqueredMilestones.Contains(startStep))) startStep = 0;
+            if (!AvailableStartSteps.Contains(startStep)) startStep = 0;
 
             double maxHealth = Stats.Health;
             CurrentRun = new RunState
             {
                 Step = startStep,
                 StartStep = startStep,
-                Shields = Math.Min(Balance.maxShieldsPerRun,
-                          RiskMath.StartShields(Balance, Level(UpgradeType.StartShield))
-                          + (int)Math.Round(Balance.prestige.ancientShield.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientShield))),
                 PlayerMaxHealth = maxHealth,
                 PlayerHealth = maxHealth,
             };
@@ -162,7 +187,7 @@ namespace RiskLoop.Core
         }
 
         /// <summary>
-        /// Bir adım daha derine in. Zar atılır, patlarsa (ve baret yoksa) tur biter.
+        /// Bir adım daha derine in. Zar atılır, göçük olursa tur biter.
         /// Hayatta kalınırsa canavar çıkabilir: o zaman katın bulgusu canavar ölünce verilir.
         /// </summary>
         public AdvanceResult Advance()
@@ -178,32 +203,20 @@ namespace RiskLoop.Core
 
             if (roll < chance)
             {
-                if (CurrentRun.Shields > 0)
-                {
-                    // Baret patlamayı yuttu: tur devam eder, adım normal sayılır.
-                    // Ama enkaz risk altındaki kazancın bir kısmını gömer (baret bedelsiz değil).
-                    CurrentRun.Shields--;
-                    CurrentRun.ShieldsUsed++;
-                    Progress.shieldsUsed++;
-                    result.ShieldUsed = true;
-                    result.ShieldLoss = CurrentRun.Earnings * Balance.shieldEarningsLoss;
-                    CurrentRun.Earnings -= result.ShieldLoss;
-                }
-                else
-                {
-                    result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout);
-                    result.Busted = true;
-                    return result;
-                }
+                result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout);
+                result.Busted = true;
+                return result;
             }
 
-            // Hayatta kaldı: derinlik artar, kazanç eklenir.
+            // Hayatta kaldı: derinlik artar, kazanç ve deneyim eklenir.
             double reward = NextStepReward;
             CurrentRun.Step = nextStep;
             CurrentRun.Earnings += reward;
             result.RewardGained = reward;
+            result.XpGained = Balance.progression.xpPerFloor * RiskMath.ZoneOf(Balance, nextStep);
+            result.LevelsGained = GainXp(result.XpGained);
 
-            // Rekor ve kilometre taşı (rekor güncellenmeden ÖNCE "ilk kez mi" bakılır)
+            // Rekor ve boss katı (rekor güncellenmeden ÖNCE "ilk kez mi" bakılır)
             bool isNewRecord = nextStep > Progress.bestStep;
             MilestoneDefinition milestone = RiskMath.MilestoneAt(Balance, nextStep);
             if (milestone != null)
@@ -225,7 +238,7 @@ namespace RiskLoop.Core
             }
             if (nextStep > Progress.allTimeBestStep) Progress.allTimeBestStep = nextStep;
 
-            // Canavar: keşif katında boss garantili, diğer katlarda zar
+            // Canavar: boss katında boss garantili, diğer katlarda zar
             MonsterInstance monster = RollEncounter(nextStep, milestone);   // ZAR 2-3
             if (monster != null)
             {
@@ -278,7 +291,7 @@ namespace RiskLoop.Core
 
         /// <summary>
         /// Göçük ya da ölüm: tur kazancı gider, sigorta bir kısmını kurtarır. Cebe girmiş (Banked) para güvende.
-        /// Turda düşen eşyalar kaybolur; ama en nadir olanı bustSalvageChance ile enkazdan kurtulabilir (döndürülür).
+        /// Turda düşen eşyalar kaybolur; ama en nadir olanı kurtarma şansıyla enkazdan çıkabilir (döndürülür).
         /// Talihsizlik telafisi bir artar (sonraki turlar daha şanslı).
         /// </summary>
         private GearItem BustOutcome(out double lost, out double saved)
@@ -294,13 +307,14 @@ namespace RiskLoop.Core
             CurrentRun.Status = RunStatus.Busted;
             CheckBestRun();
 
-            // Enkazdan kurtarma: en nadir eşya, yazı-tura
+            // Enkazdan kurtarma: en nadir eşya, yazı-tura (Enkaz Avcısı yeteneği şansı artırır)
             GearItem best = null;
             foreach (GearItem item in CurrentRun.PendingLoot)
             {
                 if (best == null || item.tier > best.tier) best = item;
             }
-            if (best != null && Progress.inventory.Count < InventoryCap && _random.NextDouble() < Balance.bustSalvageChance)   // ZAR: kurtarma
+            double chance = Math.Min(0.95, Balance.bustSalvageChance + Talents.Salvage);
+            if (best != null && Progress.inventory.Count < InventoryCap && _random.NextDouble() < chance)   // ZAR: kurtarma
             {
                 Progress.inventory.Add(best);
                 return best;
@@ -319,7 +333,7 @@ namespace RiskLoop.Core
         // ---------------- Bulgu yardımcıları ----------------
 
         /// <summary>
-        /// Katın bulgusu: kilometre taşında garantili; haritadan garantili adım varsa zarsız; değilse zar.
+        /// Katın bulgusu: boss katında garantili; haritadan garantili adım varsa zarsız; değilse zar.
         /// Savaşsız katta Advance, canavarlı katta zafer çağırır.
         /// </summary>
         private bool TryRollFloorFind(int step, double reward, MilestoneDefinition milestone, out FindResult find)
@@ -343,18 +357,24 @@ namespace RiskLoop.Core
                 return false;
             }
 
-            ApplyFind(find);
+            ApplyFind(ref find);
             return true;
         }
 
         private FindResult RollFind(int step, double stepReward, int minTier, bool fromMilestone)
         {
-            int tier = RollTier(step, minTier);                                                                     // ZAR: nadirlik
+            int tier = RollTier(step, minTier);                                                     // ZAR: nadirlik (+parlayış)
 
             var types = (FindType[])Enum.GetValues(typeof(FindType));
-            int typeIndex = RiskMath.WeightedPick(RiskMath.FindTypeWeights(Balance, tier), _random.NextDouble());   // ZAR: tür
-            FindType type = types[typeIndex];
+            double[] weights = RiskMath.FindTypeWeights(Balance, tier);
+            // Henüz açılmamış bulgu türleri çıkmaz (oyuncu seviyesiyle gelir)
+            for (int i = 0; i < types.Length; i++)
+            {
+                if (!IsFindTypeUnlocked(types[i])) weights[i] = 0;
+            }
+            FindType type = types[RiskMath.WeightedPick(weights, _random.NextDouble())];             // ZAR: tür
 
+            double valueBonusMult = 1.0 + Talents.FindValue;
             var find = new FindResult
             {
                 Type = type,
@@ -362,22 +382,46 @@ namespace RiskLoop.Core
                 Value = RiskMath.FindValue(Balance, type, tier, stepReward, Level(UpgradeType.FindValue)),
                 FromMilestone = fromMilestone
             };
+            if (type == FindType.Treasure || type == FindType.SafeCache || type == FindType.CursedTreasure) find.Value *= valueBonusMult;
 
             if (type == FindType.Gear)
             {
                 find.Item = RollGearItem(step, tier);
-                find.Value = RiskMath.GearSellValue(Balance.combat, find.Item);
+                find.Value = SellValue(find.Item);
+            }
+            else if (Talents.TwinFind > 0 && _random.NextDouble() < Talents.TwinFind)              // ZAR: ikiz (Ejderin Gözü)
+            {
+                find.Value *= 2;
+                find.Twin = true;
             }
             return find;
         }
 
-        /// <summary>Nadirlik zarı: derinlik + yükseltme + tılsım + ekipman şansı.</summary>
-        private int RollTier(int step, int minTier)
+        /// <summary>Bu bulgu türü oyuncunun seviyesinde açık mı?</summary>
+        private bool IsFindTypeUnlocked(FindType type)
         {
-            return RiskMath.WeightedPick(RiskMath.TierWeights(Balance, LuckAt(step), minTier), _random.NextDouble());
+            switch (type)
+            {
+                case FindType.Gear: return IsUnlocked(Feature.Equipment);
+                case FindType.LuckCharm:
+                case FindType.FindStreak:
+                case FindType.Multiplier:
+                case FindType.CursedTreasure: return IsUnlocked(Feature.SpecialFinds);
+                default: return true;
+            }
         }
 
-        private void ApplyFind(FindResult find)
+        /// <summary>Nadirlik zarı: derinlik + yükseltme + tılsım + ekipman + yetenek şansı. Parlayış: %x ihtimalle +1.</summary>
+        private int RollTier(int step, int minTier)
+        {
+            int tier = RiskMath.WeightedPick(RiskMath.TierWeights(Balance, LuckAt(step), minTier), _random.NextDouble());
+            int maxTier = Balance.rarityTiers.Length - 1;
+            if (Talents.TierUpgrade > 0 && tier < maxTier && _random.NextDouble() < Talents.TierUpgrade) tier++;  // ZAR: parlayış
+            return tier;
+        }
+
+        /// <summary>Bulguyu tura uygular. find.FirstOfTier burada işaretlenir (ilk kez görülen nadirlik).</summary>
+        private void ApplyFind(ref FindResult find)
         {
             switch (find.Type)
             {
@@ -392,11 +436,7 @@ namespace RiskLoop.Core
                     CurrentRun.ProfitBonus = Math.Min(CurrentRun.ProfitBonus + find.Value, Balance.maxRunProfitBonus);
                     break;
                 case FindType.Safety:
-                    CurrentRun.SafetyFactor = Math.Max(CurrentRun.SafetyFactor * (1.0 - find.Value), Balance.minRunSafetyFactor);
-                    break;
-                case FindType.Shield:
-                    CurrentRun.Shields = Math.Min(CurrentRun.Shields + (int)find.Value, Balance.maxShieldsPerRun);
-                    CurrentRun.ShieldsFound += (int)find.Value;
+                    CurrentRun.SafetyFactor = Math.Max(CurrentRun.SafetyFactor * (1.0 - Math.Min(find.Value, 0.9)), Balance.minRunSafetyFactor);
                     break;
                 case FindType.LuckCharm:
                     CurrentRun.RunLuck = Math.Min(CurrentRun.RunLuck + find.Value, Balance.maxRunLuck);
@@ -406,7 +446,7 @@ namespace RiskLoop.Core
                     break;
                 case FindType.Multiplier:
                     // Risk altındaki kazancı çarpar: büyük kazanç, ama göçükte hepsi gider
-                    double gained = CurrentRun.Earnings * find.Value;
+                    double gained = CurrentRun.Earnings * Math.Min(find.Value, Balance.maxMultiplierFindBonus);
                     CurrentRun.Earnings += gained;
                     CurrentRun.MultiplierGained += gained;
                     break;
@@ -423,6 +463,13 @@ namespace RiskLoop.Core
             if (find.Type == FindType.Treasure || find.Type == FindType.CursedTreasure) CurrentRun.TreasureTotal += find.Value;
             if (find.Type == FindType.SafeCache) CurrentRun.CacheTotal += find.Value;
 
+            // İlk kez görülen nadirlik: sunum bunu gerilimli açılışla kutlar
+            if (!Progress.seenTiers.Contains(find.Tier))
+            {
+                Progress.seenTiers.Add(find.Tier);
+                find.FirstOfTier = true;
+            }
+
             CurrentRun.Finds.Add(find);
             Progress.totalFinds++;
             if (find.Tier > Progress.bestTier) Progress.bestTier = find.Tier;
@@ -431,6 +478,24 @@ namespace RiskLoop.Core
         // ---------------- Yükseltmeler ----------------
 
         public int GetUpgradeLevel(UpgradeType type) => Progress.GetLevel(type);
+
+        /// <summary>Yükseltme oyuncunun seviyesinde açık mı? (Kazanç ve Güvenlik baştan açık.)</summary>
+        public bool IsUpgradeUnlocked(UpgradeType type) => IsUnlocked(UpgradeFeature(type));
+
+        /// <summary>Yükseltmenin bağlı olduğu özellik (Kazanç/Güvenlik için Talents = seviye 1'den küçük, hep açık sayılır).</summary>
+        public static Feature? UpgradeFeatureOf(UpgradeType type)
+        {
+            switch (type)
+            {
+                case UpgradeType.Insurance: return Feature.Insurance;
+                case UpgradeType.FindChance: return Feature.FindChance;
+                case UpgradeType.Luck: return Feature.Luck;
+                case UpgradeType.FindValue: return Feature.FindValue;
+                default: return null;
+            }
+        }
+
+        private Feature? UpgradeFeature(UpgradeType type) => UpgradeFeatureOf(type);
 
         public bool IsUpgradeMaxed(UpgradeType type)
         {
@@ -442,10 +507,11 @@ namespace RiskLoop.Core
             return RiskMath.UpgradeCost(Balance.GetUpgrade(type), GetUpgradeLevel(type));
         }
 
-        /// <summary>Yükseltmeler sadece turlar arasında alınabilir.</summary>
+        /// <summary>Yükseltmeler sadece turlar arasında ve açıldıktan sonra alınabilir.</summary>
         public bool CanBuyUpgrade(UpgradeType type)
         {
             return !IsRunActive
+                && IsUpgradeUnlocked(type)
                 && !IsUpgradeMaxed(type)
                 && Progress.money >= GetUpgradeCost(type);
         }

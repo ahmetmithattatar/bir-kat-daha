@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using RiskLoop.Core;
 
 namespace RiskLoop.Game
@@ -66,12 +67,12 @@ namespace RiskLoop.Game
                 : "Sigorta yok";
         }
 
-        /// <summary>Bu turun bulgu etkileri: baret, kazanç bonusu, risk çarpanı.</summary>
+        /// <summary>Bu turun bulgu etkileri: kazanç bonusu, risk çarpanı.</summary>
         public static string RunBuffs(RunState run)
         {
             if (run == null) return "";
 
-            string text = run.Shields > 0 ? $"<color={Gold}>Baret: {run.Shields}</color>" : "Baret: 0";
+            string text = "";
             if (run.ProfitBonus > 0) text += $"   Kazanç +%{Pct(run.ProfitBonus)}";
             if (run.SafetyFactor < 1) text += $"   Risk x{run.SafetyFactor:0.00}";
             if (run.SafetyFactor > 1) text += $"   <color={AtRiskColor}>Lanet: risk x{run.SafetyFactor:0.00}</color>";
@@ -82,24 +83,23 @@ namespace RiskLoop.Game
 
         public static string CollectionTitle(int count) => count > 0 ? $"Bu turun bulguları ({count})" : "Bu turda henüz bulgu yok";
 
-        // ---------------- Keşif katları (kilometre taşları) ----------------
+        // ---------------- Bölge bossları (keşif katları) ----------------
 
-        /// <summary>Her keşif katının kendine özgü adı. Listede olmayan kat için genel bir ad üretir.</summary>
+        // Bölge bosslarının katları (her 10 katta bir). 90'dan sonra adlar döner, "Derin" ön ekiyle.
+        private static readonly string[] ZoneBossNames =
+        {
+            "Goblin Tünelleri", "Kayıp Cüce Karakolu", "Kristal Salonlar", "Gözcünün Gölü", "Cüce Kralın Demirhanesi",
+            "Kadim Höyükler", "Ejderin Altın Yatağı", "Gölge ve Alev Köprüsü", "Dünyanın Kökleri"
+        };
+
+        /// <summary>Her boss katının (10, 20, 30...) kendine özgü adı.</summary>
         public static string MilestoneName(int step)
         {
-            switch (step)
-            {
-                case 3: return "Goblin Tünelleri";
-                case 5: return "Kayıp Cüce Karakolu";
-                case 10: return "Kristal Salonlar";
-                case 15: return "Gözcünün Gölü";
-                case 20: return "Cüce Kralın Demirhanesi";
-                case 25: return "Kadim Höyükler";
-                case 30: return "Ejderin Altın Yatağı";
-                case 35: return "Gölge ve Alev Köprüsü";
-                case 40: return "Dünyanın Kökleri";
-                default: return $"{step}. Kat Hazinesi";
-            }
+            if (step <= 0 || step % 10 != 0) return $"{step}. Kat";
+            int i = step / 10 - 1;
+            string name = ZoneBossNames[i % ZoneBossNames.Length];
+            int cycle = i / ZoneBossNames.Length;
+            return cycle == 0 ? name : $"Derin {name} {cycle + 1}";
         }
 
         public static string NextMilestone(MilestoneDefinition milestone, int currentStep, bool discovered)
@@ -134,28 +134,12 @@ namespace RiskLoop.Game
         public static string StepMessage(AdvanceResult r)
         {
             string text = $"{r.Step}. kata indin. +{Num(r.RewardGained)}";
-            if (r.ShieldUsed) text = $"<color={Gold}>Baret seni kurtardı!</color> " + text;
             if (r.IsMilestone) text += $"\n<color={Gold}>{MilestoneName(r.Step)}!</color>";
             else if (r.NewRecord) text += $"\n<color={Gold}>Yeni derinlik rekoru!</color>";
             return text;
         }
 
-        // ---------------- Baret ve göçük ----------------
-
-        public const string ShieldBreakHeader = "BARET KIRILDI!";
-
-        private static readonly string[] ShieldBreakLines =
-        {
-            "Kafana koca bir kaya düştü ama baret dayandı!",
-            "Tavan çöktü, baret paramparça... ama sen sağlamsın!",
-            "Son anda! Baret seni kurtardı.",
-            "Kayalar yağdı, baret hepsini karşıladı!"
-        };
-
-        public static string ShieldBreakTitle() => Pick(ShieldBreakLines);
-
-        public static string ShieldsLeft(int shields) =>
-            shields > 0 ? $"Kalan baret: {shields}" : $"<color={AtRiskColor}>Hiç baretin kalmadı. Bundan sonrası gerçek risk!</color>";
+        // ---------------- Göçük ----------------
 
         private static readonly string[] BustTitles = { "GÖÇÜK!", "TAVAN ÇÖKTÜ!", "KAYALAR ALTINDA!", "HER ŞEY KARARDI!" };
 
@@ -170,7 +154,6 @@ namespace RiskLoop.Game
                 case FindType.SafeCache: return "Kese";
                 case FindType.ProfitBoost: return "Zengin damar";
                 case FindType.Safety: return "Sağlam kaya";
-                case FindType.Shield: return "Baret";
                 case FindType.LuckCharm: return "Uğur tılsımı";
                 case FindType.FindStreak: return "Eski harita";
                 case FindType.Multiplier: return "Parlak kristal";
@@ -215,7 +198,6 @@ namespace RiskLoop.Game
                 case FindType.SafeCache: return $"+{Num(find.Value)} doğrudan cebe (güvende)";
                 case FindType.ProfitBoost: return $"Bu tur kat ödülleri +%{Pct(find.Value)}";
                 case FindType.Safety: return $"Bu tur göçük riski -%{Pct(find.Value)}";
-                case FindType.Shield: return $"+{(int)find.Value} baret: bir göçüğü durdurur";
                 case FindType.LuckCharm: return $"Bu tur nadir bulgu şansı +%{Pct(find.Value)}";
                 case FindType.FindStreak: return $"Sonraki {(int)find.Value} katta bulgu GARANTİ";
                 case FindType.Multiplier: return $"Risk altındaki kazanç x{1 + find.Value:0.00}!";
@@ -235,7 +217,6 @@ namespace RiskLoop.Game
                 case FindType.CursedTreasure: return $"+{Num(value)}";
                 case FindType.ProfitBoost: return $"+%{Pct(value)}";
                 case FindType.Safety: return $"-%{Pct(value)}";
-                case FindType.Shield: return $"+{(int)value}";
                 case FindType.LuckCharm: return $"+%{Pct(value)}";
                 case FindType.FindStreak: return $"{(int)value} kat";
                 case FindType.Multiplier: return $"x{1 + value:0.00}";
@@ -301,8 +282,6 @@ namespace RiskLoop.Game
         public static string Victory(VictoryResult v) =>
             $"{FantasyTexts.MonsterName(v.Monster.Definition.id)} yenildi! +{Num(v.Bounty)}";
 
-        public static string ShieldRevive => "Baret seni ölümden döndürdü!";
-
         private static readonly string[] DefeatTitles = { "YENİLDİN!", "YERE SERİLDİN!", "KARANLIK SENİ YUTTU!" };
 
         public static string DefeatTitle() => Pick(DefeatTitles);
@@ -353,10 +332,7 @@ namespace RiskLoop.Game
             return text + $"\nBulgular: {run.Finds.Count}   En iyisi: {FindTitle(best)}";
         }
 
-        // ---------------- Baret bedeli, telafi, kurtarma, öfke ----------------
-
-        public static string ShieldLoss(double loss) =>
-            loss > 0 ? $"Enkaz {Num(loss)} kazancı gömdü" : "Enkaz bir şey götürmedi";
+        // ---------------- Telafi, kurtarma, öfke ----------------
 
         /// <summary>Göçük/yenilgi sonrası teselli satırları: kurtarılan eşya + talihsizlik telafisi.</summary>
         public static string AfterBust(GearItem salvaged, int pityStacks, double pityLuck)
@@ -393,7 +369,7 @@ namespace RiskLoop.Game
         /// <summary>Kumar satırı: kazanırsan / kaybedersen / olasılık + yorum.</summary>
         public static string Gamble(double win, double lose, double chance, double ev)
         {
-            string loseText = lose <= 0 ? $"<color={Gold}>0 (baret korur)</color>" : $"<color={AtRiskColor}>{Num(lose)}</color>";
+            string loseText = lose <= 0 ? $"<color={Gold}>0</color>" : $"<color={AtRiskColor}>{Num(lose)}</color>";
             string verdict;
             if (lose <= 0) verdict = $"<color=#3CCB5A>Güvenli adım</color>";
             else if (ev >= 0) verdict = "<color=#3CCB5A>Değer</color>";
@@ -404,22 +380,169 @@ namespace RiskLoop.Game
 
         public static string SwingsLine(int swings) => $"Duvar: {swings} vuruş";
 
-        // ---------------- Oto-kazı ----------------
+        // ---------------- Seviye, açılan özellikler ----------------
 
-        public const string AutoOn = "OTO-KAZ: AÇIK (A)";
-        public const string AutoOff = "OTO-KAZ (A)";
-        public static string AutoShields(bool on) => on ? "Baret bitince dur: AÇIK" : "Baret bitince dur: KAPALI";
-        public static string AutoRisk(int pct) => $"Risk %{pct}+ ise dur";
-        public static string AutoTier(int tier) => $"Dur: {RarityStyle.Colored(RarityStyle.Name(tier), tier)} ve üstü";
-        public static string AutoFight(bool on) => on ? "Oto savaş: AÇIK" : "Oto savaş: KAPALI";
+        public const string LevelUpHeader = "SEVİYE ATLADIN!";
+        public static string LevelTitle(int level) => $"Seviye {level}";
+        public static string LevelShort(int level) => $"Sv {level}";
+        public static string XpGain(double xp) => $"+{Num(xp)} XP";
+        public static string LevelUpPoints(int available) =>
+            available > 0 ? $"<color={Gold}>+1 yetenek puanı</color> (harcanacak: {available})" : "Daha güçlüsün!";
+        public static string XpLine(double xp, double needed) => $"XP {Num(xp)} / {Num(needed)}";
 
-        public static string AutoStopped(string reason) => $"OTO-KAZ DURDU: {reason}";
-        public const string StopShields = "baret bitti";
-        public const string StopRisk = "risk sınırı aşıldı";
-        public const string StopBoss = "boss!";
-        public const string StopDanger = "tehlikeli canavar";
-        public const string StopLowHealth = "can azaldı";
-        public static string StopRareFind(int tier) => $"{RarityStyle.Name(tier)} bulgu!";
+        public static string FeatureName(Feature f)
+        {
+            switch (f)
+            {
+                case Feature.Talents: return "Yetenek Ağacı";
+                case Feature.Equipment: return "Ekipman ve ganimet";
+                case Feature.Insurance: return "Sigorta";
+                case Feature.FindChance: return "Maden dedektörü";
+                case Feature.Checkpoints: return "Geçitler";
+                case Feature.Enhance: return "Güçlendirme";
+                case Feature.Luck: return "Uğurlu fener";
+                case Feature.FindValue: return "Kuyumcu terazisi";
+                case Feature.SpecialFinds: return "Özel bulgular";
+                case Feature.Prestige: return "Yeni Çağ";
+                default: return f.ToString();
+            }
+        }
+
+        public static string FeatureHint(Feature f)
+        {
+            switch (f)
+            {
+                case Feature.Talents: return "Her seviye 1 puan. Yüzeyde Yetenekler sekmesi.";
+                case Feature.Equipment: return "Canavarlar ve kayalar artık eşya düşürür.";
+                case Feature.Insurance: return "Göçükte kazancın bir kısmını kurtar.";
+                case Feature.FindChance: return "Daha sık bulgu.";
+                case Feature.Checkpoints: return "Yendiğin bossun katından başla.";
+                case Feature.Enhance: return "Eşyalarını +10'a kadar güçlendir (riskli!).";
+                case Feature.Luck: return "Daha nadir bulgular.";
+                case Feature.FindValue: return "Hazine ve kese daha değerli.";
+                case Feature.SpecialFinds: return "Eski harita, parlak kristal, lanetli put kayalardan çıkar.";
+                case Feature.Prestige: return "30. kattan sonra her şeyi sıfırla, Yadigar kazan.";
+                default: return "";
+            }
+        }
+
+        /// <summary>Seviye penceresindeki "YENİ: ..." satırları. Hiç yoksa null.</summary>
+        public static string FeaturesUnlocked(List<Feature> features)
+        {
+            if (features == null || features.Count == 0) return null;
+            string text = $"<color={Gold}>YENİ ÖZELLİK AÇILDI!</color>";
+            foreach (Feature f in features) text += $"\n<b>{FeatureName(f)}</b>: {FeatureHint(f)}";
+            return text;
+        }
+
+        public static string LockedShort(int level) => $"Sv {level}";
+        public static string LockedTip(Feature f, int level) => $"<b>{FeatureName(f)}</b>\nSeviye {level}'te açılır. {FeatureHint(f)}";
+        public static string LockedButton(int level) => $"Seviye {level}'te açılır";
+        public static string NextUnlockLine(Feature? f, int level) =>
+            f.HasValue ? $"Sıradaki özellik: <b>{FeatureName(f.Value)}</b> (Sv {level})" : "Tüm özellikler açık";
+
+        public static string FirstOfTierLine(int tier) =>
+            $"<color={Gold}>İLK {RarityStyle.Name(tier).ToUpper()}!</color> Bu nadirliği ilk kez buldun.";
+        public const string TwinFindLine = "<color=#FFE03A>EJDER GÖZÜ: ikiz bulgu!</color>";
+        public const string BossAhead = "SONRAKİ KAT: BÖLGE BOSSU!";
+
+        // ---------------- Yetenek ağacı ----------------
+
+        public const string TabTalents = "Yetenekler";
+        public static string TalentPoints(int available, int spent) =>
+            available > 0 ? $"Yetenek puanı: <color={Gold}><b>{available}</b></color>   (harcanan {spent})" : $"Yetenek puanı: 0   (harcanan {spent})";
+        public static string RespecButton(double cost) => $"Sıfırla: {Num(cost)}";
+        public static string RespecDone(double cost) => $"Yetenekler sıfırlandı (-{Num(cost)}). Puanların geri geldi.";
+        public static string TalentsLocked(int level) => $"Yetenek ağacı seviye {level}'de açılır. Kaz, canavar kes, XP topla!";
+
+        public static string BranchName(TalentBranch b)
+        {
+            switch (b)
+            {
+                case TalentBranch.Dwarf: return "CÜCE MADENCİ";
+                case TalentBranch.Sword: return "KILIÇ USTASI";
+                case TalentBranch.Dragon: return "EJDER AVCISI";
+                default: return b.ToString();
+            }
+        }
+
+        public static string BranchHint(TalentBranch b)
+        {
+            switch (b)
+            {
+                case TalentBranch.Dwarf: return "Kazı, risk ve kazanç";
+                case TalentBranch.Sword: return "Savaş ve boss";
+                case TalentBranch.Dragon: return "Şans, ganimet ve servet";
+                default: return "";
+            }
+        }
+
+        public static string TalentName(string id)
+        {
+            switch (id)
+            {
+                case "sturdy_pick": return "Sağlam Sap";
+                case "stone_sense": return "Taş Sezgisi";
+                case "gold_vein": return "Altın Damar";
+                case "deep_instinct": return "Derin İçgüdü";
+                case "brace_master": return "Payanda Ustası";
+                case "rubble_hunter": return "Enkaz Avcısı";
+                case "mountain_heart": return "Dağın Kalbi";
+                case "keen_edge": return "Keskin Ağız";
+                case "thick_hide": return "Kalın Deri";
+                case "deadly_eye": return "Ölümcül Göz";
+                case "armor_master": return "Zırh Ustası";
+                case "blood_drinker": return "Kan İçen";
+                case "cold_blood": return "Soğukkanlı";
+                case "kingslayer": return "Kral Katili";
+                case "lucky_birth": return "Şanslı Doğum";
+                case "jeweler_eye": return "Kuyumcu Gözü";
+                case "plunderer": return "Yağmacı";
+                case "haggler": return "Pazarlıkçı";
+                case "glimmer": return "Pırıltı";
+                case "fortune_wheel": return "Talih Çarkı";
+                case "dragon_eye": return "Ejder Gözü";
+                default: return id;
+            }
+        }
+
+        /// <summary>Etkinin metni. value = rank * perRank (toplam).</summary>
+        public static string TalentEffectText(TalentEffect e, double value)
+        {
+            switch (e)
+            {
+                case TalentEffect.DigPower: return $"Kazı gücü +%{Pct(value)}";
+                case TalentEffect.RiskReduction: return $"Göçük riski -%{Pct(value)}";
+                case TalentEffect.RewardBonus: return $"Kat ödülü +%{Pct(value)}";
+                case TalentEffect.FindChance: return $"Bulgu şansı +%{Pct(value)}";
+                case TalentEffect.Insurance: return $"Sigorta +%{Pct(value)}";
+                case TalentEffect.Salvage: return $"Enkazdan kurtarma +%{Pct(value)}";
+                case TalentEffect.ZoneStartSafety: return $"Bölgenin ilk 5 katında göçük riski -%{Pct(value)}";
+                case TalentEffect.Attack: return $"Saldırı +%{Pct(value)}";
+                case TalentEffect.Health: return $"Can +%{Pct(value)}";
+                case TalentEffect.CritChance: return $"Kritik şansı +%{Pct(value)}";
+                case TalentEffect.Defense: return $"Savunma +%{Pct(value)}";
+                case TalentEffect.Lifesteal: return $"Vurduğun hasarın %{Pct(value)} kadarı can olur";
+                case TalentEffect.EnrageSlow: return $"Boss öfkesi %{Pct(value)} daha geç gelir";
+                case TalentEffect.BossDamage: return $"Bosslara +%{Pct(value)} hasar";
+                case TalentEffect.Luck: return $"Nadirlik +%{Pct(value)}";
+                case TalentEffect.FindValue: return $"Hazine/kese değeri +%{Pct(value)}";
+                case TalentEffect.GearDrop: return $"Ganimet düşme şansı +%{Pct(value)}";
+                case TalentEffect.SellValue: return $"Satış değeri +%{Pct(value)}";
+                case TalentEffect.TierUpgrade: return $"Bulgu %{Pct(value)} ihtimalle bir nadirlik üstte";
+                case TalentEffect.PityBoost: return $"Talihsizlik telafisi kademe başı +%{Pct(value)}";
+                case TalentEffect.TwinFind: return $"Bulgu %{Pct(value)} ihtimalle ikiz çıkar";
+                default: return e.ToString();
+            }
+        }
+
+        public static string TalentTooltip(TalentDefinition t, int rank, bool rowOpen, int pointsPerRow)
+        {
+            string now = rank > 0 ? TalentEffectText(t.effect, rank * t.perRank) : "Henüz öğrenilmedi";
+            string next = rank < t.maxRank ? $"\nSonraki: {TalentEffectText(t.effect, (rank + 1) * t.perRank)}" : "\n<color=#3CCB5A>MAKSİMUM</color>";
+            string lockLine = rowOpen ? "" : $"\n<color=#FF9A2E>Bu dala {t.row * pointsPerRow} puan harcayınca açılır</color>";
+            return $"<b>{TalentName(t.id)}</b>  ({rank}/{t.maxRank})\n{now}{next}\n<color=#9AA0B4>Tıkla: 1 puan harca</color>{lockLine}";
+        }
 
         // ---------------- Geçitler ----------------
 
@@ -491,7 +614,6 @@ namespace RiskLoop.Game
                 case UpgradeType.FindChance: return "Maden dedektörü";
                 case UpgradeType.Luck: return "Uğurlu fener";
                 case UpgradeType.FindValue: return "Kuyumcu terazisi";
-                case UpgradeType.StartShield: return "Yedek baret";
                 default: return type.ToString();
             }
         }
@@ -513,7 +635,6 @@ namespace RiskLoop.Game
                 case UpgradeType.FindChance: return $"Bulgu şansı +%{Pct(b.findChanceUpgrade.effectPerLevel * level)}";
                 case UpgradeType.Luck: return $"Nadirlik +%{Pct(b.luckUpgrade.effectPerLevel * level)}";
                 case UpgradeType.FindValue: return $"Bulgu değeri x{RiskMath.FindValueBonus(b, level):0.00}";
-                case UpgradeType.StartShield: return $"Tura {RiskMath.StartShields(b, level)} baretle başla";
                 default: return "";
             }
         }

@@ -91,8 +91,6 @@ namespace RiskLoop.Core
         public double defenseFactor = 5;
 
         public double hpRegenPerFloor = 0.08;          // Savaşsız her katta canın %8'i dolar
-        public double shieldReviveHealth = 0.30;       // Baret ölümü engellerse %30 canla kalkarsın
-        public bool shieldsProtectInCombat = false;    // Baret canavara karşı korumaz: savaş gücü (eşya) önemli kalsın
 
         // --- Boss öfkesi: uzayan savaş cezalandırılır (hasar kontrolü). Eşya ve güçlendirme kasmayı anlamlı yapar ---
         // Her enrageInterval saniyede bir öfke: saldırı x(1 + enrageAttackPerStack * öfke)
@@ -109,16 +107,16 @@ namespace RiskLoop.Core
         // hp(step)  = monsterBaseHealth * monsterHealthGrowth^(step-1) * hpMult
         // atk(step) = monsterBaseAttack * monsterAttackGrowth^(step-1) * atkMult
         public double monsterBaseHealth = 40;
-        public double monsterHealthGrowth = 1.18;
+        public double monsterHealthGrowth = 1.16;
         public double monsterBaseAttack = 6;
-        public double monsterAttackGrowth = 1.16;
+        public double monsterAttackGrowth = 1.15;
         public double monsterAttackInterval = 1.6;     // Canavar kaç saniyede bir vurur (Game katmanı sayar)
         public double bossAttackIntervalMult = 0.85;   // Bosslar biraz daha sık vurur
 
         // Karşılaşma: chance(step) = min(monsterChanceBase + monsterChancePerStep*(step-1), maxMonsterChance)
-        public double monsterChanceBase = 0.15;
-        public double monsterChancePerStep = 0.012;
-        public double maxMonsterChance = 0.5;
+        public double monsterChanceBase = 0.18;
+        public double monsterChancePerStep = 0.003;
+        public double maxMonsterChance = 0.45;
 
         public double bountySteps = 1.5;               // Öldürme ödülü = kat ödülü * bountySteps * hpMult (risk altında)
 
@@ -158,8 +156,8 @@ namespace RiskLoop.Core
         // Ortalama boss çarpanları (havuzların ortalaması), güç seviyesi hesabı için
         public double avgMiniBossHpMult = 3.6;
         public double avgMiniBossAtkMult = 1.3;
-        public double avgBossHpMult = 6.8;
-        public double avgBossAtkMult = 1.55;
+        public double avgBossHpMult = 5.4;
+        public double avgBossAtkMult = 1.45;
 
         public StatValue[] affixPool = DefaultContent.AffixPool();
         public GearBaseDefinition[] gearBases = DefaultContent.GearBases();
@@ -210,6 +208,8 @@ namespace RiskLoop.Core
         public FindResult Find;
         public List<FindResult> Drops = new List<FindResult>();  // Düşen eşyalar (Type = Gear)
         public bool UnlockedCheckpoint;                       // Bu zaferle yeni bir geçit açıldı mı?
+        public double XpGained;                               // Canavar/boss deneyimi
+        public int LevelsGained;
     }
 
     /// <summary>Oyuncunun bir vuruşu.</summary>
@@ -243,7 +243,6 @@ namespace RiskLoop.Core
     public struct MonsterHitResult
     {
         public double Damage;
-        public bool ShieldUsed;        // Can bitti ama baret kurtardı
         public bool PlayerDied;        // Tur bitti (göçük gibi)
         public double LostEarnings;
         public double InsurancePayout;

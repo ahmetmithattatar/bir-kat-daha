@@ -10,7 +10,6 @@ namespace RiskLoop.Core
         SafeCache,    // Doğrudan toplam paraya eklenir. Güvende
         ProfitBoost,  // Bu tur boyunca adım ödüllerini artırır
         Safety,       // Bu tur boyunca patlama riskini azaltır
-        Shield,       // Bir patlamayı engeller
         LuckCharm,    // Bu tur boyunca nadirlik şansını artırır
         FindStreak,   // Sonraki N adımda bulgu garantili
         Multiplier,   // Risk altındaki tur kazancını anında çarpar
@@ -27,5 +26,7 @@ namespace RiskLoop.Core
         public bool FromMilestone; // Kilometre taşının garantili bulgusu mu?
         public GearItem Item;      // Type == Gear ise eşya (diğerlerinde null)
         public bool FromMonster;   // Canavardan mı düştü?
+        public bool FirstOfTier;   // Bu nadirlik ilk kez mi görüldü? (İlk seferde gerilimli açılış, sonra hızlı)
+        public bool Twin;          // Ejderin Gözü: bulgu iki kez çıktı (değer x2)
     }
 }

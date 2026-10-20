@@ -3,13 +3,12 @@ using UnityEngine;
 namespace RiskLoop.Game.Art
 {
     /// <summary>
-    /// Derinliğe göre kaya katmanının rengi. Her keşif katı yeni bir bölgenin başlangıcıdır,
+    /// Derinliğe göre kaya katmanının rengi. Her 10 katlık bölge (sonunda boss) kendi rengindedir; 90. kattan sonra renkler döner,
     /// böylece oyuncu derine indikçe dünyanın değiştiğini GÖRÜR (ilerleme hissi).
     /// </summary>
     public static class DepthTheme
     {
-        // Bölge başlangıç katları ve renkleri (aynı sırada)
-        private static readonly int[] StartSteps = { 1, 5, 10, 15, 20, 25, 30, 35 };
+        private const int ZoneSize = 10;   // BalanceData.zoneSize ile aynı (sadece renk için)
 
         private static readonly Color[] WallColors =
         {
@@ -21,18 +20,11 @@ namespace RiskLoop.Game.Art
             new Color(0.66f, 0.62f, 0.48f), // fosil mezarlığı
             new Color(0.24f, 0.38f, 0.28f), // ejderin ini
             new Color(0.70f, 0.24f, 0.10f), // lav kalbi
+            new Color(0.20f, 0.17f, 0.26f), // dünyanın kökleri
         };
 
         /// <summary>Bu kat hangi bölgede (0..)?</summary>
-        public static int ZoneIndex(int step)
-        {
-            int zone = 0;
-            for (int i = 0; i < StartSteps.Length; i++)
-            {
-                if (step >= StartSteps[i]) zone = i;
-            }
-            return zone;
-        }
+        public static int ZoneIndex(int step) => ((System.Math.Max(step, 1) - 1) / ZoneSize) % WallColors.Length;
 
         public static Color WallColor(int step) => WallColors[ZoneIndex(step)];
     }

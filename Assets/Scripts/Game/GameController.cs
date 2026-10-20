@@ -41,15 +41,6 @@ namespace RiskLoop.Game
         [Tooltip("Canavar çıktıktan sonra ilk vuruşundan önce oyuncuya tanınan ek süre (sn).")]
         [SerializeField] private float monsterFirstAttackGrace = 0.8f;
 
-        [Header("Oto-kazı")]
-        [Tooltip("Oto-kazı açıkken animasyon hızı çarpanı.")]
-        [SerializeField] private float autoSpeed = 2.5f;
-        [Tooltip("Oto savaşta can bu oranın altına düşerse oto-kazı durur.")]
-        [SerializeField] private float autoStopHealth = 0.3f;
-
-        private bool _autoDig;
-        private bool _autoStartedWithShields;
-
         private GameSession _session;
         private float _keysLockedUntil;
         private bool _swinging;
@@ -90,8 +81,8 @@ namespace RiskLoop.Game
             upgradePanel.EnhanceClicked += OnEnhanceClicked;
             upgradePanel.PrestigeClicked += OnPrestigeClicked;
             upgradePanel.BuyPrestigeClicked += OnBuyPrestigeClicked;
-            runPanel.AutoToggleClicked += ToggleAuto;
-            runPanel.AutoSettingsChanged += OnAutoSettingsChanged;
+            upgradePanel.LearnTalentClicked += OnLearnTalentClicked;
+            upgradePanel.RespecClicked += OnRespecClicked;
             topBar.ResetConfirmed += OnResetConfirmed;
         }
 
@@ -116,14 +107,10 @@ namespace RiskLoop.Game
             if (_session == null) return;
 
             TickMonster();
-            if (_autoDig && !InputLocked) AutoTick();
 
 #if ENABLE_INPUT_SYSTEM
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
-
-            // A: oto-kazıyı aç/kapat (animasyon sürerken de kapatılabilir)
-            if (keyboard.aKey.wasPressedThisFrame && _session.IsRunActive) ToggleAuto();
 
             if (InputLocked || Time.unscaledTime < _keysLockedUntil) return;
 
@@ -133,7 +120,7 @@ namespace RiskLoop.Game
                 bool surfacePressed = keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame;
 
                 if (surfacePressed && _session.CurrentRun.Step > _session.CurrentRun.StartStep) OnCashOutClicked();
-                else if (digHeld && !_autoDig) OnAdvanceClicked();
+                else if (digHeld) OnAdvanceClicked();
             }
             else
             {
@@ -186,81 +173,9 @@ namespace RiskLoop.Game
             upgradePanel.EnhanceClicked -= OnEnhanceClicked;
             upgradePanel.PrestigeClicked -= OnPrestigeClicked;
             upgradePanel.BuyPrestigeClicked -= OnBuyPrestigeClicked;
-            runPanel.AutoToggleClicked -= ToggleAuto;
-            runPanel.AutoSettingsChanged -= OnAutoSettingsChanged;
+            upgradePanel.LearnTalentClicked -= OnLearnTalentClicked;
+            upgradePanel.RespecClicked -= OnRespecClicked;
             topBar.ResetConfirmed -= OnResetConfirmed;
-        }
-
-        // ---------------- Oto-kazı ----------------
-
-        /// <summary>
-        /// Oto-kazı: kazıyı kendi sürdürür, durma kurallarından biri olunca durur ve kontrolü oyuncuya verir.
-        /// Slot makinesindeki "oto çevir" gibi: sıkıcı kısmı hızla geçer, kumar anında oyuncuyu çağırır.
-        /// </summary>
-        private void AutoTick()
-        {
-            if (!_session.IsRunActive)
-            {
-                SetAuto(false);
-                return;
-            }
-
-            AutoDigSettings rules = _session.Progress.autoDig;
-            RunState run = _session.CurrentRun;
-
-            if (_session.InCombat)
-            {
-                MonsterInstance m = run.Monster;
-                if (m.Kind != MonsterKind.Normal) { StopAuto(UIStrings.StopBoss); return; }
-                if (!rules.autoFightNormal || _session.CurrentThreat == ThreatLevel.Deadly) { StopAuto(UIStrings.StopDanger); return; }
-                if (run.PlayerHealth < run.PlayerMaxHealth * autoStopHealth) { StopAuto(UIStrings.StopLowHealth); return; }
-                OnAdvanceClicked();
-                return;
-            }
-
-            if (rules.stopWhenShieldsGone && _autoStartedWithShields && run.Shields == 0) { StopAuto(UIStrings.StopShields); return; }
-
-            // "Baret bitince dur" açıkken baret varsa risk sınırı uygulanmaz: göçüğü baret yutacak.
-            bool shieldGuarded = rules.stopWhenShieldsGone && run.Shields > 0;
-            if (!shieldGuarded && _session.NextBustChance * 100.0 >= rules.stopRiskPercent) { StopAuto(UIStrings.StopRisk); return; }
-            OnAdvanceClicked();
-        }
-
-        private void ToggleAuto()
-        {
-            if (!_session.IsRunActive) return;
-            SetAuto(!_autoDig);
-        }
-
-        private void SetAuto(bool on)
-        {
-            _autoDig = on;
-            if (on) _autoStartedWithShields = _session.CurrentRun != null && _session.CurrentRun.Shields > 0;
-            feedback.BaseSpeed = on ? autoSpeed : 1f;   // FxTime.Speed'i yönetmen ayarlar (hit-stop ile birlikte)
-            feedback.AutoMode = on;
-            feedback.AutoStopTier = _session.Progress.autoDig.stopTier;
-            runPanel.SetAuto(on, _session.Progress.autoDig);
-        }
-
-        private void StopAuto(string reason)
-        {
-            if (!_autoDig) return;
-            SetAuto(false);
-            runPanel.ShowMessage(UIStrings.AutoStopped(reason));
-            feedback.AnnounceAutoStop(UIStrings.AutoStopped(reason));
-        }
-
-        /// <summary>Bir sonuçtaki bulgular durma eşiğini geçtiyse oto-kazıyı durdur.</summary>
-        private void CheckAutoStopForFind(FindResult find)
-        {
-            if (_autoDig && find.Tier >= _session.Progress.autoDig.stopTier) StopAuto(UIStrings.StopRareFind(find.Tier));
-        }
-
-        private void OnAutoSettingsChanged()
-        {
-            Save();
-            feedback.AutoStopTier = _session.Progress.autoDig.stopTier;
-            runPanel.SetAuto(_autoDig, _session.Progress.autoDig);
         }
 
         // Mobilde uygulama arka plana atılınca OnApplicationQuit çağrılmayabilir, o yüzden burada da kaydediyoruz.
@@ -283,7 +198,6 @@ namespace RiskLoop.Game
             feedback.OnRunStarted(_session);
             runPanel.ShowMessage(UIStrings.RunStarted);
             ShowRunScreen();
-            SetAuto(false);
         }
 
         /// <summary>Ana eylem: savaşta saldır, değilse kaz.</summary>
@@ -306,7 +220,6 @@ namespace RiskLoop.Game
         private void OnCashOutClicked()
         {
             if (InputLocked || !_session.IsRunActive || _session.CurrentRun.Step <= _session.CurrentRun.StartStep) return;
-            SetAuto(false);
             StartCoroutine(CashOutRoutine());
         }
 
@@ -329,7 +242,6 @@ namespace RiskLoop.Game
 
             if (result.Busted)
             {
-                SetAuto(false);
                 Save();
                 yield return feedback.PlayBust();
                 upgradePanel.ShowResult(UIStrings.Busted(result, _session.CurrentRun) +
@@ -348,9 +260,8 @@ namespace RiskLoop.Game
                 _monsterTimer = (float)_session.MonsterAttackInterval + monsterFirstAttackGrace;
                 _enrageTimer = (float)_session.EnrageInterval + monsterFirstAttackGrace;
             }
-            if (result.HasFind) CheckAutoStopForFind(result.Find);
 
-            topBar.Refresh(_session.Progress);
+            topBar.Refresh(_session);
             runPanel.Refresh(_session);
             SetSequence(false);
         }
@@ -371,14 +282,12 @@ namespace RiskLoop.Game
             SetSequence(true);
             yield return feedback.PlayVictory(hit.Victory, _session);
             Save();  // Geçit açılmış ya da kese düşmüş olabilir
-            if (hit.Victory.HasFind) CheckAutoStopForFind(hit.Victory.Find);
-            foreach (FindResult drop in hit.Victory.Drops) CheckAutoStopForFind(drop);
-            topBar.Refresh(_session.Progress);
+            topBar.Refresh(_session);
             runPanel.Refresh(_session);
             SetSequence(false);
         }
 
-        /// <summary>Canavar vurur. Can biterse (baret yoksa) tur biter.</summary>
+        /// <summary>Canavar vurur. Can biterse tur biter.</summary>
         private IEnumerator MonsterAttackRoutine()
         {
             SetSequence(true);
@@ -389,7 +298,6 @@ namespace RiskLoop.Game
 
             if (hit.PlayerDied)
             {
-                SetAuto(false);
                 Save();
                 yield return feedback.PlayDefeat();
                 upgradePanel.ShowResult(UIStrings.Defeated(hit, run, FantasyTexts.MonsterName(monster.Definition.id)) +
@@ -412,7 +320,7 @@ namespace RiskLoop.Game
             bool fled = _session.InCombat;
             double payout = _session.CashOut();
             Save();
-            topBar.Refresh(_session.Progress);
+            topBar.Refresh(_session);
             yield return feedback.PlayCashOut(payout);
             upgradePanel.ShowResult(UIStrings.CashedOut(_session.CurrentRun, fled));
             SetSequence(false);
@@ -484,7 +392,7 @@ namespace RiskLoop.Game
             SetSequence(true);
             EnhanceResult result = _session.Enhance(uid);
             Save();
-            topBar.Refresh(_session.Progress);
+            topBar.Refresh(_session);
             yield return upgradePanel.PlayEnhance(result);
             SetSequence(false);
             RefreshAll();
@@ -505,6 +413,28 @@ namespace RiskLoop.Game
             if (_session.TryBuyPrestige(type))
             {
                 Save();
+                RefreshAll();
+            }
+        }
+
+        // ---------------- Yetenek ağacı ----------------
+
+        private void OnLearnTalentClicked(string id)
+        {
+            if (_session.TryLearnTalent(id))
+            {
+                Save();
+                RefreshAll();
+            }
+        }
+
+        private void OnRespecClicked()
+        {
+            double cost = _session.RespecCost;
+            if (_session.Respec())
+            {
+                Save();
+                upgradePanel.ShowTalentMessage(UIStrings.RespecDone(cost));
                 RefreshAll();
             }
         }
@@ -557,7 +487,7 @@ namespace RiskLoop.Game
 
         private void RefreshAll()
         {
-            topBar.Refresh(_session.Progress);
+            topBar.Refresh(_session);
             runPanel.Refresh(_session);
             upgradePanel.Refresh(_session);
         }

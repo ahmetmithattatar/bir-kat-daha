@@ -275,7 +275,7 @@ namespace RiskLoop.Game
             {
                 case PrestigeType.AncientGold: return "Kadim Altın";
                 case PrestigeType.AncientLuck: return "Yıldızların Lütfu";
-                case PrestigeType.AncientShield: return "Cüce Miğferi";
+                case PrestigeType.AncientInsight: return "Kadim Bilgelik";
                 case PrestigeType.AncientMight: return "Kralların Kanı";
                 case PrestigeType.AncientWealth: return "Ejder Hazinesi";
                 default: return type.ToString();
@@ -289,7 +289,7 @@ namespace RiskLoop.Game
             {
                 case PrestigeType.AncientGold: return $"Kat ödülleri x{System.Math.Pow(1 + d.effectPerLevel, level):0.00}";
                 case PrestigeType.AncientLuck: return $"Nadirlik +%{UIStrings.Pct(d.effectPerLevel * level)}";
-                case PrestigeType.AncientShield: return $"Her tura +{(int)(d.effectPerLevel * level)} baret";
+                case PrestigeType.AncientInsight: return $"Kazanılan XP x{System.Math.Pow(1 + d.effectPerLevel, level):0.00}";
                 case PrestigeType.AncientMight: return $"Saldırı ve Can x{System.Math.Pow(1 + d.effectPerLevel, level):0.00}";
                 case PrestigeType.AncientWealth:
                     return level > 0 ? $"Yeni çağa {UIStrings.Num(d.effectPerLevel * System.Math.Pow(4, level - 1))} parayla başla" : "Yeni çağa parasız başla";

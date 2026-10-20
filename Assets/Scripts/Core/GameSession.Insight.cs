@@ -76,7 +76,7 @@ namespace RiskLoop.Core
         // ---------------- Savaş gücü ----------------
 
         /// <summary>
-        /// Savaş gücü: normal canavarlar "Orta"dan kolay VE mini bosslar ölümcül değil olan en derin kat.
+        /// Savaş gücü: normal canavarlar "Orta"dan kolay VE bölge bossu ölümcül değil olan en derin kat.
         /// </summary>
         public int PowerLevel(CharacterStats s)
         {
@@ -85,7 +85,7 @@ namespace RiskLoop.Core
             for (int step = 1; step <= InsightMaxStep; step++)
             {
                 bool normalOk = ThreatRatio(step, MonsterKind.Normal, s) < c.threatMedium;
-                bool miniOk = ThreatRatio(step, MonsterKind.MiniBoss, s) < c.threatHard;
+                bool miniOk = ThreatRatio(step, MonsterKind.Boss, s) < c.threatHard;   // Bölge bossunu sağ çıkarak yenebilir mi
                 if (!normalOk || !miniOk) break;
                 level = step;
             }
@@ -121,57 +121,47 @@ namespace RiskLoop.Core
         // ---------------- Göçük: kaç kat daha? ----------------
 
         /// <summary>
-        /// Göçük riski ve baretlerle ortalama kaç kat daha dayanırsın (savaş hariç, beklenen değer).
-        /// Baret sayısına göre olasılık dağılımı adım adım ilerletilir (dinamik programlama).
+        /// Göçük riskiyle, bir sonraki boss katına kadar ortalama kaç kat daha inebilirsin (savaş hariç, beklenen değer).
+        /// Boss katında durur: oradan sonrası bossu yenmene bağlı.
         /// </summary>
         public double ExpectedFloorsLeft()
         {
             int startStep = CurrentStep;
-            int shields = CurrentRun != null ? CurrentRun.Shields : RiskMath.StartShields(Balance, Level(UpgradeType.StartShield));
-            double safety = RunSafetyFactor * (1.0 - Stats.CaveResist);
-
-            // alive[j] = j baret kalmışken hâlâ hayatta olma olasılığı
-            var alive = new double[shields + 1];
-            alive[shields] = 1.0;
+            double alive = 1.0;
             double expected = 0;
-
             for (int n = 1; n <= InsightMaxStep; n++)
             {
-                double p = RiskMath.BustChance(Balance, startStep + n, Level(UpgradeType.Safety), safety);
-                var next = new double[shields + 1];
-                for (int j = 0; j <= shields; j++)
-                {
-                    if (alive[j] <= 0) continue;
-                    next[j] += alive[j] * (1.0 - p);        // Göçük yok
-                    if (j > 0) next[j - 1] += alive[j] * p;  // Göçük, baret yuttu
-                }
-                alive = next;
-
-                double total = 0;
-                foreach (double a in alive) total += a;
-                expected += total;
-                if (total < 1e-4) break;
+                int step = startStep + n;
+                alive *= 1.0 - BustChanceAt(step);
+                expected += alive;
+                if (RiskMath.IsBossFloor(Balance, step) || alive < 1e-4) break;
             }
             return expected;
         }
 
+        /// <summary>Göçük olmadan bir sonraki boss katına ulaşma olasılığı (0..1).</summary>
+        public double ReachNextBossChance()
+        {
+            int startStep = CurrentStep;
+            double alive = 1.0;
+            for (int step = startStep + 1; step <= startStep + InsightMaxStep; step++)
+            {
+                if (RiskMath.IsBossFloor(Balance, step)) break;
+                alive *= 1.0 - BustChanceAt(step);
+            }
+            return alive;
+        }
+
         // ---------------- Kumar oranı ----------------
 
-        /// <summary>
-        /// Sonraki iniş: kazanırsan (kat ödülü), kaybedersen, olasılık.
-        /// Kayıp: baret varsa enkazın gömdüğü pay (risk altındakinin %35'i), yoksa risk altındaki - sigorta.
-        /// </summary>
+        /// <summary>Sonraki iniş: kazanırsan (kat ödülü), kaybedersen (risk altındaki - sigorta), olasılık.</summary>
         public void NextGamble(out double win, out double lose, out double chance)
         {
             win = NextStepReward;
             chance = NextBustChance;
-            bool shielded = CurrentRun != null && CurrentRun.Shields > 0;
             double atRisk = CurrentRun != null ? CurrentRun.Earnings : 0;
-            lose = shielded ? atRisk * Balance.shieldEarningsLoss : atRisk * (1.0 - InsuranceFraction);
+            lose = atRisk * (1.0 - InsuranceFraction);
         }
-
-        /// <summary>Sonraki inişte bir göçük turu bitirir mi? (Baret yoksa evet.)</summary>
-        public bool NextBustEndsRun => CurrentRun == null || CurrentRun.Shields <= 0;
 
         /// <summary>Beklenen değer: kazanırsan * (1-olasılık) - kaybedersen * olasılık.</summary>
         public double NextGambleExpectedValue()

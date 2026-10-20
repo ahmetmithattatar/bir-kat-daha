@@ -20,7 +20,6 @@ namespace RiskLoop.Core
         public double Payout { get; internal set; }       // Tur sonunda risk altından cebe giren miktar
 
         // Bu turun bulgu etkileri (tur bitince sıfırlanır)
-        public int Shields { get; internal set; }                  // Kalan baret sayısı
         public double ProfitBonus { get; internal set; }           // Adım ödüllerine eklenen oran (0.1 = +%10)
         public double SafetyFactor { get; internal set; } = 1.0;   // Patlama riskinin çarpanı (lanet 1'in üstüne çıkarır)
         public double RunLuck { get; internal set; }               // Tılsımlardan gelen ek şans
@@ -50,8 +49,6 @@ namespace RiskLoop.Core
         public double TreasureTotal { get; internal set; }        // Hazinelerden tur kazancına eklenen (risk altında)
         public double CacheTotal { get; internal set; }           // Keselerden cebe giren
         public double MilestoneBonusTotal { get; internal set; }  // İlk keşif ödülleri (cebe giren)
-        public int ShieldsFound { get; internal set; }
-        public int ShieldsUsed { get; internal set; }
         public bool IsNewBestRun { get; internal set; }           // Tur bitince: en değerli tur rekoru mu?
 
         /// <summary>
@@ -65,14 +62,14 @@ namespace RiskLoop.Core
     public struct AdvanceResult
     {
         public bool Busted;           // Patlama oldu mu?
-        public bool ShieldUsed;       // Patlama bir baretle engellendi mi?
         public int Step;              // İnilmeye çalışılan adım
         public double BustChance;     // O adımın patlama olasılığı
         public double Roll;           // Atılan zar (0..1). Roll < BustChance ise patlama
         public double RewardGained;   // Hayatta kalındıysa eklenen kazanç
         public double LostEarnings;   // Patlamada kaybedilen miktar
         public double InsurancePayout;// Patlamada sigortanın kurtardığı miktar
-        public double ShieldLoss;     // Baret göçüğü yuttuysa enkazın gömdüğü kazanç
+        public double XpGained;       // Bu inişte kazanılan deneyim
+        public int LevelsGained;      // Bu inişte atlanan seviye sayısı (yetenek puanı + yeni özellikler)
         public GearItem SalvagedItem; // Göçükte enkazdan kurtarılan eşya (yoksa null)
 
         public bool HasFind;          // Bu adımda bulgu çıktı mı?

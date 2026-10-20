@@ -43,7 +43,6 @@ namespace RiskLoop.Game.UI
         [Header("Kazma ve baret")]
         [SerializeField] private RectTransform pickaxeRoot;
         [SerializeField] private Image pickaxeImage;
-        [SerializeField] private Image helmetImage;
 
         [Header("Atmosfer")]
         [SerializeField] private Image vignette;
@@ -118,14 +117,12 @@ namespace RiskLoop.Game.UI
             _pickaxeRestPos = pickaxeRoot.anchoredPosition;
 
             pickaxeImage.sprite = SpriteLibrary.PickaxeSprite;
-            helmetImage.sprite = SpriteLibrary.HelmetSprite;
             raysImage.sprite = PixelArt.Rays();
             glowImage.sprite = PixelArt.Glow();
             holeImage.sprite = PixelArt.Glow();
             vignette.sprite = PixelArt.Vignette();
 
             itemRoot.gameObject.SetActive(false);
-            helmetImage.gameObject.SetActive(false);
             monsterRoot.gameObject.SetActive(false);
             monsterAura.sprite = PixelArt.Glow();
             torchGlow.sprite = PixelArt.Glow(64);
@@ -578,42 +575,7 @@ namespace RiskLoop.Game.UI
             wallRoot.gameObject.SetActive(false);
         }
 
-        // ---------------- Baret ve göçük ----------------
-
-        /// <summary>Tavan çöker ama baret dayanır: baret görünür, taşlar üstüne yağar, baret kırılıp düşer.</summary>
-        public IEnumerator ShieldSave()
-        {
-            helmetImage.gameObject.SetActive(true);
-            RectTransform h = helmetImage.rectTransform;
-            h.anchoredPosition = new Vector2(0f, 140f);
-            h.localRotation = Quaternion.identity;
-            helmetImage.color = Color.white;
-
-            // Taş yağmuru baretin üstüne
-            for (int i = 0; i < 4; i++)
-            {
-                particles.Spawn(TopEdgePoint(UnityEngine.Random.Range(0.35f, 0.65f)), new Color(0.5f, 0.45f, 0.4f), 6, 120f,
-                                gravity: -2200f, minSize: 14f, maxSize: 30f, lifetime: 0.6f, baseVelocity: new Vector2(0, -400f));
-                StartCoroutine(UIFx.Shake(h, 14f, 0.12f, new Vector2(0f, 140f)));
-                StartCoroutine(UIFx.Shake(sceneRoot, 16f, 0.12f, Vector2.zero));
-                yield return UIFx.Wait(0.1f);
-            }
-
-            // Baret kırılır: dönerek aşağı düşer ve söner
-            const float duration = 0.5f;
-            float t = 0f;
-            Vector2 start = h.anchoredPosition;
-            while (t < duration)
-            {
-                t += FxTime.Delta;
-                float k = Mathf.Clamp01(t / duration);
-                h.anchoredPosition = start + new Vector2(120f * k, -500f * k * k);
-                h.localRotation = Quaternion.Euler(0f, 0f, -200f * k);
-                helmetImage.color = new Color(1f, 1f, 1f, 1f - k);
-                yield return null;
-            }
-            helmetImage.gameObject.SetActive(false);
-        }
+        // ---------------- Göçük ----------------
 
         /// <summary>Göçük: tavan iner, taşlar sahneyi doldurur, her şey kararır.</summary>
         public IEnumerator Collapse()

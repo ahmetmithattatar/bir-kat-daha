@@ -46,23 +46,39 @@ namespace RiskLoop.Core
             return Math.Pow(1.0 - b.safetyUpgrade.effectPerLevel, safetyLevel);
         }
 
+        // ---------------- Bölgeler ----------------
+
+        /// <summary>Katın bölgesi: 1-10 -> 1, 11-20 -> 2 ...</summary>
+        public static int ZoneOf(BalanceData b, int step) => (Math.Max(step, 1) - 1) / b.zoneSize + 1;
+
+        /// <summary>Bölge içindeki kat: 1..10 (10 = boss katı).</summary>
+        public static int FloorInZone(BalanceData b, int step) => (Math.Max(step, 1) - 1) % b.zoneSize + 1;
+
+        /// <summary>Bölgenin son katı mı (boss katı)?</summary>
+        public static bool IsBossFloor(BalanceData b, int step) => FloorInZone(b, step) == b.zoneSize;
+
         /// <summary>
-        /// Bu adıma inerken patlama (göçük) olasılığı, 0..1 arası.
-        /// Her adım bağımsız bir zar atışıdır. runSafetyFactor = bu turda bulunan "Safety" bulgularının çarpanı.
+        /// Bu adıma inerken patlama (göçük) olasılığı, 0..1 arası. Her adım bağımsız bir zar atışıdır.
+        /// Risk BÖLGE İÇİNDE artar; derin bölgeler sadece biraz daha riskli. Boss katında göçük yok (sınav bossun kendisi).
+        /// runSafetyFactor = bu turun bulgu etkileri, ekipman ve yetenek çarpanlarının toplamı (çağıran hesaplar).
         /// </summary>
         public static double BustChance(BalanceData b, int step, int safetyLevel, double runSafetyFactor = 1)
         {
-            int s = Math.Max(step, 1);
-            double raw = b.baseBustChance + b.bustChancePerStep * (s - 1);
+            if (IsBossFloor(b, step)) return 0;
+            int f = FloorInZone(b, step);
+            int z = ZoneOf(b, step);
+            double raw = b.baseBustChance + b.bustChancePerZoneFloor * (f - 1) + b.bustChancePerZone * (z - 1);
             double reduced = raw * SafetyFactor(b, safetyLevel) * runSafetyFactor;
-            return Clamp(reduced, BustFloor(b, s), b.maxBustChance);
+            return Clamp(reduced, BustFloor(b, step), b.maxBustChance);
         }
 
-        /// <summary>Bu derinlikte riskin inebileceği en düşük değer. Hiçbir yükseltme bunun altına indiremez.</summary>
+        /// <summary>Bu katta riskin inebileceği en düşük değer. Hiçbir yükseltme bunun altına indiremez.</summary>
         public static double BustFloor(BalanceData b, int step)
         {
-            int s = Math.Max(step, 1);
-            return Math.Min(b.minBustChance + b.bustFloorPerStep * (s - 1), b.maxBustChance);
+            if (IsBossFloor(b, step)) return 0;
+            int f = FloorInZone(b, step);
+            int z = ZoneOf(b, step);
+            return Math.Min(b.minBustChance + b.bustFloorPerZoneFloor * (f - 1) + b.bustFloorPerZone * (z - 1), b.maxBustChance);
         }
 
         // ---------------- Sigorta ----------------
@@ -162,7 +178,7 @@ namespace RiskLoop.Core
 
         /// <summary>
         /// Bir bulgunun değeri. Türüne göre anlamı:
-        /// Treasure/SafeCache = para, ProfitBoost = eklenecek bonus oranı, Safety = risk azaltma oranı, Shield = adet.
+        /// Treasure/SafeCache = para, ProfitBoost = eklenecek bonus oranı, Safety = risk azaltma oranı.
         /// </summary>
         public static double FindValue(BalanceData b, FindType type, int tier, double stepReward, int findValueLevel)
         {
@@ -185,8 +201,6 @@ namespace RiskLoop.Core
                     return def.baseValue * power;
                 case FindType.Safety:
                     return Math.Min(def.baseValue * power, b.maxSafetyFindReduction);
-                case FindType.Shield:
-                    return tier >= b.shieldDoubleTier ? 2 : 1;
                 default:
                     return 0;
             }
@@ -201,18 +215,25 @@ namespace RiskLoop.Core
             {
                 if (m.step == step) return m;
             }
+
+            // Tanımlı son bossun ötesi (100, 110 ...): oyun sonsuz. Boss havuzları döngüyle tekrar kullanılır.
+            if (IsBossFloor(b, step) && b.milestones.Length > 0)
+            {
+                MilestoneDefinition last = b.milestones[b.milestones.Length - 1];
+                if (step > last.step)
+                {
+                    MilestoneDefinition source = b.milestones[(step / b.zoneSize - 1) % b.milestones.Length];
+                    return new MilestoneDefinition(step, last.minTier, last.firstReachRewardSteps, source.bossPool);
+                }
+            }
             return null;
         }
 
-        /// <summary>Bu adımdan SONRAKİ ilk kilometre taşı. Yoksa null.</summary>
+        /// <summary>Bu adımdan SONRAKİ ilk boss katı (her bölgenin sonu).</summary>
         public static MilestoneDefinition NextMilestone(BalanceData b, int currentStep)
         {
-            MilestoneDefinition best = null;
-            foreach (MilestoneDefinition m in b.milestones)
-            {
-                if (m.step > currentStep && (best == null || m.step < best.step)) best = m;
-            }
-            return best;
+            int next = (Math.Max(currentStep, 0) / b.zoneSize + 1) * b.zoneSize;
+            return MilestoneAt(b, next);
         }
 
         // ---------------- Savaş ----------------
@@ -335,12 +356,6 @@ namespace RiskLoop.Core
         }
 
         // ---------------- Yükseltmeler ----------------
-
-        /// <summary>Tur başında verilen baret sayısı.</summary>
-        public static int StartShields(BalanceData b, int startShieldLevel)
-        {
-            return (int)Math.Round(b.startShieldUpgrade.effectPerLevel * startShieldLevel);
-        }
 
         /// <summary>Şu anki seviyeden bir sonrakine geçmenin fiyatı. Yukarı yuvarlanır (tam sayı fiyatlar).</summary>
         public static double UpgradeCost(UpgradeDefinition def, int currentLevel)

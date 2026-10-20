@@ -8,13 +8,14 @@ namespace RiskLoop.Game.UI
 {
     /// <summary>
     /// Tur ekranı: karakter + derinlik + turun değeri, 12 stat kartı (açıklamaları fareyle), risk çubuğu,
-    /// kısa kumar / etki / keşif satırları, bulgu koleksiyonu, oto-kazı ve butonlar.
+    /// kısa kumar / etki / bölge satırları, bulgu koleksiyonu ve butonlar.
+    /// Tam ekran kazı sahnesinin ÜSTÜNDE yarı saydam paneller olarak durur (sahnenin ortası açık kalır).
     /// Sadece GÖSTERİR ve tıklamaları haber verir. Karar vermez, oyun kuralı bilmez.
     /// </summary>
     public class RunPanelView : MonoBehaviour
     {
         // Kartların sırası (sahne kurucu da bu sırayla 12 kart üretir)
-        private const int ChipRisk = 0, ChipShields = 1, ChipPower = 2, ChipThreat = 3, ChipFloors = 4, ChipReward = 5,
+        private const int ChipRisk = 0, ChipBoss = 1, ChipPower = 2, ChipThreat = 3, ChipFloors = 4, ChipReward = 5,
                           ChipFind = 6, ChipMonster = 7, ChipInsurance = 8, ChipDig = 9, ChipLuck = 10, ChipAttack = 11;
         public const int ChipCount = 12;
 
@@ -52,9 +53,6 @@ namespace RiskLoop.Game.UI
         [Header("Kazı sahnesi")]
         [SerializeField] private DigView digView;   // Sahneye tıklamak da kazmayı vurur
 
-        [Header("Oto-kazı")]
-        [SerializeField] private AutoDigView autoDig;
-
         [Header("Butonlar")]
         [SerializeField] private Button advanceButton;
         [SerializeField] private Button cashOutButton;
@@ -62,13 +60,10 @@ namespace RiskLoop.Game.UI
         // GameController bu olaylara abone olur. (Python'daki callback listesi gibi düşün.)
         public event Action AdvanceClicked;
         public event Action CashOutClicked;
-        public event Action AutoToggleClicked;
-        public event Action AutoSettingsChanged;
 
         // Efektlerin nereden çıkacağını bilmesi için (uçan yazılar vs.)
         public RectTransform RunValueAnchor => runValueText.rectTransform;
         public RectTransform DepthAnchor => depthText.rectTransform;
-        public RectTransform BuffsAnchor => chips[ChipShields].Rect;
         public RectTransform CollectionAnchor => (RectTransform)collection.transform;
 
         private static readonly Color SafeColor = new Color(0.25f, 0.8f, 0.35f);
@@ -84,8 +79,6 @@ namespace RiskLoop.Game.UI
             advanceButton.onClick.AddListener(() => AdvanceClicked?.Invoke());
             cashOutButton.onClick.AddListener(() => CashOutClicked?.Invoke());
             digView.SwingClicked += () => AdvanceClicked?.Invoke();
-            autoDig.ToggleClicked += () => AutoToggleClicked?.Invoke();
-            autoDig.Changed += () => AutoSettingsChanged?.Invoke();
         }
 
         private void Update()
@@ -115,14 +108,14 @@ namespace RiskLoop.Game.UI
             runValueBreakdownText.text = UIStrings.RunValueBreakdown(run);
 
             // ---- Stat kartları: kısa değer + renk + açıklama ----
-            int shields = run != null ? run.Shields : 0;
             ThreatLevel threat = session.CurrentThreat;
             double find = Math.Min(1.0, session.NextFindChance);
             double monster = Math.Min(1.0, session.NextMonsterChance);
 
             chips[ChipRisk].Set("RİSK", $"%{UIStrings.Pct(risk)}", RunTooltips.RiskColor(risk), RunTooltips.Risk(session));
-            chips[ChipShields].Set("BARET", $"{shields}/{session.Balance.maxShieldsPerRun}",
-                                   shields > 0 ? RunTooltips.Warn : RunTooltips.Danger, RunTooltips.Shields(session));
+            double bossChance = session.ReachNextBossChance();
+            chips[ChipBoss].Set($"{RiskMath.NextMilestone(session.Balance, step).step}. KAT BOSS", $"%{UIStrings.Pct(bossChance)}",
+                                bossChance >= 0.6 ? RunTooltips.Good : bossChance >= 0.3 ? RunTooltips.Warn : RunTooltips.Danger, RunTooltips.BossReach(session));
             chips[ChipPower].Set("GÜÇ", $"{session.CurrentPowerLevel}. kat",
                                  session.CurrentPowerLevel >= step + 1 ? RunTooltips.Good : RunTooltips.Bad, RunTooltips.Power(session));
             chips[ChipThreat].Set(combat ? "BU SAVAŞ" : "TEHDİT", RunTooltips.ThreatShort(threat), RunTooltips.ThreatColor(threat), RunTooltips.Threat(session));
@@ -132,7 +125,10 @@ namespace RiskLoop.Game.UI
             chips[ChipReward].Set("SONRAKİ", $"+{UIStrings.Num(session.NextStepReward)}", RunTooltips.Good, RunTooltips.NextReward(session));
             chips[ChipFind].Set("BULGU", find >= 1 ? "GARANTİ" : $"%{UIStrings.Pct(find)}", find >= 1 ? RunTooltips.Warn : RunTooltips.Info, RunTooltips.FindChance(session));
             chips[ChipMonster].Set("CANAVAR", monster >= 1 ? "BOSS!" : $"%{UIStrings.Pct(monster)}", monster >= 1 ? RunTooltips.Danger : RunTooltips.Neutral, RunTooltips.MonsterChance(session));
-            chips[ChipInsurance].Set("SİGORTA", $"%{UIStrings.Pct(session.InsuranceFraction)}", RunTooltips.Info, RunTooltips.Insurance(session));
+            if (session.IsUnlocked(Feature.Insurance))
+                chips[ChipInsurance].Set("SİGORTA", $"%{UIStrings.Pct(session.InsuranceFraction)}", RunTooltips.Info, RunTooltips.Insurance(session));
+            else
+                chips[ChipInsurance].Set("SİGORTA", UIStrings.LockedShort(session.UnlockLevel(Feature.Insurance)), RunTooltips.Neutral, UIStrings.LockedTip(Feature.Insurance, session.UnlockLevel(Feature.Insurance)));
             chips[ChipDig].Set("DUVAR", $"{session.NextSwingsNeeded} vuruş", RunTooltips.Neutral, RunTooltips.Dig(session));
             chips[ChipLuck].Set("ŞANS", $"+%{UIStrings.Pct(session.LuckBonus)}", session.PityLuck > 0 ? RunTooltips.Info : RunTooltips.Neutral, RunTooltips.Luck(session));
             chips[ChipAttack].Set("SALDIRI", UIStrings.Num(session.Stats.Attack), RunTooltips.Neutral, RunTooltips.Combat(session));
@@ -170,11 +166,6 @@ namespace RiskLoop.Game.UI
         public void ShowMessage(string message)
         {
             messageText.text = message;
-        }
-
-        public void SetAuto(bool on, AutoDigSettings settings)
-        {
-            autoDig.Show(on, settings);
         }
 
         /// <summary>Animasyon oynarken butonlar kilitlenir (spam önleme).</summary>

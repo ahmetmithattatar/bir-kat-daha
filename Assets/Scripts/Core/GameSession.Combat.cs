@@ -71,8 +71,14 @@ namespace RiskLoop.Core
             bool crit = _random.NextDouble() < stats.CritChance;                                    // ZAR: kritik
             double variance = 1.0 + (_random.NextDouble() * 2.0 - 1.0) * c.damageVariance;         // ZAR: hasar oynaması
             double damage = stats.Attack * variance * (crit ? stats.CritDamage : 1.0);
+            if (monster.Kind != MonsterKind.Normal) damage *= 1.0 + Talents.BossDamage;   // Kral Katili
 
             monster.Health -= damage;
+
+            // Kan Emici: vurulan hasarın bir kısmı can olarak döner
+            double lifesteal = Talents.Lifesteal;
+            if (lifesteal > 0)
+                CurrentRun.PlayerHealth = Math.Min(CurrentRun.PlayerMaxHealth, CurrentRun.PlayerHealth + damage * lifesteal);
             var result = new AttackResult { Damage = damage, Crit = crit };
 
             if (monster.IsDead)
@@ -83,7 +89,7 @@ namespace RiskLoop.Core
             return result;
         }
 
-        /// <summary>Canavar oyuncuya bir kez vurur. Can biterse baret kurtarır, yoksa tur biter (göçük gibi).</summary>
+        /// <summary>Canavar oyuncuya bir kez vurur. Can biterse tur biter (göçük gibi).</summary>
         public MonsterHitResult MonsterAttack()
         {
             if (!InCombat) throw new InvalidOperationException("Savaş yok.");
@@ -100,36 +106,25 @@ namespace RiskLoop.Core
 
             if (CurrentRun.PlayerHealth <= 0)
             {
-                if (c.shieldsProtectInCombat && CurrentRun.Shields > 0)
-                {
-                    // Baret ölümü engeller: az canla ayağa kalkarsın
-                    CurrentRun.Shields--;
-                    CurrentRun.ShieldsUsed++;
-                    Progress.shieldsUsed++;
-                    CurrentRun.PlayerHealth = CurrentRun.PlayerMaxHealth * c.shieldReviveHealth;
-                    result.ShieldUsed = true;
-                }
-                else
-                {
-                    CurrentRun.PlayerHealth = 0;
-                    CurrentRun.DiedToMonster = true;
-                    result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout);
-                    result.PlayerDied = true;
-                }
+                CurrentRun.PlayerHealth = 0;
+                CurrentRun.DiedToMonster = true;
+                result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout);
+                result.PlayerDied = true;
             }
             return result;
         }
 
-        /// <summary>Bossun öfke aralığı (sn). Normal canavarlar öfkelenmez: 0.</summary>
+        /// <summary>Bossun öfke aralığı (sn), Soğukkanlılık yeteneğiyle uzar. Normal canavarlar öfkelenmez: 0.</summary>
         public double EnrageInterval
         {
             get
             {
                 if (!InCombat) return 0;
+                double slow = 1.0 + Talents.EnrageSlow;
                 switch (CurrentRun.Monster.Kind)
                 {
-                    case MonsterKind.Boss: return Balance.combat.bossEnrageInterval;
-                    case MonsterKind.MiniBoss: return Balance.combat.miniBossEnrageInterval;
+                    case MonsterKind.Boss: return Balance.combat.bossEnrageInterval * slow;
+                    case MonsterKind.MiniBoss: return Balance.combat.miniBossEnrageInterval * slow;
                     default: return 0;
                 }
             }
@@ -152,6 +147,11 @@ namespace RiskLoop.Core
             CurrentRun.Kills++;
             Progress.monstersKilled++;
             if (monster.Kind != MonsterKind.Normal) Progress.bossesKilled++;
+
+            // Deneyim: boss çok, normal canavar orta (bölgeyle artar)
+            int zone = RiskMath.ZoneOf(Balance, monster.Step);
+            victory.XpGained = (monster.Kind == MonsterKind.Normal ? Balance.progression.xpPerKill : Balance.progression.xpPerBoss) * zone;
+            victory.LevelsGained = GainXp(victory.XpGained);
 
             // Keşif katının bossu yenildi: geçit açılır (sonraki turlara buradan başlanabilir)
             if (monster.Milestone != null && !Progress.conqueredMilestones.Contains(monster.Milestone.step))
@@ -178,7 +178,7 @@ namespace RiskLoop.Core
             switch (monster.Kind)
             {
                 case MonsterKind.Normal:
-                    if (_random.NextDouble() < c.normalDropChance) drops = 1;   // ZAR: düşme
+                    if (_random.NextDouble() < c.normalDropChance + Talents.GearDrop) drops = 1;   // ZAR: düşme (Ganimetçi artırır)
                     break;
                 case MonsterKind.MiniBoss:
                     drops = c.miniBossDrops;
@@ -190,6 +190,8 @@ namespace RiskLoop.Core
                     break;
             }
 
+            if (!IsUnlocked(Feature.Equipment)) drops = 0;   // Ekipman henüz açılmadıysa eşya düşmez
+
             for (int i = 0; i < drops; i++)
             {
                 int tier = RollTier(monster.Step, minTier);   // ZAR: nadirlik
@@ -199,10 +201,10 @@ namespace RiskLoop.Core
                     Type = FindType.Gear,
                     Tier = tier,
                     Item = item,
-                    Value = RiskMath.GearSellValue(c, item),
+                    Value = SellValue(item),
                     FromMonster = true
                 };
-                ApplyFind(drop);
+                ApplyFind(ref drop);
                 victory.Drops.Add(drop);
             }
 

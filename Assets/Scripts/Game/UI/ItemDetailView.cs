@@ -100,7 +100,8 @@ namespace RiskLoop.Game.UI
             equipButton.gameObject.SetActive(true);
             equipLabel.text = _equipped ? UIStrings.UnequipButton : UIStrings.EquipButton;
 
-            enhanceButton.gameObject.SetActive(true);
+            // Güçlendirme seviyeyle açılır; o zamana kadar buton görünmez (kalabalık yapmasın)
+            enhanceButton.gameObject.SetActive(session.IsUnlocked(Feature.Enhance));
             bool maxed = item.enhance >= c.enhanceMax;
             enhanceLabel.text = maxed ? UIStrings.EnhanceMaxed
                 : UIStrings.EnhanceButton(item.enhance + 1, session.EnhanceChance(item), session.EnhanceCost(item));

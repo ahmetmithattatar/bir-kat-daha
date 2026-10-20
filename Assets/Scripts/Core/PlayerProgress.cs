@@ -13,27 +13,14 @@ namespace RiskLoop.Core
     }
 
     /// <summary>
-    /// Oto-kazı durma kuralları (oyuncunun tercihi, kayda girer).
-    /// Oto-kazı bu koşullardan biri olunca kendiliğinden durur ve kontrol oyuncuya geçer.
-    /// </summary>
-    [Serializable]
-    public class AutoDigSettings
-    {
-        public bool stopWhenShieldsGone = true;  // Baret bitince dur (oto başlarken baret varsa)
-        public int stopRiskPercent = 30;         // Göçük riski bunu geçince dur
-        public int stopTier = 4;                 // Bu nadirlik ve üstü bulguda dur (4 = yeşil)
-        public bool autoFightNormal = true;      // Normal canavarlarla kendisi savaşsın (boss gelince her zaman durur)
-    }
-
-    /// <summary>
     /// Turlar arasında kalıcı olan her şey: para, yükseltmeler, ekipman, istatistikler, Yeni Çağ verileri.
     /// JSON'a kaydedilir. Alan eklerken saveVersion'ı artır.
-    /// Yeni Çağ'da sıfırlananlar: para, yükseltmeler, ekipman, rekorlar, geçitler. KALANLAR: çağ, yadigar, kadim yükseltmeler, ayarlar.
+    /// Yeni Çağda sıfırlananlar: para, yükseltmeler, ekipman, rekorlar, geçitler. KALANLAR: çağ, yadigar, kadim yükseltmeler, seviye, yetenekler.
     /// </summary>
     [Serializable]
     public class PlayerProgress
     {
-        public int saveVersion = 5;
+        public int saveVersion = 6;
         public double money;
         public List<UpgradeLevelEntry> upgradeLevels = new List<UpgradeLevelEntry>();
 
@@ -53,7 +40,6 @@ namespace RiskLoop.Core
         public int bestStep;       // Derinlik rekoru (bu çağ). Kilometre taşı "ilk kez" ödülü buna bakar
         public int bestTier;       // Bulunan en yüksek nadirlik
         public int totalFinds;
-        public int shieldsUsed;
         public double bestRunValue;  // En değerli turun toplamı ("rekor tur" tatmini için)
         public int pityStacks;       // Talihsizlik telafisi: art arda göçük/yenilgi sayısı (sınırlı)
 
@@ -63,14 +49,22 @@ namespace RiskLoop.Core
         public int allTimeBestStep;
         public List<UpgradeLevelEntry> prestigeLevels = new List<UpgradeLevelEntry>();
 
-        // Oto-kazı tercihleri: sıfırlanmaz
-        public AutoDigSettings autoDig = new AutoDigSettings();
+        // Oyuncu seviyesi ve yetenekler: Yeni Çağda da KALIR (hesap ilerlemesi)
+        public int level = 1;
+        public double xp;                 // Mevcut seviyedeki XP
+        public List<UpgradeLevelEntry> talentRanks = new List<UpgradeLevelEntry>();
+
+        // Görülen nadirlikler: bir nadirlik ilk kez gelince gerilimli açılış, sonra hızlı geçiş. Sıfırlanmaz.
+        public List<int> seenTiers = new List<int>();
 
         public int GetLevel(UpgradeType type) => GetLevel(upgradeLevels, type.ToString());
         public void SetLevel(UpgradeType type, int level) => SetLevel(upgradeLevels, type.ToString(), level);
 
         public int GetPrestigeLevel(PrestigeType type) => GetLevel(prestigeLevels, type.ToString());
         public void SetPrestigeLevel(PrestigeType type, int level) => SetLevel(prestigeLevels, type.ToString(), level);
+
+        public int GetTalentRank(string id) => GetLevel(talentRanks, id);
+        public void SetTalentRank(string id, int rank) => SetLevel(talentRanks, id, rank);
 
         private static int GetLevel(List<UpgradeLevelEntry> list, string id)
         {

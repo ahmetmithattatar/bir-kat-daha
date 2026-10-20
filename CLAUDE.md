@@ -10,37 +10,57 @@
 ## Oyun döngüsü
 1. Turlar arası ekranda yükseltme al, "Kazıya başla".
 2. "Derine in": bir sonraki katın göçük şansıyla zar atılır.
-   - Hayatta kalırsan derinlik +1, tur kazancına `o katın ödülü` eklenir, sonra bulgu zarı atılır.
-   - Göçükte baret varsa baret harcanır ve tur devam eder. Yoksa tur kazancı gider, sigorta bir kısmını kurtarır, tur biter.
+   - Hayatta kalırsan derinlik +1, tur kazancına `o katın ödülü` eklenir, XP kazanılır, sonra bulgu zarı atılır.
+   - Göçükte tur kazancı gider, sigorta bir kısmını kurtarır, tur biter. (Baret YOK, 7. turda kaldırıldı.)
 3. "Yüzeye dön": tur kazancının tamamı toplam paraya eklenir, tur biter.
 4. Ekranda her zaman: göçük yüzdesi + renkli risk çubuğu, sonraki kat ödülü + bulgu şansı, sigorta oranı,
-   **turun değeri** (sayarak artar) + "risk altında / cepte" dökümü, bu turun etkileri (baret, kazanç bonusu, risk çarpanı),
-   sonraki keşif katı ve kalan kat, **bu turun bulgu koleksiyonu** (kart ızgarası).
+   **turun değeri** (sayarak artar) + "risk altında / cepte" dökümü, bu turun etkileri (kazanç bonusu, risk çarpanı),
+   sonraki boss katı ve oraya ulaşma ihtimali, **bu turun bulgu koleksiyonu** (kart ızgarası), üst barda seviye + XP.
 
 ## Kazı sahnesi (birinci şahıs, `UI/DigView`)
-- Tur ekranı 3 sütun: sol istatistik | **orta kazı sahnesi** + mesaj | sağ koleksiyon + butonlar.
+- **Tur ekranı TAM EKRAN:** kazı sahnesi tüm tuvali kaplar. Üstünde yarı saydam HUD panelleri (`CreateHudPanel`, içeriğe göre yükseklik):
+  sol üst istatistik (karakter, derinlik, değer, 12 stat kartı, risk çubuğu, kısa satırlar), sağ üst bulgu koleksiyonu,
+  sağ alt KAZ / Yüzeye dön, alt orta mesaj, en üstte yarı saydam üst bar. Ortası (duvar, canavar, bulgu) hep açık.
+  Kazma ve silah HUD'ların iç kenarında (`HudSideWidth`), oyuncu can barı üst barın altında. HUD arka planı tıklamayı yutar (yanlış vuruş yok).
 - Sahne: iç içe 4 tünel halkası (içe koyulaşır), ortada kaya duvarı (+çatlak katmanı, "12. KAT" kazınmış yazı), sağ altta kazma,
   kenar karartma (fener titremesi). Kaya rengi bölgeye göre değişir (`Art/DepthTheme`: toprak, taş, kristal, göl, demirhane, fosil, ejder, lav;
   bölgeler keşif katlarında başlar). Her bölgede 4 doku çeşidi dönüşümlü.
 - **Bir kat = kazı gücüne göre 1-8 kazma vuruşu** (başta 3; bkz. kazma yuvası). Her vuruş: geri çekil → hızla in → kıvılcım + moloz + toz, duvar sarsılır, çatlak büyür.
   Tuş basılı tutulursa art arda vurur (yorucu olmasın). Sahneye tıklamak da vurur. Zar SADECE son vuruşta atılır.
 - Son vuruş: duvar titrer `0.12 + 0.7*risk` sn (gerilim) → sonuç:
-  baret kurtardıysa sahnede baret görünür, üstüne taş yağar, kırılıp düşer + pencere | duvar parçalanır, delik açılır →
-  bulgu delikten fırlar (arkasında nadirlik renginde dönen hüzme) → nadirse pencere, değilse adıyla uçan yazı → koleksiyona uçar →
+  duvar parçalanır, delik açılır →
+  bulgu delikten fırlar (arkasında nadirlik renginde dönen hüzme) → pencere / hızlı kart / uçan yazı (bkz. Hissiyat) → koleksiyona uçar →
   tünelde ilerlenir (halkalar büyür, yeni duvar karanlıktan yaklaşır) | göçükte tavan çöker, taşlar dipte YIĞILIR, sahne kararır.
 - Risk sahnede görünür: tavan çatlağı riskle koyulaşır, tavandan riskle sıklaşan çakıl düşer.
 
-## Baret ve uzun oyun dengesi (6. tur kararları)
-Sorun: ~15. katta hep baret olduğu için göçük korkusu kalmıyordu, oto-kazıyla eşya kasılıp oyun hızla doluyordu.
-- **Baret bedelli:** göçüğü yutar ama risk altındaki kazancın %35'ini gömer (`shieldEarningsLoss`). Canavara karşı KORUMAZ
-  (`shieldsProtectInCombat = false`). Tur başına en fazla 3 baret (`maxShieldsPerRun`). Yedek baret maks 2 (çok pahalı), Cüce Miğferi maks 1,
-  baret bulgu ağırlığı 7 → 4.
+## Bölgeler, seviye, yetenekler (7. tur kararları)
+Kullanıcı isteği: tam ekran HUD, oto-kazı ve baret tamamen kalksın, boss her 10 katta, takılınca bölgeyi farmlayıp bossu kesme tatmini,
+nadirlik açılışı sadece ilk seferde uzun, özellikler seviyeyle açılsın, yetenek ağacı (tasarımı bana bırakıldı).
+- **Bölgeler (`zoneSize` 10):** her 10. kat bölge bossu (10, 20, ... 90; sonrası havuzlar döner, `RiskMath.MilestoneAt`). Boss katında göçük YOK.
+  Risk bölge İÇİNDE kat kat artar: `base + bustChancePerZoneFloor*(f-1) + bustChancePerZone*(z-1)` (taban da aynı mantık, `bustFloorPerZone*`).
+  Bossu yenince yeni bölgenin başında risk biraz düşer: derinlik kapısı göçük değil **boss gücü**. Bossu yenemeyen oyuncu 1-9. katları
+  farmlar (para + eşya + XP), güçlenir, tekrar dener. Geçit (seviye 5) yenilen bossun katından başlatır.
+- **Canavarlar:** normal canavar havuzları bölge içine (1-9, 11-19, ...). Tüm keşif bossları `MonsterKind.Boss`. Ölçek 1.16 can / 1.15 saldırı.
+  Silah/kazma/malzeme `minStep`'leri ikiye katlandı (en derin 72). Güç göstergesi = bölge bossunu sağ yenebildiğin en derin kat.
+- **Seviye ve XP (`ProgressionBalance`, `GameSession.Progression.cs`):** kat başı `xpPerFloor*bölge`, öldürme `xpPerKill*bölge`,
+  boss `xpPerBoss*bölge`. Gereken XP `xpBase*xpGrowth^(seviye-1)`. Seviye ve yetenekler Yeni Çağda da KALIR. Kadim Bilgelik XP çarpanı.
+- **Özellik kilitleri (`Feature`):** Yetenekler 2, Ekipman/ganimet 3, Sigorta + Dedektör 4, Geçitler 5, Güçlendirme 6, Fener + Terazi 7,
+  Özel bulgular (harita/kristal/put) 8, Yeni Çağ 12 (+ 30. kat rekoru). Kilitli şey görünür ama soluk: "Sv X'te açılır" (merak + hedef).
+  Seviye penceresi yeni özelliği yazar ve okunana kadar bekler. Yükseltme ekranında "Sıradaki özellik: ..." satırı.
+- **Yetenek ağacı (`TalentBalance`, 21 düğüm, her seviye 1 puan):** 3 dal x 4 sıra; bir dala 5 puan harcayınca sonraki sıra açılır,
+  en alttaki tek düğüm dalın imzası. Cüce Madenci (kazı gücü, risk, kat ödülü, bulgu, sigorta, enkaz; imza Dağın Kalbi: bölgenin ilk 5 katında
+  risk -%50), Kılıç Ustası (saldırı, can, kritik, savunma, can çalma, öfke yavaşlatma; imza Kral Katili: bosslara +%40), Ejder Avcısı
+  (nadirlik, hazine değeri, ganimet, satış, Pırıltı +1 nadirlik, telafi; imza Ejder Gözü: %12 ikiz bulgu). Sıfırlama ücretli `100*seviye²`.
+  Neden: her seviye anında hissedilen bir seçim, dal imzası uzun vadeli hedef, sıfırlama farklı build denemeye davet.
+- **İlk-kez açılış:** `PlayerProgress.seenTiers`. Bir nadirlik (lacivert+) ilk kez gelince uzun renk tırmanışı + "İLK ...!" (kapatana kadar bekler).
+  Sonrakiler: sarı+ ya da mavi+ ganimet hızlı kart (`ShowFindQuick`, ~0.9 sn, tıkla geç), diğerleri uçan yazı. Keşif katı her zaman uzun.
+- **Göçük cezası ağırlaştı (baret yok):** telafi (+%12 nadirlik/kademe, Talih Çarkı ile artar), enkazdan kurtarma (%50 + Enkaz Avcısı),
+  sigorta (+Payanda Ustası, sınır %90) ve Dağın Kalbi yumuşatır.
 - **Boss öfkesi:** boss 8 sn'de, mini boss 12 sn'de bir öfkelenir: saldırı +%20/kademe. Uzayan savaş = ölüm. Hasar yetmezse takılırsın:
   eşya kasmak, güçlendirmek anlamlı. Zamanlayıcı `GameController`'da, görsel öfke çubuğu can barının altında.
 - **Göçük moral bozmasın:** Talihsizlik telafisi (her göçük/yenilgi +%12 nadirlik, maks 5 kademe, başarılı dönüşte sıfır) +
   Enkazdan kurtarma (turun en nadir eşyası %50 ihtimalle envantere).
-- **Oto-kazı:** "Baret bitince dur" açıkken baret varsa risk sınırı uygulanmaz.
-- **Arayüz sadeleşti:** tur ekranı sol sütunu = karakter + derinlik + turun değeri + 12 stat kartı (RİSK, BARET, GÜÇ, TEHDİT, DAYANMA,
+- **Arayüz sadeleşti:** tur ekranı sol HUD = karakter + derinlik + turun değeri + 12 stat kartı (RİSK, "N. KAT BOSS" ulaşma %, GÜÇ, TEHDİT, DAYANMA,
   SONRAKİ, BULGU, CANAVAR, SİGORTA, DUVAR, ŞANS, SALDIRI) + kısa kumar/etki/keşif satırları. Ayrıntı fareyle üstüne gelince
   (`TooltipTrigger` → `TooltipView`). Metinler `RunTooltips.cs`'de.
 - **Karakter (`AvatarView`, `Art/CharacterArt`):** 24x32 pixel art, katmanlı. Giyilenler malzeme renginde üstünde görünür,
@@ -50,16 +70,12 @@ Sorun: ~15. katta hep baret olduğu için göçük korkusu kalmıyordu, oto-kaz�
   altınlar sayaca kavisle uçar (`FxLayerView.CoinsTo`), sarı+ bulguda ganimet ışını, titreyen meşale ışığı, süzülen toz.
 
 ## Bağımlılık ve uzun oyun sistemleri (5. tur kararları)
-- **Oto-kazı (slot "oto çevir" mantığı):** A tuşu / buton. Kazıyı kendi sürdürür, animasyonlar `FxTime.Speed` = 2.5x.
-  Sıradan bulgular pencere açmadan koleksiyona uçar. Durma kuralları (`PlayerProgress.autoDig`, kayda girer):
-  baret bitince (oto başlarken baret varsa), risk %X+ (10..75), nadirlik >= seçilen (varsayılan yeşil), oto savaş açık/kapalı.
-  Ayrıca her zaman durur: boss, ölümcül tehdit, can < %30. Durunca banner + flaş: kumar anında kontrol oyuncuya geçer.
-  Amaç: baret varken sıkıcı katları hızla geçmek, risk anında oyuncuyu çağırmak.
+- **Oto-kazı 7. turda KALDIRILDI** (kullanıcı isteği; `AutoDigView` silindi, kayıtta `autoDig` yok).
 - **Geçitler:** Keşif katının bossu yenilince (`conqueredMilestones`) sonraki turlara o kattan başlanabilir (atlanan katların ödülü yok).
   Yükseltme ekranında "Başlangıç: ..." butonu döngüyle seçer.
 - **Güç/risk göstergesi (`GameSession.Insight.cs`):** "Savaş gücün: N. kat seviyesi" (normal canavar Orta'dan kolay VE mini boss ölümcül değil
   olan en derin kat), tehdit (Kolay/Orta/Zor/Ölümcül = canavarı öldürene kadar kaybedilen can oranı <0.2/<0.5/<1/>=1),
-  göçük hesabıyla ortalama kaç kat daha (baret sayısı üzerinden DP), kumar satırı (kazanırsan / kaybedersen / %, yorum: Güvenli adım, Değer,
+  göçük hesabıyla sonraki boss katına kadar ortalama kaç kat ve oraya ulaşma ihtimali, kumar satırı (kazanırsan / kaybedersen / %, yorum: Güvenli adım, Değer,
   Kumar, Çılgınlık). Eşya detayında "Savaş gücü 14 → 17" ve kazmada "Duvar 5 → 3 vuruş".
 - **Kazma yuvası + kazı gücü:** `GearSlot.Pickaxe`, `StatType.DigPower`. Gereken vuruş = ceil(3 * 1.07^(kat-1) / kazı gücü), 1..8.
   8 kazma (Paslı → Yıldız Demiri). Eldeki kazma görseli kuşanılanla değişir.
@@ -67,23 +83,25 @@ Sorun: ~15. katta hep baret olduğu için göçük korkusu kalmıyordu, oto-kaz�
   eşya nadirlik çarpanı `1.22^tier` (mor x4.9), luckPerStep 0.025, tur şansı sınırı 1.5. Kırmızı/mor eşyalar efsanevi isim alır.
 - **Güçlendirme (Shaiya tarzı):** +1..+10, şans %95 → %15, her seviye statlar +%10. +4'ten sonra başarısızlık seviye düşürür,
   +7'den sonra eşya KIRILIR. Ücret satış değeri x2 x1.6^seviye (para yutağı). Ruletvari animasyon.
-- **Yeni Çağ (prestij):** 15. kattan sonra açılır. Yadigar = floor(rekor^1.6 / 10). Sıfırlanır: para, yükseltmeler, eşyalar, rekor, geçitler.
-  Kalır: çağ, yadigar, 5 Kadim yükseltme (Kadim Altın, Yıldızların Lütfu, Cüce Miğferi, Kralların Kanı, Ejder Hazinesi), oto-kazı ayarları.
+- **Yeni Çağ (prestij):** seviye 12 + 30. kat rekoru. Yadigar = floor(rekor^1.6 / 10). Sıfırlanır: para, yükseltmeler, eşyalar, rekor, geçitler.
+  Kalır: çağ, yadigar, seviye, XP, yetenekler, görülen nadirlikler, 5 Kadim yükseltme (Kadim Altın, Yıldızların Lütfu, Kadim Bilgelik (XP x1.2/sv),
+  Kralların Kanı, Ejder Hazinesi).
 - **Yükseltme maks seviyeleri yükseltildi** (tek çağda dolmasın): Kazanç 40, Güvenlik 25, Sigorta 15, Dedektör 20, Fener 25, Terazi 30.
-- **İçerik:** bölge başına 6 canavarlık havuz (48), her keşif katında 5 bossluk havuz (45), 19 şablon. LOTR havası ama **özgün isimler**
-  (Steam'de telif/marka riski olmasın: Balrog/Nazgûl/Moria gibi birebir isim YOK). Keşif katları: Goblin Tünelleri, Kayıp Cüce Karakolu,
-  Kristal Salonlar, Gözcünün Gölü, Cüce Kralın Demirhanesi, Kadim Höyükler, Ejderin Altın Yatağı, Gölge ve Alev Köprüsü, Dünyanın Kökleri.
+- **İçerik:** bölge başına 6 canavarlık havuz (48), her boss katında 5 bossluk havuz (45), 19 şablon. LOTR havası ama **özgün isimler**
+  (Steam'de telif/marka riski olmasın: Balrog/Nazgûl/Moria gibi birebir isim YOK). Boss katları (10..90): Goblin Tünelleri, Kayıp Cüce Karakolu,
+  Kristal Salonlar, Gözcünün Gölü, Cüce Kralın Demirhanesi, Kadim Höyükler, Ejderin Altın Yatağı, Gölge ve Alev Köprüsü, Dünyanın Kökleri
+  (100+ "Derin ... 2" diye döner, `UIStrings.MilestoneName`). Kaya rengi de 10 katta bir değişir (`DepthTheme`, 9 renk döner).
 - **Çantayı sat:** ekipman sekmesinde, iki basış ister.
 - **Config uyarısı:** `BalanceConfig.asset` Inspector'da bir kez düzenlenirse tüm alanlar asset'e yazılır ve koddaki yeni varsayılanlar
   artık uygulanmaz. Yeni varsayılanları almak için asset'in ⋮ menüsünden Reset.
 
 ## Savaş, canavarlar, ekipman (RPG katmanı)
 Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur biter**, **eşyalar yüzeye dönünce kalıcı**, **savaş + kazı statları**.
-- Duvar yıkılınca canavar çıkabilir: `min(0.15 + 0.012*(step-1), 0.5)`. Keşif katında boss garantili (zar yok).
+- Duvar yıkılınca canavar çıkabilir: `min(0.15 + 0.012*(step-1), 0.5)`. Boss katında (her 10.) boss garantili (zar yok).
   Canavarlı katta bulgu zarı **zafere ertelenir** (canavar katın hazinesini korur).
 - Savaşta kazı tuşu = **SALDIR** (basılı tut, `playerAttackCooldown` 0.16 sn). Canavar `monsterAttackInterval` (1.6 sn, boss x0.85) aralıkla vurur;
   sayacı `GameController` tutar (Core zaman bilmez), uzun sahnelerde (pencere vs.) durur. İlk vuruştan önce 0.8 sn tolerans.
-- Oyuncu canı tur başında `Stats.Health` ile dolar; tur içinde kalıcı, savaşsız her katta %8 dolar. Can 0: baret varsa %30 canla kalkar, yoksa tur biter
+- Oyuncu canı tur başında `Stats.Health` ile dolar; tur içinde kalıcı, savaşsız her katta %8 dolar. Can 0: tur biter
   (sigorta çalışır, turun eşyaları kaybolur). "Yüzeye dön" savaşta **kaçış**: kazanç ve eşyalar korunur, canavar ödülü gider.
 - Hasar: oyuncu `Attack * ±%10 * (kritikse CritDamage)`. Canavar: `atk * (1 - def/(def + 5*atk))` (ölçekten bağımsız savunma).
 - Canavar: `hp = 40 * 1.18^(step-1) * hpMult`, `atk = 6 * 1.16^(step-1) * atkMult`. Öldürme ödülü `kat ödülü * 1.5 * hpMult` (risk altında).
@@ -108,7 +126,7 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
 ## Görseller (kodla üretilen pixel art, dosya yok)
 - `Art/PixelArt`: metin ızgarasından sprite (`FromRows`), seed'li kaya dokusu, birikimli çatlak (aynı seed + büyüyen stage),
   hüzme, parıltı, vignette. Hepsi Point filtreli ve önbellekli (bellek sızmaz).
-- `Art/SpriteLibrary`: 16x16 ikonlar metin olarak (harf = renk, tablo dosyanın başında). Kazma, baret ve her bulgu türü.
+- `Art/SpriteLibrary`: 16x16 ikonlar metin olarak (harf = renk, tablo dosyanın başında). Kazma ve her bulgu türü.
   Çeşitlilik: Hazine nadirlikle değişir (para yığını → altın külçe → sandık → taç), Kese (kese → çuval).
   Kristal gri çizilip nadirlik rengine boyanır. İkonlar koleksiyon kartlarında, sahnede ve pencerede.
 - Pencerede ikon önce **siyah siluet** (ne olduğu belli, ne kadar iyi olduğu değil), renk tırmanışı biter, sonra renklenir.
@@ -116,9 +134,8 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
 ## Hissiyat (juice) ve spam önleme
 - Her kat bir sahne: `RunFeedbackDirector` sonucu oynatır. `GameController`: vuruş sırasında `_busy` (butonlar sönmez),
   sonuç sahnesinde `SetBusy(true)` (butonlar da kilitli).
-  1. Baret kırıldıysa: kırmızı flaş, sahnede baret sekansı, sonra **kapatılması gereken** "BARET KIRILDI!" penceresi.
   2. Kat ödülü: derinlik "pat", turun değerinden uçan +X. Ödül turun o ana kadarki değerinin %25'i/%50'si üstündeyse açık mavi/altın.
-  3. Bulgu: nadirlik ≥ 3 (lacivert) ya da keşif katıysa açılır pencere: çerçeve beyazdan gerçek nadirliğe kadar renk renk tırmanır
+  3. Bulgu: nadirlik İLK KEZ görülüyorsa (lacivert+) ya da boss katıysa uzun pencere (görülmüşse hızlı kart / uçan yazı, 7. tur): çerçeve beyazdan gerçek nadirliğe kadar renk renk tırmanır
      (yükseldikçe yavaşlar), sonra isim ve ikon açılır, parçacık + flaş (+ 6 ve üstünde sarsıntı). Kapatmak için tık/tuş, en az `0.35 + 0.08*tier` sn.
   4. Tur değeri `bestRunValue`'yu geçerse turda bir kez "EN DEĞERLİ TURUN!" banner'ı.
   5. Göçük: çok sert sarsıntı, kırmızı ekran, rastgele başlık (GÖÇÜK!, TAVAN ÇÖKTÜ!...), tavan çöker, sonra sonuç ekranı.
@@ -140,22 +157,19 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
   | SafeCache | Kese | Doğrudan cebe, güvende |
   | ProfitBoost | Zengin damar | Tur boyu kat ödülleri +% (toplanarak birikir) |
   | Safety | Sağlam kaya | Tur boyu göçük riski çarpanı azalır (çarpımsal) |
-  | Shield | Baret | Bir göçüğü yutar. En az lacivert seviyede çıkar, kırmızı ve üstünde 2 adet |
   | LuckCharm | Uğur tılsımı | Tur boyu `runLuck += baseValue*power` (daha nadir bulgular) |
   | FindStreak | Eski harita | Sonraki `floor(1 + 0.5*tier)` katta bulgu garantili (zar 2 atılmaz). En az açık mavi |
   | Multiplier | Parlak kristal | Risk altındaki kazanç `*= 1 + min(0.1*power, 2)` anında (en fazla x3). En az mavi |
   | CursedTreasure | Lanetli put | Büyük hazine (baseValue 4) risk altında + tur riski x1.15 (toplam en fazla x1.6). En az mavi |
-- Tür ağırlıkları: Hazine 40, Kese 20, Damar 18, Kaya 15, Tılsım 10, Baret 7, Harita 6, Kristal 5, Put 5.
-- Keşif katları (kilometre taşları), her birinin adı var (`UIStrings.MilestoneName`):
-  3 Paslı Sandık, 5 Kayıp Madenci Kampı, 10 Kristal Mağarası, 15 Yeraltı Gölü, 20 Cüce Demirhanesi,
-  25 Dev Fosil Mezarlığı, 30 Ejderin İni, 35 Lav Kalbi, 40 Dünyanın Çekirdeği.
+- Tür ağırlıkları: Hazine 40, Kese 20, Damar 18, Kaya 15, Tılsım 10, Harita 6, Kristal 5, Put 5.
+- Boss katları (keşif katları) her 10 katta bir, adları `UIStrings.MilestoneName` (bkz. 7. tur kararları).
   Garantili bulgu çıkar, her katta en düşük nadirlik daha yüksek. Keşfedilmemiş katın adı "???" görünür (merak).
   İlk kez ulaşınca ayrıca güvenli ilk keşif ödülü (`o katın ödülü * firstReachRewardSteps`) doğrudan cebe girer.
   Amaç: oyuncunun kendine "şu kata kadar in, dön" hedefi koyması (geliştiricinin kendi stratejisi). Keşif katı bu hedefi doğal kılıyor,
   bir önceki katta "bir tane daha" gerilimi yaratıyor.
 - Koleksiyon: aynı tür + aynı nadirlik tek kartta birikir (×adet, toplam etki), en nadir solda. 9 kutu, fazlası "+N daha". Ekipmanlar yuvaya göre de ayrılır.
 
-## Yükseltmeler (7)
+## Yükseltmeler (6)
 | Tür | UI adı | Etki | Birikim |
 |---|---|---|---|
 | Earnings | Daha iyi kazma | Kat ödülü | `(1+e)^lvl` |
@@ -164,29 +178,28 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
 | FindChance | Maden dedektörü | Bulgu şansı | `+e*lvl` (üst sınır `maxFindChance`) |
 | Luck | Uğurlu fener | Nadirlik | `luck += e*lvl` |
 | FindValue | Kuyumcu terazisi | Hazine/Kese değeri | `(1+e)^lvl`, e=0.12 (maks x9.6) |
-| StartShield | Yedek baret | Tura baretle başla | `round(e*lvl)` adet, maks 3, çok pahalı |
 
 ## Alınan kararlar
 | Konu | Karar |
 |---|---|
 | Kazanç modeli | Kat başı ödül × çarpan, tur 0'dan başlar, giriş ücreti yok |
 | Risk modeli | Her iniş bağımsız zar, olasılık derinlikle doğrusal artar |
-| Ekonomi patlaması | İlk sürümde her şey maksimumdayken risk %1'e iniyor, derinlik sınırsızlaşıp kazanç 10^15'e çıkıyordu (performans değil, denge sorunu: double 10^308'e kadar gider). Çözüm: **derinlikle artan taban risk** `minBustChance + bustFloorPerStep*(step-1)` (30. katta ≥ %30), tur bonus sınırları (`maxRunProfitBonus` +%200, `minRunSafetyFactor` 0.5), Kuyumcu terazisi 0.20→0.12. Hesap: maks yükseltme + yarıya inmiş riskle 20. kata ulaşma ~%7, 30. kata ~%0.2 (baretsiz) |
+| Ekonomi patlaması | İlk sürümde her şey maksimumdayken risk %1'e iniyor, derinlik sınırsızlaşıp kazanç 10^15'e çıkıyordu (performans değil, denge sorunu: double 10^308'e kadar gider). Çözüm: **derinlikle artan taban risk** `minBustChance + bustFloorPerStep*(step-1)` (30. katta ≥ %30), tur bonus sınırları (`maxRunProfitBonus` +%200, `minRunSafetyFactor` 0.5), Kuyumcu terazisi 0.20→0.12. Hesap: maks yükseltme + yarıya inmiş riskle 20. kata ulaşma ~%7, 30. kata ~%0.2. 7. turda risk bölge içinde artan modele geçti (bkz. 7. tur kararları) |
 | Sayı gösterimi | `UIStrings.Num`: 10.000 altı tam sayı, üstü 12.3K / 4.56M / 7.8B / T / Qa..., liste biterse 1.23e45 |
 | Tur değeri | `RunState.TotalValue` = risk altındaki (`Earnings`) + cepte (`Banked`: Kese + ilk keşif ödülü). `bestRunValue` kalıcı rekor |
 | Yükseltme birikimi | Çoğu çarpımsal. Seviyeler kalıcı, eski ilerleme boşa gitmez |
 | Sigorta | `1 - (1-e)^level`, %100'e asla ulaşmaz. Sadece risk altındaki kazanca uygulanır |
-| Baret | Göçüğü yutar, adım normal sayılır (ödül + bulgu zarı) ama risk altındakinin %35'i gider. Canavara karşı korumaz. Tur başına maks 3 |
+| Baret | 7. turda kaldırıldı. Göçük cezasını telafi, enkaz, sigorta ve Dağın Kalbi yumuşatır |
 | Fiyatlar | `ceil(baseCost * costGrowth^level)`, tam sayı |
 | Para tipi | `double` (idle oyunlar gibi büyük sayılara hazır). Gösterimde aşağı yuvarlanır |
-| Kayıt | JsonUtility ile `Application.persistentDataPath/save.json` (saveVersion 4: envanter ve kuşanılan eşyalar; GearSlot/StatType sayı olarak, SADECE SONA ekle). Tur ortası kaydedilmez (risk altındaki kazanç kaybolur, Kese/rekor ödülü anında kaydedilir) |
+| Kayıt | JsonUtility ile `Application.persistentDataPath/save.json` (saveVersion 6: seviye, XP, yetenekler, görülen nadirlikler; envanter ve kuşanılan eşyalar; GearSlot/StatType sayı olarak, SADECE SONA ekle). Tur ortası kaydedilmez (risk altındaki kazanç kaybolur, Kese/rekor ödülü anında kaydedilir) |
 | Kaydı sıfırla | Üst barın sağında (kazı butonlarından uzakta). Tur sırasında gizli, iki basış ister (3 sn içinde) |
 | Sahne | `RiskLoop > Build Prototype Scene` menüsü sahneyi koddan kurar ve bağlar. Config'i NewScene'den SONRA yükler (önce yüklenirse referans null düşer) |
 | Platform önceliği | Önce **PC (yatay 16:9)**. Mobil sonra (yatay düzen telefonda da çalışabilir, ayrıca ele alınacak) |
 | UI | uGUI + TextMeshPro (zengin metinde `<color>` ile nadirlik renkleri). CanvasScaler 1920x1080 Expand. Tur ekranı: sol istatistik / sağ bulgu+butonlar. Yükseltme ekranı: sol sonuç+başla / sağ 7 yükseltme |
 | Klavye | ↓/S/Boşluk kaz (basılı tut = art arda vuruş; yükseltme ekranında YENİ basışla kazıya başla), ↑/W yüzeye dön. Tur bitince 0.6 sn tuş kilidi. Butonların UI navigasyonu kapalı |
 | Layout tuzağı | Dikey düzenin içindeki yatay grupta `childForceExpandHeight = true` OLMAZ: grup esnek yükseklik ister ve ekranı kaplar. Yan yana dizilimde metin genişliği `preferredWidth = 0` ile sıfırlanır (TMP tek satır genişliğini bildirir, sütunu taşırır) |
-| Tema | Mantık temadan bağımsız (`Step`, `Bust`, `Find`, `Shield`). Tema metinleri `UIStrings.cs` + `RarityStyle.cs` içinde |
+| Tema | Mantık temadan bağımsız (`Step`, `Bust`, `Find`, `Zone`). Tema metinleri `UIStrings.cs` + `RarityStyle.cs` içinde |
 
 ## Mimari
 ```
@@ -198,13 +211,15 @@ Assets/Scripts/
     GameSession.Combat.cs  Canavar çıkışı, Attack / MonsterAttack, zafer ve ganimet
     GameSession.Gear.cs    Eşya üretimi (RollGearItem), envanter, kuşan/çıkar/sat, otomatik kuşan, çantayı sat, güçlendirme
     GameSession.Prestige.cs  Yeni Çağ, Yadigar, Kadim yükseltmeler
-    GameSession.Insight.cs   Savaş gücü, tehdit, kalan kat (DP), kumar oranı (hiçbir şeyi değiştirmez)
+    GameSession.Insight.cs   Savaş gücü, tehdit, boss katına ulaşma, kumar oranı (hiçbir şeyi değiştirmez)
+    GameSession.Progression.cs  XP, seviye, özellik kilitleri (IsUnlocked), yetenek ağacı (öğren, sıfırla, toplam bonus)
+    Progression.cs     Feature, ProgressionBalance, TalentBranch/Effect/Definition, TalentBalance (21 düğüm), TalentBonuses
     Prestige.cs        PrestigeType, PrestigeBalance
     Gear.cs            GearSlot, StatType, StatValue, GearItem
     CombatData.cs      CombatBalance (savaş/ekipman sayıları), MonsterDefinition, GearBaseDefinition, sonuç tipleri
     DefaultContent.cs  Varsayılan içerik: 18 silah, 47 zırh/takı tabanı, 41 canavar
     CharacterStats.cs  Taban + kuşanılan eşyalar = toplam statlar (sınırlarla)
-    RunState.cs        Tek turun durumu (baret, tur bonusları, bulgular) + AdvanceResult
+    RunState.cs        Tek turun durumu (tur bonusları, bulgular, can) + AdvanceResult
     FindType.cs        Bulgu türleri + FindResult
     PlayerProgress.cs  Kalıcı veri (para, yükseltme seviyeleri, istatistik, rekor)
     IRandomSource.cs   Rastgelelik arayüzü (seed verilebilir, testte sahte kaynak)
@@ -212,7 +227,7 @@ Assets/Scripts/
   Game/        Unity katmanı (Assembly-CSharp)
     BalanceConfig.cs   ScriptableObject kabı. Context menu: Export/Import JSON -> Balance/balance.json
     GameController.cs  Köprü: UI olayları -> GameSession -> UI yenile, kaydet. İnişleri coroutine ile sıralar (_busy kilidi)
-    RunFeedbackDirector.cs  Sonucu sahneler: kazı gerilimi, baret, ödül, bulgu, göçük, dönüş efektleri
+    RunFeedbackDirector.cs  Sonucu sahneler: kazı gerilimi, ödül, bulgu (ilk kez uzun / sonra hızlı), XP + seviye penceresi, göçük, dönüş efektleri
     SaveSystem.cs
     UIStrings.cs       Ekrandaki tüm metinler (tema/çeviri burada)
     RarityStyle.cs     Nadirlik isimleri ve renkleri
@@ -222,7 +237,7 @@ Assets/Scripts/
     UI/                TopBarView, RunPanelView, FindCollectionView + FindMiniCardView, UpgradePanelView, UpgradeRowView:
                        sadece gösterir, olay yayar. DigView (kazı + savaş sahnesi), UIParticleSpawner, FxLayerView, RevealPopupView, UIFx: efektler
                        EquipmentView + GearSlotView + ItemDetailView: ekipman sekmesi. PrestigePanelView + PrestigeRowView: Yeni Çağ sekmesi.
-                       AutoDigView: oto-kazı paneli. FxTime: animasyon hız çarpanı (oto-kazıda hızlanır)
+                       TalentTreeView + TalentNodeView: yetenek sekmesi. FxTime: animasyon hız çarpanı (hit-stop)
   Editor/
     PrototypeSceneBuilder.cs
 Assets/Config/BalanceConfig.asset   (menü ilk çalıştığında oluşur)
@@ -241,8 +256,11 @@ Kurallar:
 ## Formüller (varsayılan sayılar `BalanceData.cs` içinde)
 ```
 reward(step)    = baseStepReward * stepMultiplierGrowth^(step-1) * (1+earnings.e)^earningsLvl * (1 + runProfitBonus)
-bustChance(step)= clamp((baseBustChance + bustChancePerStep*(step-1)) * (1-safety.e)^safetyLvl * runSafetyFactor, floor(step), max)
-floor(step)     = minBustChance + bustFloorPerStep*(step-1)
+zone(step) z    = (step-1)/zoneSize + 1,   f = (step-1)%zoneSize + 1,   f == zoneSize -> boss katı, bustChance = 0
+bustChance(step)= clamp((baseBustChance + bustChancePerZoneFloor*(f-1) + bustChancePerZone*(z-1)) * (1-safety.e)^safetyLvl
+                        * runSafetyFactor * (1-gear CaveResist) * (1-talent RiskReduction), floor(step), max)
+floor(step)     = minBustChance + bustFloorPerZoneFloor*(f-1) + bustFloorPerZone*(z-1)
+xpToNext(lvl)   = ceil(xpBase * xpGrowth^(lvl-1));  talent bonus = rank * perRank (TalentBonuses)
 runProfitBonus  <= maxRunProfitBonus,   runSafetyFactor >= minRunSafetyFactor
 insurance       = 1 - (1-insurance.e)^insuranceLvl      -> göçükte kurtarılan = runEarnings * insurance
 findChance(step)= clamp(findChanceBase + findChancePerStep*(step-1) + findChance.e*lvl, 0, maxFindChance)   (hazine odasında 1)
@@ -259,15 +277,15 @@ Zar sırası: GameSession.cs başındaki yorumda (Advance, Attack, MonsterAttack
 Varsayılanlarla kaba tahmin (bulgusuz): yükseltmesiz optimal durma noktası ~6. kat. Bulgular eklendi, Python simülasyonuyla yeniden ölçülmeli.
 
 ## Yapılacaklar
-- [ ] Unity'de derleme ve oynanış testi (bedelli baret, boss öfkesi, stat kartları + ipucu, karakter, hit-stop sürümü henüz denenmedi)
-- [ ] Python simülasyonu: Yeni Çağ döngüsü süresi, güçlendirme para yutağı, oto-kazı ile tur başına süre
+- [ ] Unity'de derleme ve oynanış testi (7. tur: tam ekran HUD, bölgeler, seviye/yetenek ağacı, ilk-kez açılış henüz Unity'de denenmedi; kod Unity Roslyn'iyle hatasız derlendi)
+- [ ] Python simülasyonu: Yeni Çağ döngüsü süresi, güçlendirme para yutağı, seviye hızı (XP eğrisi 1.28), bölge bossu duvarları ve farm süresi
 - [ ] Savaş dengesi: boss süreleri, ekipman ölçeği (1.14) vs canavar ölçeği (1.18/1.16), düşme oranları
 - [ ] Sonra: silah türüne özel vuruş efekti, canavar türüne özel saldırı (zehir, büyü), set bonusları, eşya karşılaştırma ipucu (tooltip)
 - [ ] Pixel art'ı gerçek bir sanatçı/asset ile değiştirmek istenirse: SpriteLibrary.FindIcon tek giriş noktası
 - [ ] Geç oyun para yutağı (money sink): tüm yükseltmeler dolunca paranın anlamı kalmıyor. Aday: prestij / yeni maden (sıfırla, kalıcı çarpan kazan)
-- [ ] Ses: kazı, bulgu (nadirliğe göre), baret kırılması, göçük
+- [ ] Ses: kazı, bulgu (nadirliğe göre), seviye atlama, göçük
 - [ ] Windows build ayarları: Player Settings'te pencere modu/çözünürlük (ör. 1600x900 pencereli, yeniden boyutlandırılabilir)
 - [ ] Python simülasyonu: `Balance/balance.json` oku, `RiskMath`'i port et, stratejiler (sabit hedef katta dön, hazine odasında dön, EV>0 iken devam) için tur başı kazanç, yükseltme hızı ve nadirlik dağılımını ölç
-- [ ] Core için EditMode testleri (Unity Test Framework kurulu): RiskMath formülleri, sahte IRandomSource ile Advance/CashOut/baret/hazine odası
+- [ ] Core için EditMode testleri (Unity Test Framework kurulu): RiskMath formülleri, sahte IRandomSource ile Advance/CashOut/bölge riski/yetenekler
 - [ ] git init + Unity `.gitignore` (Library/, Temp/, Logs/, UserSettings/ hariç)
 - [ ] Sonra: bulgu kartı animasyonu (nadirliğe göre parlama, ses), görsel tema, sayı kısaltma (1.2K, 3.4M), yerelleştirme, mobil güvenli alan (safe area), yükseltme listesi uzarsa ScrollRect

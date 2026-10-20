@@ -13,7 +13,6 @@ namespace RiskLoop.Core
         Insurance,    // Patlamada tur kazancının bir kısmını kurtarır
         FindChance,   // Her adımda bulgu çıkma şansını artırır
         Luck,         // Bulguların nadirlik şansını artırır
-        FindValue,    // Para veren bulguların değerini artırır
-        StartShield   // Her tura kalkanla (barete) başlar
+        FindValue     // Para veren bulguların değerini artırır
     }
 }

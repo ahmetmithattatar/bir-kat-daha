@@ -348,7 +348,6 @@ namespace RiskLoop.Game.Art
                     return tier >= 4 ? PixelArt.FromRows("sack", Sack, Palette) : PixelArt.FromRows("pouch", Pouch, Palette);
                 case FindType.ProfitBoost: return PixelArt.FromRows("ore", OreVein, Palette);
                 case FindType.Safety: return PixelArt.FromRows("solidrock", SolidRock, Palette);
-                case FindType.Shield: return HelmetSprite;
                 case FindType.LuckCharm: return PixelArt.FromRows("clover", Clover, Palette);
                 case FindType.FindStreak: return PixelArt.FromRows("map", Map, Palette);
                 case FindType.Multiplier: return PixelArt.FromRows("gem", Gem, GemPalette);
