@@ -5,13 +5,13 @@ namespace RiskLoop.Core
 {
     /// <summary>
     /// GameSession'ın "durumu anlama" kısmı: oyuncunun ne kadar güçlü olduğunu, bulunduğu katın ne kadar tehlikeli
-    /// olduğunu ve bir sonraki inişin kumar oranını hesaplar. Hiçbir şeyi DEĞİŞTİRMEZ, zar atmaz (beklenen değerler).
+    /// olduğunu ve bir sonraki inişin riskini ve ödülünü hesaplar. Hiçbir şeyi DEĞİŞTİRMEZ, zar atmaz (beklenen değerler).
     ///
     ///   Savaş gücü (PowerLevel): normal canavarları rahat, mini bossları sağ çıkarak yenebileceğin en derin kat.
     ///     WoW'daki eşya seviyesi gibi: "Gücün 14. kat seviyesinde". Eşya ve yükseltmelerin ilerlemesini tek sayıda gösterir.
     ///   Tehdit (ThreatAt): canavarı öldürene kadar canının yüzde kaçını kaybedeceğin -> Kolay / Orta / Zor / Ölümcül.
     ///   Kalan kat (ExpectedFloorsLeft): göçük riski ve baretlerle ortalama kaç kat daha dayanırsın.
-    ///   Kumar (NextGamble): sonraki inişte kazanacağın, kaybedebileceğin ve olasılığı.
+    ///   Sonraki iniş (NextGamble): kazanacağın, kaybedebileceğin ve olasılığı.
     /// </summary>
     public partial class GameSession
     {
@@ -175,20 +175,19 @@ namespace RiskLoop.Core
             return alive;
         }
 
-        // ---------------- Kumar oranı ----------------
+        // ---------------- Sonraki iniş: risk ve ödül ----------------
 
         /// <summary>
         /// Sonraki iniş: kazanırsan (kat ödülü + Cesaret çarpanının kazandırdığı), kaybedersen (risk altındaki;
-        /// sigorta sadece normal kısmı kurtarır, kumar kazancı tamamen gider), olasılık (göçük).
+        /// hepsi gider), olasılık (göçük).
         /// </summary>
         public void NextGamble(out double win, out double lose, out double chance)
         {
             chance = NextBustChance;
             double atRisk = CurrentRun != null ? CurrentRun.Earnings : 0;
-            double courage = CurrentRun != null ? CurrentRun.CourageEarnings : 0;
             double reward = NextStepReward;
             win = (atRisk + reward) * NextCourageMult - atRisk;
-            lose = Math.Max(0, atRisk - courage) * (1.0 - InsuranceFraction) + courage;
+            lose = atRisk;   // Göçükte risk altındaki her şey gider
         }
 
         /// <summary>Beklenen değer: kazanırsan * (1-olasılık) - kaybedersen * olasılık.</summary>

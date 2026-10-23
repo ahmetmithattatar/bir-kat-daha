@@ -51,7 +51,7 @@ namespace RiskLoop.Game.UI
         }
 
         /// <summary>Eşya göster. item null ise boş kutu (emptySlot verilirse o yuvanın soluk şablonu).</summary>
-        public void Set(GearItem item, GearSlot? emptySlot, bool selected)
+        public void Set(GearItem item, GearSlot? emptySlot, bool selected, bool usable = true)
         {
             _uid = item != null ? item.uid : -1;
             inner.color = selected ? InnerSelected : InnerNormal;
@@ -61,7 +61,8 @@ namespace RiskLoop.Game.UI
                 frame.color = RarityStyle.TierColor(item.tier);
                 icon.enabled = true;
                 icon.sprite = GearArt.Icon(item);
-                icon.color = Color.white;
+                // Giyilemiyorsa (seviye ya da sınıf) ikon kırmızımsı ve soluk: "bekle, level atla"
+                icon.color = usable ? Color.white : new Color(1f, 0.45f, 0.45f, 0.7f);
             }
             else
             {

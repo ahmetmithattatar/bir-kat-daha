@@ -75,7 +75,7 @@ namespace RiskLoop.Game.UI
             for (int i = 0; i < inventorySlots.Length; i++)
             {
                 GearItem item = i < inventory.Count ? inventory[i] : null;
-                inventorySlots[i].Set(item, null, item != null && item.uid == selectedUid);
+                inventorySlots[i].Set(item, null, item != null && item.uid == selectedUid, session.CanUseItem(item));
             }
         }
     }

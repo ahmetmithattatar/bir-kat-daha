@@ -18,7 +18,8 @@ MonoBehaviour:
     stepMultiplierGrowth: 1.12
     zoneSize: 10
     baseBustChance: 0.02
-    bustChancePerZoneFloor: 0.015
+    bustChancePerZoneFloor: 0
+    bustChancePerZoneFloorSq: 0.0067
     bustChancePerZone: 0.01
     minBustChance: 0.01
     bustFloorPerZoneFloor: 0.012
@@ -71,6 +72,10 @@ MonoBehaviour:
     maxPityStacks: 5
     unluckyBustChance: 0.1
     unluckyExtraPityStacks: 1
+    courageMinChance: 0.15
+    courageEdge: 0.85
+    maxCourageMult: 3
+    courageLuckPerRisk: 1
     bustSalvageChance: 0.5
     luckCharmFind:
       weight: 10

@@ -121,6 +121,28 @@ hitap etsin, yükseltme/yetenekler ikonlu olsun, class sistemi + spell book (sev
   Değerli eşyada (yeşil+, güçlendirilmiş ya da Kudret artıran) satış iki basış ister.
 - **Config:** risk eğrisi değiştiği için `BalanceConfig.asset` yine **Reset** edilmeli.
 
+## Sade risk, kalıcı tırmanış, eşya seviyesi (13. tur kararları)
+- **Sigorta ve Talihsizlik telafisi KALDIRILDI** (kullanıcı isteği). Göçükte risk altındaki her şey gider (enkazdan eşya kurtarma kaldı).
+  `UpgradeType.Insurance` silindi (kayıt adla tuttuğu için eski kayıtlar bozulmaz), `pityStacks` silindi.
+  Yetenekler değişti (id aynı): `brace_master` = Derin Soluk (Cesaret ödülü +%8/sıra), `fortune_wheel` = Talih Çarkı (riskli katta nadirlik +%40/sıra).
+- **Risk sadece ortadaki büyük sayıyla anlatılır:** soldaki gri başlık ve sağdaki GÜVENLİ/DEĞER/ÇILGINLIK yorumu kaldırıldı
+  (sol not sadece Kehanet büyüsünün sonucu için). Sol HUD'dan boss'a ulaşma kartı da kalktı (sadece Kudret + savaşta tehdit).
+- **Cesaret ödülü yüzde olarak:** "x1.21" yerine "+%21" (`UIStrings.CourageBonus`).
+- **Her başarılı katta kutlama, riskle büyür (`RunFeedbackDirector.CelebrateSurvival`):** <%5 kıvılcım, %5-10 "geçtin" yazısı,
+  %10+ başlık + flaş, %20+ sarsıntı + altın yağmuru, %35+ turuncu + hit-stop, %50+ efsanevi (çift flaş, dev patlama).
+- **Oyunda "kumar" kelimesi yok** (cesaret, gözü kara, yürekli, kader...). Gösterge adı: Cesaret terazisi.
+- **Risk turda kazılan katla sürekli tırmanır, boss katında SIFIRLANMAZ** (`RiskMath.BustChance(..., runFloor, ...)`):
+  geçitten başlayınca tur güvenli başlar, derine indikçe hep düşer. **Kalıcı azaltıcıların toplamı riski en fazla %40 düşürür**
+  (`minTotalRiskFactor` 0.6; ölçüm: hepsi birlikte 9. katta geçmeyi %89'a çıkarıp risk hissini öldürüyordu). Büyüler ve Dağın Kalbi
+  geçici olduğu için sınırın dışında. Destek kirişleri 0.05 → 0.03/seviye. Ölçülen geçme şansı (yeni oyuncu / her şey maks):
+  5. kat %86 / %92, 9. kat %54 / %72, 12. kat %15 / %49, 14. kat %5 / %30.
+- **Eşya giyme seviyesi:** canavar seviyesi = kat x 0.5 (`monsterLevelPerStep`), adının yanında "Sv 12". Düşen eşyanın
+  `requiredLevel`'ı o katın canavar seviyesi: seviyen yetmezse çantada kırmızımsı görünür, "Seviye 12 gerekir" yazar, kuşanılamaz.
+  Eşyanın gücü düştüğü kattan (itemLevel): derin katın beyazı sığ katın nadirinden güçlü olabilir, nadirlik yine çarpan verir.
+- **Eşya nadirliği derinlikle şişmez:** eşya için ayrı zar (`RollGearTier`): derinlik şansı yok, toplam şans `gearLuckCap` 0.8 ile sınırlı;
+  boss ganimetinin garantili en düşük nadirliği en fazla yeşil (`maxBossDropMinTier` 4). Derinde de çoğunlukla beyaz-mavi-yeşil düşer.
+- **Config:** yeni alanlar ve risk eğrisi için `BalanceConfig.asset` **Reset** gerekir.
+
 ## Geçme şansı ve Cesaret çarpanı (12. tur kararları)
 Kullanıcı: "%6.5 göçük" yerine sonraki kata geçme ihtimali görünsün (%95 = hiç düşünmeden, %55 = kumar), ve %45-%30 gibi düşük
 ihtimalleri denemek ÖDÜLLENDİRİLSİN.

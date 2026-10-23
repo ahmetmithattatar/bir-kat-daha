@@ -30,8 +30,21 @@ namespace RiskLoop.Core
             return true;
         }
 
-        /// <summary>Bu silahı bu sınıf kullanabilir mi? (Silah dışı eşyalar herkese uygun.)</summary>
+        /// <summary>Bu eşya giyilebilir mi? Seviye yetmeli (giyme seviyesi) ve silahsa sınıf uymalı.</summary>
         public bool CanUseItem(GearItem item)
+        {
+            if (item == null) return true;
+            if (!MeetsLevel(item)) return false;
+            if (item.slot != GearSlot.Weapon) return true;
+            GearBaseDefinition def = Balance.combat.FindGearBase(item.baseId);
+            return def == null || def.heroClass == HeroClass.None || !HasClass || def.heroClass == CurrentClass;
+        }
+
+        /// <summary>Oyuncunun seviyesi bu eşyayı giymeye yetiyor mu?</summary>
+        public bool MeetsLevel(GearItem item) => item == null || Progress.level >= item.requiredLevel;
+
+        /// <summary>Silah sınıfı uyuyor mu? (Seviyeden bağımsız.)</summary>
+        public bool MatchesClass(GearItem item)
         {
             if (item == null || item.slot != GearSlot.Weapon) return true;
             GearBaseDefinition def = Balance.combat.FindGearBase(item.baseId);

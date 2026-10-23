@@ -52,6 +52,7 @@ namespace RiskLoop.Core
         public int tier;           // Nadirlik 0..8
         public int itemLevel;      // Düştüğü kat (statlar bununla büyür)
         public int enhance;        // Güçlendirme seviyesi (+0 .. +10)
+        public int requiredLevel;  // Giymek için gereken oyuncu seviyesi (0 = yok; eski kayıtlardaki eşyalar)
         public List<StatValue> stats = new List<StatValue>();
 
         /// <summary>Güçlendirme çarpanı (CombatBalance.enhanceStatBonus ile). Varsayılan %10/seviye.</summary>

@@ -8,8 +8,8 @@ namespace RiskLoop.Game.UI
 {
     /// <summary>
     /// Tur ekranı (tam ekran kazı sahnesinin ÜSTÜNDE yarı saydam paneller, sahnenin ortası açık kalır):
-    ///   sol üst : karakter + derinlik + turun değeri, en fazla 4 sade kart (Kudret, boss / bu savaş, sigorta, telafi), tur etkileri
-    ///   alt orta: Kumar terazisi (RiskGaugeView): bir sonraki hamlenin riski ve ödülü büyük
+    ///   sol üst : karakter + derinlik + turun değeri, en fazla 2 sade kart (Kudret, savaşta tehdit), tur etkileri
+    ///   alt orta: Cesaret terazisi (RiskGaugeView): bir sonraki hamlenin riski ve ödülü büyük
     ///   sağ     : bulgu koleksiyonu, butonlar
     /// Yeni oyuncuyu sayı yağmuruna boğmamak için kartlar ilgili özellik açılınca belirir. Ayrıntılar fareyle (ipucu).
     /// Sadece GÖSTERİR ve tıklamaları haber verir. Karar vermez, oyun kuralı bilmez.
@@ -17,8 +17,8 @@ namespace RiskLoop.Game.UI
     public class RunPanelView : MonoBehaviour
     {
         // Kartların sırası (sahne kurucu da bu sırayla kart üretir)
-        private const int ChipKudret = 0, ChipBoss = 1, ChipInsurance = 2, ChipPity = 3;
-        public const int ChipCount = 4;
+        private const int ChipKudret = 0, ChipThreat = 1;
+        public const int ChipCount = 2;
 
         [Header("Üst")]
         [SerializeField] private AvatarView avatar;
@@ -33,7 +33,7 @@ namespace RiskLoop.Game.UI
         [SerializeField] private TMP_Text buffsText;
         [SerializeField] private TooltipTrigger buffsTip;
 
-        [Header("Kumar terazisi")]
+        [Header("Cesaret terazisi")]
         [SerializeField] private RiskGaugeView riskGauge;
 
         [Header("Büyüler")]
@@ -103,7 +103,7 @@ namespace RiskLoop.Game.UI
             depthText.text = $"{step}. KAT";
             runValueBreakdownText.text = UIStrings.RunValueBreakdown(run);
 
-            // ---- Sade kartlar: sadece açık olan özellikler, en fazla 4 ----
+            // ---- Sade kartlar: Kudret (ekipman açılınca) ve savaşta "BU SAVAŞ" tehdidi. Risk sadece ortadaki sayıda ----
             bool gear = session.IsUnlocked(Feature.Equipment);
             chips[ChipKudret].gameObject.SetActive(gear);
             if (gear)
@@ -113,24 +113,12 @@ namespace RiskLoop.Game.UI
                                       UIStrings.KudretRankColor(rank), RunTooltips.Kudret(session));
             }
 
+            chips[ChipThreat].gameObject.SetActive(combat);
             if (combat)
             {
                 ThreatLevel threat = session.CurrentThreat;
-                chips[ChipBoss].Set("BU SAVAŞ", RunTooltips.ThreatShort(threat), RunTooltips.ThreatColor(threat), RunTooltips.Threat(session));
+                chips[ChipThreat].Set("BU SAVAŞ", RunTooltips.ThreatShort(threat), RunTooltips.ThreatColor(threat), RunTooltips.Threat(session));
             }
-            else
-            {
-                double bossChance = session.ReachNextBossChance();
-                chips[ChipBoss].Set($"{RiskMath.NextMilestone(session.Balance, step).step}. KAT BOSS", $"%{UIStrings.Pct(bossChance)}",
-                                    bossChance >= 0.6 ? RunTooltips.Good : bossChance >= 0.3 ? RunTooltips.Warn : RunTooltips.Danger, RunTooltips.BossReach(session));
-            }
-
-            chips[ChipInsurance].gameObject.SetActive(session.IsUnlocked(Feature.Insurance));
-            chips[ChipInsurance].Set("SİGORTA", $"%{UIStrings.Pct(session.InsuranceFraction)}", RunTooltips.Info, RunTooltips.Insurance(session));
-
-            // Talihsizlik telafisi sadece birikmişse görünür (göçükten sonra teselli)
-            chips[ChipPity].gameObject.SetActive(session.PityLuck > 0);
-            chips[ChipPity].Set("TELAFİ", $"+%{UIStrings.Pct(session.PityLuck)}", RunTooltips.Info, RunTooltips.Luck(session));
 
             // ---- Tur etkileri: sadece varsa ----
             string buffs = RunTooltips.BuffsShort(run);

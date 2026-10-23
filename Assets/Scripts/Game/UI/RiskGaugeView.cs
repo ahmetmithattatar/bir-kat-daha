@@ -7,8 +7,8 @@ using UnityEngine.UI;
 namespace RiskLoop.Game.UI
 {
     /// <summary>
-    /// "Kumar terazisi": ekranın alt ortasında, bir sonraki hamlenin riskini ve ödülünü BÜYÜK gösterir.
-    ///   Kazıda : büyük göçük yüzdesi + renkli çubuk + "KAZANIRSAN +X" | "KAYBEDERSEN -Y" + yorum (Güvenli / Değer / Kumar / Çılgınlık)
+    /// "Cesaret terazisi": ekranın alt ortasında, bir sonraki hamlenin riskini ve ödülünü BÜYÜK gösterir.
+    ///   Kazıda : büyük göçük yüzdesi + renkli çubuk + "KAZANIRSAN +X (+%cesaret)" | "KAYBEDERSEN -Y" (risk sadece büyük sayıyla anlatılır, yorum yok)
     ///   Savaşta: tehdit + "KAÇARSAN +X cebe" | "ÖLÜRSEN -Y"
     /// Ayrıca kalp atışı: risk ve kaybedilecek para büyüdükçe ekran kenarları kırmızı nabız gibi atar, nabız hızlanır.
     /// Oyuncu her basışta neyi riske attığını HİSSEDER: risk/ödül döngüsünün kalbi burası.
@@ -19,7 +19,7 @@ namespace RiskLoop.Game.UI
         [SerializeField] private RectTransform root;        // Nabızda hafifçe büyür
         [SerializeField] private TMP_Text titleText;         // "GÖÇÜK RİSKİ" / "BU SAVAŞ"
         [SerializeField] private TMP_Text riskText;          // "%18" / "Zor"
-        [SerializeField] private TMP_Text verdictText;       // "Değer", "Kumar"...
+        [SerializeField] private TMP_Text verdictText;       // Artık boş (eski yorum alanı; sahne kurucu oluşturduğu için duruyor)
         [SerializeField] private RectTransform barFill;
         [SerializeField] private Image barFillImage;
         [SerializeField] private TMP_Text winText;
@@ -89,9 +89,13 @@ namespace RiskLoop.Game.UI
             session.NextGamble(out double win, out double lose, out double chance);
             Color color = RiskColor(chance);
 
-            // Büyük sayı GEÇME şansı (%95 = hiç düşünmeden kaz, %55 = kumar). Çubuk da geçme şansı kadar dolu.
+            // Risk SADECE bu büyük sayıyla anlatılır: sonraki kata GEÇME şansı (%95 = hiç düşünmeden kaz, %40 = gözü kara).
+            // Yanında yorum ya da ek yazı yok; oyuncu kararını bu sayıya göre verir. Çubuk da geçme şansı kadar dolu.
             double success = 1.0 - chance;
-            titleText.text = UIStrings.GaugeRiskTitleWithOdds(session.CurrentRun.SurvivalOdds);
+            bool? foresight = session.ForesightSaysBust;   // Kehanet büyüsünün sonucu (varsa) solda kısa not
+            titleText.text = foresight.HasValue
+                ? (foresight.Value ? "<color=#FF3B3B>KEHANET:\nGÖÇECEK</color>" : "<color=#3CCB5A>KEHANET:\nGÜVENLİ</color>")
+                : "";
             riskText.text = $"%{UIStrings.Pct(success)}";
             riskText.color = color;
             barFill.anchorMax = new Vector2(Mathf.Clamp01((float)success), 1f);
@@ -101,11 +105,7 @@ namespace RiskLoop.Game.UI
             double courage = session.NextCourageMult;
             winText.text = UIStrings.GaugeWin(win, courage);
             loseText.text = lose > 0 ? UIStrings.GaugeLose(lose) : UIStrings.GaugeNothingToLose;
-            bool? foresight = session.ForesightSaysBust;
-            verdictText.text = foresight.HasValue
-                ? (foresight.Value ? "<color=#FF3B3B>KEHANET: GÖÇECEK</color>" : "<color=#3CCB5A>KEHANET: GÜVENLİ</color>")
-                : courage > 1.0 ? UIStrings.CourageVerdict(courage)
-                : UIStrings.GambleVerdict(session.NextGambleExpectedValue(), win, lose);
+            verdictText.text = "";
             tooltip.SetText(RunTooltips.Gamble(session));
 
             // Nabız: risk büyüdükçe ve kaybedilecek bir şey varken
@@ -132,7 +132,7 @@ namespace RiskLoop.Game.UI
             barFillImage.color = color;
 
             winText.text = UIStrings.GaugeFlee(run.TotalValue);
-            loseText.text = UIStrings.GaugeDie(run.Earnings * (1.0 - session.InsuranceFraction));
+            loseText.text = UIStrings.GaugeDie(run.Earnings);
             verdictText.text = "";
             tooltip.SetText(RunTooltips.Threat(session));
 

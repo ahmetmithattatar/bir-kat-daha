@@ -41,7 +41,6 @@ namespace RiskLoop.Core
         public int bestTier;       // Bulunan en yüksek nadirlik
         public int totalFinds;
         public double bestRunValue;  // En değerli turun toplamı ("rekor tur" tatmini için)
-        public int pityStacks;       // Talihsizlik telafisi: art arda göçük/yenilgi sayısı (sınırlı)
 
         // Yeni Çağ (prestij): sıfırlanmaz
         public int age = 1;

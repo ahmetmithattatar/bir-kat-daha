@@ -296,7 +296,7 @@ namespace RiskLoop.Game
         /// <summary>Canavarın adı zorluk renginde. XP vermeyen kademelerde "(XP yok)".</summary>
         public static string MonsterNameLine(MonsterInstance m, bool givesXp)
         {
-            string name = $"<color={DifficultyColor(m.Difficulty)}>{FantasyTexts.MonsterName(m.Definition.id)}</color>";
+            string name = $"<color={DifficultyColor(m.Difficulty)}>{FantasyTexts.MonsterName(m.Definition.id)}  <size=70%>Sv {m.Level}</size></color>";
             if (!givesXp) name += " <size=60%><color=#9AA0B4>(XP yok)</color></size>";
             string kind = FantasyTexts.MonsterKindLabel(m.Kind);
             return kind.Length > 0 ? $"<color={Gold}>{kind}</color>  {name}" : name;
@@ -321,15 +321,12 @@ namespace RiskLoop.Game
         public static string Busted(AdvanceResult r, RunState run)
         {
             string text = $"{BustTitle()} {r.Step}. katta göçük oldu (risk %{Pct(r.BustChance)}).\nKaybedilen: {Num(r.LostEarnings)}";
-            if (r.Unlucky) text += $"\n<color=#8FD3FF>Sadece %{Pct(r.BustChance)} ihtimaldi... Şanssızlık! Telafi fazladan birikti.</color>";
-            if (r.InsurancePayout > 0) text += $"   Sigorta kurtardı: {Num(r.InsurancePayout)}";
             return text + "\n" + RunSummary(run, lootSaved: false);
         }
 
         public static string Defeated(MonsterHitResult hit, RunState run, string monsterName)
         {
             string text = $"{DefeatTitle()} {monsterName} seni {run.Step}. katta yendi.\nKaybedilen: {Num(hit.LostEarnings)}";
-            if (hit.InsurancePayout > 0) text += $"   Sigorta kurtardı: {Num(hit.InsurancePayout)}";
             return text + "\n" + RunSummary(run, lootSaved: false);
         }
 
@@ -338,7 +335,7 @@ namespace RiskLoop.Game
             string text = $"Turun toplam değeri: <b>{Num(run.TotalValue)}</b>";
             if (run.IsNewBestRun) text += $"  <color={Gold}>EN DEĞERLİ TUR REKORU!</color>";
             if (run.Kills > 0) text += $"   Yenilen canavar: {run.Kills}";
-            if (run.CourageTotalMult > 1.01) text += $"   <color=#FFC83A>Cesaret toplam x{run.CourageTotalMult:0.00}</color>";
+            if (run.CourageTotalMult > 1.01) text += $"   <color=#FFC83A>Cesaret ödülü toplam {CourageBonus(run.CourageTotalMult)}</color>";
 
             if (run.PendingLoot.Count > 0)
             {
@@ -358,14 +355,13 @@ namespace RiskLoop.Game
             return text + $"\nBulgular: {run.Finds.Count}   En iyisi: {FindTitle(best)}";
         }
 
-        // ---------------- Telafi, kurtarma, öfke ----------------
+        // ---------------- Kurtarma, öfke ----------------
 
-        /// <summary>Göçük/yenilgi sonrası teselli satırları: kurtarılan eşya + talihsizlik telafisi.</summary>
-        public static string AfterBust(GearItem salvaged, int pityStacks, double pityLuck)
+        /// <summary>Göçük/yenilgi sonrası teselli satırı: enkazdan kurtarılan eşya.</summary>
+        public static string AfterBust(GearItem salvaged)
         {
             string text = "";
             if (salvaged != null) text += $"\n<color={Gold}>ENKAZDAN KURTARDIN:</color> {FantasyTexts.GearName(salvaged)}";
-            if (pityStacks > 0) text += $"\n<color=#8FD3FF>Talihsizlik telafisi: sonraki turlarda nadirlik +%{Pct(pityLuck)} ({pityStacks}/5)</color>";
             return text;
         }
 
@@ -387,7 +383,6 @@ namespace RiskLoop.Game
             {
                 case Feature.Talents: return "Yetenek Ağacı";
                 case Feature.Equipment: return "Ekipman ve ganimet";
-                case Feature.Insurance: return "Sigorta";
                 case Feature.FindChance: return "Maden dedektörü";
                 case Feature.Checkpoints: return "Geçitler";
                 case Feature.Enhance: return "Güçlendirme";
@@ -405,7 +400,6 @@ namespace RiskLoop.Game
             {
                 case Feature.Talents: return "Her seviye 1 puan. Yüzeyde Yetenekler sekmesi.";
                 case Feature.Equipment: return "Canavarlar ve kayalar artık eşya düşürür.";
-                case Feature.Insurance: return "Göçükte kazancın bir kısmını kurtar.";
                 case Feature.FindChance: return "Daha sık bulgu.";
                 case Feature.Checkpoints: return "Yendiğin bossun katından başla.";
                 case Feature.Enhance: return "Eşyalarını +10'a kadar güçlendir (riskli!).";
@@ -473,7 +467,7 @@ namespace RiskLoop.Game
                 case "stone_sense": return "Taş Sezgisi";
                 case "gold_vein": return "Altın Damar";
                 case "deep_instinct": return "Derin İçgüdü";
-                case "brace_master": return "Payanda Ustası";
+                case "brace_master": return "Derin Soluk";
                 case "rubble_hunter": return "Enkaz Avcısı";
                 case "mountain_heart": return "Dağın Kalbi";
                 case "keen_edge": return "Keskin Ağız";
@@ -503,7 +497,7 @@ namespace RiskLoop.Game
                 case TalentEffect.RiskReduction: return $"Göçük riski -%{Pct(value)}";
                 case TalentEffect.RewardBonus: return $"Kat ödülü +%{Pct(value)}";
                 case TalentEffect.FindChance: return $"Bulgu şansı +%{Pct(value)}";
-                case TalentEffect.Insurance: return $"Sigorta +%{Pct(value)}";
+                case TalentEffect.CourageBonus: return $"Cesaret ödülü +%{Pct(value)}";
                 case TalentEffect.Salvage: return $"Enkazdan kurtarma +%{Pct(value)}";
                 case TalentEffect.ZoneStartSafety: return $"Bölgenin ilk 5 katında göçük riski -%{Pct(value)}";
                 case TalentEffect.Attack: return $"Saldırı +%{Pct(value)}";
@@ -518,7 +512,7 @@ namespace RiskLoop.Game
                 case TalentEffect.GearDrop: return $"Ganimet düşme şansı +%{Pct(value)}";
                 case TalentEffect.SellValue: return $"Satış değeri +%{Pct(value)}";
                 case TalentEffect.TierUpgrade: return $"Bulgu %{Pct(value)} ihtimalle bir nadirlik üstte";
-                case TalentEffect.PityBoost: return $"Talihsizlik telafisi kademe başı +%{Pct(value)}";
+                case TalentEffect.RiskLuck: return $"Riskli katta bulgu nadirliği +%{Pct(value)}";
                 case TalentEffect.TwinFind: return $"Bulgu %{Pct(value)} ihtimalle ikiz çıkar";
                 default: return e.ToString();
             }
@@ -732,15 +726,8 @@ namespace RiskLoop.Game
             return head + $"   toplam {Num(totalNow)} → <color={color}>{Num(totalWith)} {arrow}{(diff > 0 ? "+" : "")}{Num(diff)}</color>";
         }
 
-        // ---------------- Kumar terazisi ----------------
-
-        public const string GaugeRiskTitle = "GEÇME ŞANSI";
-
-        /// <summary>Başlık + bu turda geçilen katları sağ atlatma olasılığı ("%38'lik yolu geçtin": oyuncu şansını görsün).</summary>
-        public static string GaugeRiskTitleWithOdds(double survivalOdds) =>
-            survivalOdds < 0.999
-                ? $"{GaugeRiskTitle}\n<size=65%><color=#9AA0B4>bu tur %{Pct(survivalOdds)}'lik yolu geçtin</color></size>"
-                : GaugeRiskTitle;
+        // ---------------- Risk göstergesi (Cesaret terazisi) ----------------
+        // Risk tek bir büyük sayıyla anlatılır: sonraki kata GEÇME şansı. Yanında yorum yok.
 
         private static readonly string[] NearMissTitles = { "KIL PAYI!", "AZ KALSIN!", "TAVAN İNLEDİ!", "ŞANSLI GÜN!" };
         public static string NearMissTitle() => Pick(NearMissTitles);
@@ -749,38 +736,44 @@ namespace RiskLoop.Game
         public const string GaugeCombatTitle = "BU SAVAŞ";
         public static string GaugeWin(double win) => $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>";
 
-        /// <summary>Kazanırsan: Cesaret çarpanı varsa yanında altın "x1.45" (tüm kazancın katlanacağını göstersin).</summary>
+        /// <summary>Cesaret ödülü yüzde olarak: çarpan 1.69 -> "+%69" (1,xx yerine tatmin edici büyük sayı).</summary>
+        public static string CourageBonus(double mult) => $"+%{(mult - 1.0) * 100.0:0}";
+
+        /// <summary>Kazanırsan: Cesaret ödülü varsa yanında altın "+%45" (tüm kazancın büyüyeceğini göstersin).</summary>
         public static string GaugeWin(double win, double courage) =>
             courage > 1.0
-                ? $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>  <color=#FFC83A><b>x{courage:0.00}</b></color>"
+                ? $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>  <color=#FFC83A><b>{CourageBonus(courage)} cesaret</b></color>"
                 : GaugeWin(win);
 
-        /// <summary>Riskli katın yorumu: Cesaret çarpanı (renk riskle sararıp turuncu olur).</summary>
-        public static string CourageVerdict(double courage) =>
-            $"<color={(courage >= 1.6 ? "#FF7A2E" : "#FFC83A")}>CESARET x{courage:0.00}</color>";
+        // Kutlama başlıkları: alınan risk büyüdükçe daha görkemli (geçme şansı yüksekse başlık yok, sadece küçük efekt)
+        private static readonly string[] BraveTitles = { "CESUR ADIM!", "YİĞİTÇE!", "SAĞLAM YÜREK!" };
+        private static readonly string[] BoldTitles = { "YÜREKLİ!", "KORKUSUZ!", "DAĞ GİBİ!" };
+        private static readonly string[] FearlessTitles = { "GÖZÜ KARA!", "KADER SENDEN YANA!", "ÖLÜMLE DANS!" };
+        private static readonly string[] LegendTitles = { "EFSANEVİ CESARET!", "İMKANSIZI BAŞARDIN!", "DESTANLIK!" };
 
-        private static readonly string[] CourageTitles = { "CESARET!", "YÜREKLİ!", "GÖZÜ KARA!", "KADER SENDEN YANA!" };
-        public static string CourageBanner(double mult) => $"{Pick(CourageTitles)}  x{mult:0.00}";
+        /// <summary>Riske göre kutlama başlığı (risk %10'un altındaysa null: başlıksız küçük kutlama).</summary>
+        public static string CourageTitle(double bustChance)
+        {
+            if (bustChance >= 0.5) return Pick(LegendTitles);
+            if (bustChance >= 0.35) return Pick(FearlessTitles);
+            if (bustChance >= 0.2) return Pick(BoldTitles);
+            if (bustChance >= 0.1) return Pick(BraveTitles);
+            return null;
+        }
+
         public static string CourageMessage(double chance, double gain) =>
-            $"<color=#FFC83A>%{Pct(1 - chance)} şansla geçtin!</color> Risk altındaki kazanç katlandı: <b>+{Num(gain)}</b>";
+            gain > 0
+                ? $"<color=#FFC83A>%{Pct(1 - chance)} şansla geçtin!</color> Cesaret ödülü: <b>+{Num(gain)}</b>"
+                : $"<color=#FFE03A>%{Pct(1 - chance)} şansla geçtin!</color>";
         public static string GaugeLose(double lose) => $"<size=70%>KAYBEDERSEN</size>\n<color=#FF4A3A><b>-{Num(lose)}</b></color>";
         public const string GaugeNothingToLose = "<size=70%>KAYBEDERSEN</size>\n<color=#9AA0B4><b>henüz bir şey yok</b></color>";
         public static string GaugeFlee(double value) => $"<size=70%>KAÇARSAN</size>\n<color=#3CCB5A><b>{Num(value)} cebe</b></color>";
         public static string GaugeDie(double lose) => $"<size=70%>ÖLÜRSEN</size>\n<color=#FF4A3A><b>-{Num(lose)}</b></color>";
 
-        /// <summary>Bir sonraki inişin yorumu. ev: beklenen değer.</summary>
-        public static string GambleVerdict(double ev, double win, double lose)
-        {
-            if (lose <= 0) return "<color=#3CCB5A>GÜVENLİ</color>";
-            if (ev >= 0) return "<color=#3CCB5A>DEĞER</color>";
-            if (ev > -win) return $"<color={Gold}>KUMAR</color>";
-            return "<color=#FF3B3B>ÇILGINLIK</color>";
-        }
-
-        /// <summary>KAZ butonu: altında küçük göçük yüzdesi (basmadan önce bir daha görsün).</summary>
+        /// <summary>KAZ butonu: altında küçük geçme şansı ve cesaret ödülü (basmadan önce bir daha görsün).</summary>
         public static string AdvanceButtonWithRisk(double risk, double courage = 1.0) =>
             courage > 1.0
-                ? $"{AdvanceButton}\n<size=40%>geçme %{Pct(1 - risk)}  <color=#FFC83A>x{courage:0.00}</color></size>"
+                ? $"{AdvanceButton}\n<size=40%>geçme %{Pct(1 - risk)}  <color=#FFC83A>{CourageBonus(courage)}</color></size>"
                 : $"{AdvanceButton}\n<size=40%>geçme %{Pct(1 - risk)}</size>";
 
         public static string SwingsCompare(int now, int with) =>
@@ -812,8 +805,17 @@ namespace RiskLoop.Game
         public static string SellButton(double value) => $"Sat\n<size=75%>+{Num(value)}</size>";
         public const string SellConfirm = "<color=#FF5A4A>Emin misin?</color>\n<size=75%>tekrar bas</size>";
         public static string InventoryTitle(int count, int cap) => $"Envanter ({count}/{cap})";
-        public static string ItemLevelLine(GearItem item, bool equipped) =>
-            $"{FantasyTexts.BaseName(item)}  ·  Seviye {item.itemLevel}{(equipped ? "  ·  <color=#3CCB5A>KUŞANILDI</color>" : "")}";
+        /// <summary>"Kısa Kılıç · Kat 24 · Giyme Sv 12" (seviye yetmiyorsa kırmızı).</summary>
+        public static string ItemLevelLine(GearItem item, bool equipped, bool meetsLevel)
+        {
+            string req = item.requiredLevel > 0
+                ? (meetsLevel ? $"  ·  Giyme Sv {item.requiredLevel}" : $"  ·  <color=#FF5A4A>Giyme Sv {item.requiredLevel}</color>")
+                : "";
+            return $"{FantasyTexts.BaseName(item)}  ·  Kat {item.itemLevel}{req}{(equipped ? "  ·  <color=#3CCB5A>KUŞANILDI</color>" : "")}";
+        }
+
+        public static string LevelTooLow(int required, int level) =>
+            $"<color=#FF5A4A>Seviye {required} gerekir</color> (sen {level}). Çantanda tut, seviye atlayınca giy!";
         public static string Sold(double value) => $"Satıldı: +{Num(value)}";
 
         // ---------------- Yükseltmeler ----------------
@@ -823,7 +825,6 @@ namespace RiskLoop.Game
             {
                 case UpgradeType.Earnings: return "Daha iyi kazma";
                 case UpgradeType.Safety: return "Destek kirişleri";
-                case UpgradeType.Insurance: return "Sigorta";
                 case UpgradeType.FindChance: return "Maden dedektörü";
                 case UpgradeType.Luck: return "Uğurlu fener";
                 case UpgradeType.FindValue: return "Kuyumcu terazisi";
@@ -844,7 +845,6 @@ namespace RiskLoop.Game
             {
                 case UpgradeType.Earnings: return $"Kazanç x{RiskMath.EarningsBonus(b, level):0.00}";
                 case UpgradeType.Safety: return $"Göçük riski x{RiskMath.SafetyFactor(b, level):0.00}";
-                case UpgradeType.Insurance: return $"Kurtarılan %{Pct(RiskMath.InsuranceFraction(b, level))}";
                 case UpgradeType.FindChance: return $"Bulgu şansı +%{Pct(b.findChanceUpgrade.effectPerLevel * level)}";
                 case UpgradeType.Luck: return $"Nadirlik +%{Pct(b.luckUpgrade.effectPerLevel * level)}";
                 case UpgradeType.FindValue: return $"Bulgu değeri x{RiskMath.FindValueBonus(b, level):0.00}";

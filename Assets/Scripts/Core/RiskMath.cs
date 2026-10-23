@@ -59,45 +59,44 @@ namespace RiskLoop.Core
 
         /// <summary>
         /// Bu adıma inerken patlama (göçük) olasılığı, 0..1 arası. Her adım bağımsız bir zar atışıdır.
-        /// Risk BÖLGE İÇİNDE artar; derin bölgeler sadece biraz daha riskli. Boss katında göçük yok (sınav bossun kendisi).
+        /// 13. tur: risk BU TURDA KAZILAN KAT SAYISIYLA (runFloor) sürekli artar, boss katlarında SIFIRLANMAZ.
+        /// Derine indikçe geçme şansı hep düşer (alt sınır yok, en fazla maxBustChance). Yeni tur (ya da geçitten başlama)
+        /// güvenli başlar. Derin bölgeler biraz daha riskli. Boss katında göçük yok (sınav bossun kendisi).
         /// runSafetyFactor = bu turun bulgu etkileri, ekipman ve yetenek çarpanlarının toplamı (çağıran hesaplar).
         /// </summary>
-        public static double BustChance(BalanceData b, int step, int safetyLevel, double runSafetyFactor = 1)
+        public static double BustChance(BalanceData b, int step, int runFloor, int safetyLevel, double runSafetyFactor = 1, double tempFactor = 1)
         {
             if (IsBossFloor(b, step)) return 0;
-            int f = FloorInZone(b, step);
+            int f = Math.Max(runFloor, 1);
             int z = ZoneOf(b, step);
             double raw = b.baseBustChance + b.bustChancePerZoneFloor * (f - 1) + b.bustChancePerZoneFloorSq * (f - 1) * (f - 1)
                          + b.bustChancePerZone * (z - 1);
-            double reduced = raw * SafetyFactor(b, safetyLevel) * runSafetyFactor;
-            return Clamp(reduced, BustFloor(b, step), b.maxBustChance);
+            // Kalıcı azaltıcıların (yükseltme, ekipman, yetenek, bulgu) toplamı riski en fazla (1 - minTotalRiskFactor) düşürür:
+            // yoksa iyi donanımlı oyuncu için geçme şansı hep yüksek kalır, risk hissi kaybolur. Lanet (>1) sınırsız artırır.
+            // tempFactor: büyüler ve Dağın Kalbi (geçici, bedelli) bu sınırın dışında.
+            double factor = Math.Max(SafetyFactor(b, safetyLevel) * runSafetyFactor, b.minTotalRiskFactor);
+            double reduced = raw * factor * tempFactor;
+            return Clamp(reduced, BustFloor(b, step, runFloor), b.maxBustChance);
         }
 
         /// <summary>
         /// Cesaret çarpanı: göçük riski p olan katı sağ geçince risk altındaki kazanç bununla çarpılır.
         /// p küçükse (courageMinChance altı) 1: güvenli katta ödül yok, riskli katta neredeyse adil bahis.
         /// </summary>
-        public static double CourageMultiplier(BalanceData b, double bustChance)
+        public static double CourageMultiplier(BalanceData b, double bustChance, double bonus = 0)
         {
             if (bustChance < b.courageMinChance || bustChance >= 1.0) return 1.0;
-            return Math.Min(1.0 + b.courageEdge * bustChance / (1.0 - bustChance), b.maxCourageMult);
+            // bonus: Derin Soluk yeteneği (kazanılan yüzde x(1 + bonus))
+            return Math.Min(1.0 + b.courageEdge * (1.0 + bonus) * bustChance / (1.0 - bustChance), b.maxCourageMult);
         }
 
         /// <summary>Bu katta riskin inebileceği en düşük değer. Hiçbir yükseltme bunun altına indiremez.</summary>
-        public static double BustFloor(BalanceData b, int step)
+        public static double BustFloor(BalanceData b, int step, int runFloor)
         {
             if (IsBossFloor(b, step)) return 0;
-            int f = FloorInZone(b, step);
+            int f = Math.Max(runFloor, 1);
             int z = ZoneOf(b, step);
             return Math.Min(b.minBustChance + b.bustFloorPerZoneFloor * (f - 1) + b.bustFloorPerZone * (z - 1), b.maxBustChance);
-        }
-
-        // ---------------- Sigorta ----------------
-
-        /// <summary>Patlamada kurtarılan tur kazancı oranı, 0..1. Hiçbir zaman 1'e ulaşmaz.</summary>
-        public static double InsuranceFraction(BalanceData b, int insuranceLevel)
-        {
-            return 1.0 - Math.Pow(1.0 - b.insuranceUpgrade.effectPerLevel, insuranceLevel);
         }
 
         // ---------------- Bulgular ----------------
@@ -248,6 +247,9 @@ namespace RiskLoop.Core
         }
 
         // ---------------- Savaş ----------------
+
+        /// <summary>Canavar seviyesi (kattan): en az 1. Düşen eşyanın giyme seviyesi de budur.</summary>
+        public static int MonsterLevel(CombatBalance c, int step) => Math.Max(1, (int)Math.Round(step * c.monsterLevelPerStep));
 
         /// <summary>Bu katta canavar çıkma olasılığı (keşif katı hariç; orada boss garantili).</summary>
         public static double MonsterChance(CombatBalance c, int step)

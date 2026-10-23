@@ -49,7 +49,8 @@ namespace RiskLoop.Core
                 baseId = baseDef.id,
                 slot = baseDef.slot,
                 tier = tier,
-                itemLevel = step
+                itemLevel = step,
+                requiredLevel = RiskMath.MonsterLevel(c, step)   // Giyme seviyesi = o katın canavar seviyesi
             };
 
             // 3) Taban statlar (düz statlar seviyeyle üstel, yüzde statlar yavaş büyür)

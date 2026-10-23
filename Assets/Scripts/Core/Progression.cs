@@ -11,7 +11,6 @@ namespace RiskLoop.Core
     {
         Talents,        // Yetenek ağacı
         Equipment,      // Ekipman sekmesi + eşya düşmesi
-        Insurance,      // Sigorta yükseltmesi
         FindChance,     // Maden dedektörü yükseltmesi
         Checkpoints,    // Geçitten başlama
         Enhance,        // Güçlendirme
@@ -38,7 +37,6 @@ namespace RiskLoop.Core
         // Açılış seviyeleri (Feature sırasıyla aynı olmak zorunda değil; GetUnlockLevel eşler)
         public int talentsLevel = 2;
         public int equipmentLevel = 3;
-        public int insuranceLevel = 4;
         public int findChanceLevel = 4;
         public int checkpointsLevel = 5;
         public int enhanceLevel = 6;
@@ -53,7 +51,6 @@ namespace RiskLoop.Core
             {
                 case Feature.Talents: return talentsLevel;
                 case Feature.Equipment: return equipmentLevel;
-                case Feature.Insurance: return insuranceLevel;
                 case Feature.FindChance: return findChanceLevel;
                 case Feature.Checkpoints: return checkpointsLevel;
                 case Feature.Enhance: return enhanceLevel;
@@ -83,7 +80,7 @@ namespace RiskLoop.Core
         RiskReduction,    // Göçük riski çarpanı *(1 - x)
         RewardBonus,      // Kat ödülü +%
         FindChance,       // Bulgu şansı +
-        Insurance,        // Sigorta +
+        CourageBonus,     // Cesaret ödülü + (riskli katı geçince kazanılan yüzde artar)
         Salvage,          // Enkazdan kurtarma şansı +
         ZoneStartSafety,  // Bölgenin ilk 5 katında risk *(1 - x)        (kapanış yeteneği)
         Attack,           // Saldırı +%
@@ -98,7 +95,7 @@ namespace RiskLoop.Core
         GearDrop,         // Eşya düşme şansı +
         SellValue,        // Satış değeri +%
         TierUpgrade,      // Bulgu/eşya nadirliğinin +1 olma şansı ("parlayış")
-        PityBoost,        // Talihsizlik telafisi kademe başına +
+        RiskLuck,         // Riskli katın bulgu nadirliği bonusu +
         TwinFind          // Bulgunun iki kez çıkma şansı                  (kapanış yeteneği)
     }
 
@@ -143,7 +140,7 @@ namespace RiskLoop.Core
             new TalentDefinition("stone_sense", TalentBranch.Dwarf, 0, 5, TalentEffect.RiskReduction, 0.03),
             new TalentDefinition("gold_vein", TalentBranch.Dwarf, 1, 5, TalentEffect.RewardBonus, 0.06),
             new TalentDefinition("deep_instinct", TalentBranch.Dwarf, 1, 5, TalentEffect.FindChance, 0.02),
-            new TalentDefinition("brace_master", TalentBranch.Dwarf, 2, 3, TalentEffect.Insurance, 0.05),
+            new TalentDefinition("brace_master", TalentBranch.Dwarf, 2, 3, TalentEffect.CourageBonus, 0.08),
             new TalentDefinition("rubble_hunter", TalentBranch.Dwarf, 2, 3, TalentEffect.Salvage, 0.15),
             new TalentDefinition("mountain_heart", TalentBranch.Dwarf, 3, 1, TalentEffect.ZoneStartSafety, 0.5),
 
@@ -162,7 +159,7 @@ namespace RiskLoop.Core
             new TalentDefinition("plunderer", TalentBranch.Dragon, 1, 5, TalentEffect.GearDrop, 0.06),
             new TalentDefinition("haggler", TalentBranch.Dragon, 1, 5, TalentEffect.SellValue, 0.10),
             new TalentDefinition("glimmer", TalentBranch.Dragon, 2, 3, TalentEffect.TierUpgrade, 0.03),
-            new TalentDefinition("fortune_wheel", TalentBranch.Dragon, 2, 3, TalentEffect.PityBoost, 0.04),
+            new TalentDefinition("fortune_wheel", TalentBranch.Dragon, 2, 3, TalentEffect.RiskLuck, 0.4),
             new TalentDefinition("dragon_eye", TalentBranch.Dragon, 3, 1, TalentEffect.TwinFind, 0.12),
         };
 
@@ -179,9 +176,9 @@ namespace RiskLoop.Core
     /// <summary>Harcanmış yeteneklerin toplam etkisi. GameSession kurallara bunu uygular.</summary>
     public struct TalentBonuses
     {
-        public double DigPower, RiskReduction, RewardBonus, FindChance, Insurance, Salvage, ZoneStartSafety;
+        public double DigPower, RiskReduction, RewardBonus, FindChance, CourageBonus, Salvage, ZoneStartSafety;
         public double Attack, Health, CritChance, Defense, Lifesteal, EnrageSlow, BossDamage;
-        public double Luck, FindValue, GearDrop, SellValue, TierUpgrade, PityBoost, TwinFind;
+        public double Luck, FindValue, GearDrop, SellValue, TierUpgrade, RiskLuck, TwinFind;
 
         public void Add(TalentEffect effect, double value)
         {
@@ -191,7 +188,7 @@ namespace RiskLoop.Core
                 case TalentEffect.RiskReduction: RiskReduction += value; break;
                 case TalentEffect.RewardBonus: RewardBonus += value; break;
                 case TalentEffect.FindChance: FindChance += value; break;
-                case TalentEffect.Insurance: Insurance += value; break;
+                case TalentEffect.CourageBonus: CourageBonus += value; break;
                 case TalentEffect.Salvage: Salvage += value; break;
                 case TalentEffect.ZoneStartSafety: ZoneStartSafety += value; break;
                 case TalentEffect.Attack: Attack += value; break;
@@ -206,7 +203,7 @@ namespace RiskLoop.Core
                 case TalentEffect.GearDrop: GearDrop += value; break;
                 case TalentEffect.SellValue: SellValue += value; break;
                 case TalentEffect.TierUpgrade: TierUpgrade += value; break;
-                case TalentEffect.PityBoost: PityBoost += value; break;
+                case TalentEffect.RiskLuck: RiskLuck += value; break;
                 case TalentEffect.TwinFind: TwinFind += value; break;
             }
         }

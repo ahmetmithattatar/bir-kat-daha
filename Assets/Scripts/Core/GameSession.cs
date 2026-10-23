@@ -26,6 +26,7 @@ namespace RiskLoop.Core
     ///   Attack:        1) kritik (Kartal Gözü yükü varsa zar yine atılır, sonuç kritik)  2) hasar oynaması
     ///   MonsterAttack: 1) hasar oynaması
     ///   Zafer:         katın bulgusu (4-6), sonra ganimet: [normal canavarsa düşme zarı] her eşya için nadirlik [+parlayış] + RollGearItem
+    ///   Bulgu eşyaysa: tür seçildikten sonra ayrı eşya nadirliği zarı (RollGearTier: derinlik şansı yok, sınırlı) [+parlayış]
     ///   RollGearItem:  yuva, taban, her ek stat için stat seçimi
     ///   Göçük/ölüm:    enkazdan kurtarma (turda eşya varsa)
     ///   Cast:          Kehanet: sonraki katın göçük zarı ŞİMDİ atılır, Advance yeni zar atmaz. Vuruşlu büyüler Attack gibi (her vuruş 2 zar)
@@ -101,16 +102,20 @@ namespace RiskLoop.Core
         {
             TalentBonuses t = Talents;
             double factor = RunSafetyFactor * (1.0 - Stats.CaveResist) * (1.0 - Math.Min(t.RiskReduction, 0.6));
-            // Dağın Kalbi: bölgenin ilk yarısında risk ayrıca azalır
-            if (t.ZoneStartSafety > 0 && RiskMath.FloorInZone(Balance, step) <= Balance.zoneSize / 2) factor *= 1.0 - t.ZoneStartSafety;
-            // Büyü: korumalı katlar (Kaya Omuz, Zamanı Bük, Yol Bulucu)
+            int runFloor = RunFloorOf(step);
+            // Geçici azaltıcılar (toplam sınırın dışında): Dağın Kalbi turun ilk 5 katında, büyüyle korunan katlar
+            double temp = 1.0;
+            if (t.ZoneStartSafety > 0 && runFloor <= Balance.zoneSize / 2) temp *= 1.0 - t.ZoneStartSafety;
             if (CurrentRun != null && CurrentRun.SafeFloors > 0 && step > CurrentStep && step <= CurrentStep + CurrentRun.SafeFloors)
-                factor *= 1.0 - CurrentRun.SafeFloorsFactor;
-            return RiskMath.BustChance(Balance, step, Level(UpgradeType.Safety), factor);
+                temp *= 1.0 - CurrentRun.SafeFloorsFactor;
+            return RiskMath.BustChance(Balance, step, runFloor, Level(UpgradeType.Safety), factor, temp);
         }
 
+        /// <summary>Bu adım turun kaçıncı kazılan katı? (Geçitten başlandıysa başlangıçtan sayılır.) Risk buna göre artar.</summary>
+        private int RunFloorOf(int step) => step - (CurrentRun != null ? CurrentRun.StartStep : 0);
+
         /// <summary>Sonraki katı sağ geçersen risk altındaki kazanç bununla çarpılır (Cesaret, 1 = yok).</summary>
-        public double NextCourageMult => RiskMath.CourageMultiplier(Balance, NextBustChance);
+        public double NextCourageMult => RiskMath.CourageMultiplier(Balance, NextBustChance, Talents.CourageBonus);
 
         /// <summary>Bir sonraki inişte hayatta kalınırsa eklenecek kazanç.</summary>
         public double NextStepReward => RewardFor(CurrentStep + 1);
@@ -132,12 +137,6 @@ namespace RiskLoop.Core
             }
         }
 
-        /// <summary>Göçükte/yenilgide kurtarılacak oran (0..0.9). Sigorta yükseltmesi + yetenek.</summary>
-        public double InsuranceFraction =>
-            IsUnlocked(Feature.Insurance) || Talents.Insurance > 0
-                ? Math.Min(0.9, RiskMath.InsuranceFraction(Balance, Level(UpgradeType.Insurance)) + Talents.Insurance)
-                : 0;
-
         /// <summary>Mevcut adımdan sonraki ilk boss katı.</summary>
         public MilestoneDefinition NextMilestone => RiskMath.NextMilestone(Balance, CurrentStep);
 
@@ -156,12 +155,7 @@ namespace RiskLoop.Core
         private double LuckAt(int step) =>
             RiskMath.Luck(Balance, step, Level(UpgradeType.Luck), RunLuck) + Stats.Luck + Talents.Luck
             + Balance.prestige.ancientLuck.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientLuck)
-            + (CurrentRun != null ? CurrentRun.CourageLuck : 0)   // Riskli katın bulgusu daha nadir
-            + PityLuck;
-
-        /// <summary>Talihsizlik telafisi: art arda göçük/yenilgilerden gelen ek şans (yetenekle güçlenir).</summary>
-        public double PityLuck =>
-            (Balance.pityLuckPerStack + Talents.PityBoost) * Math.Min(Progress.pityStacks, Balance.maxPityStacks);
+            + (CurrentRun != null ? CurrentRun.CourageLuck : 0);   // Riskli katın bulgusu daha nadir
 
         /// <summary>Toplam şans (derinlik hariç kaynaklar). Gösterge için.</summary>
         public double LuckBonus => LuckAt(1) - Balance.luckPerStep;
@@ -223,9 +217,8 @@ namespace RiskLoop.Core
 
             if (roll < chance)
             {
-                result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout, chance);
+                result.SalvagedItem = BustOutcome(out result.LostEarnings);
                 result.Busted = true;
-                result.Unlucky = chance < Balance.unluckyBustChance;
                 return result;
             }
 
@@ -239,16 +232,16 @@ namespace RiskLoop.Core
             GainMana(CB.manaPerFloor);
             CurrentRun.SurvivalOdds *= 1.0 - chance;   // "Bu tur %X'lik yolu geçtin" (oyuncu ne kadar şanslı olduğunu görsün)
 
-            // Cesaret: riskli katı sağ geçmek risk altındaki tüm kazancı katlar (bu kısım sigortaya dahil değil).
+            // Cesaret: riskli katı sağ geçmek risk altındaki tüm kazancı katlar. Göçükte hepsi gider.
             // Riskli katın bulgusu da daha nadir gelir.
-            double courage = RiskMath.CourageMultiplier(Balance, chance);
+            double courage = RiskMath.CourageMultiplier(Balance, chance, Talents.CourageBonus);
             result.CourageMult = courage;
-            CurrentRun.CourageLuck = chance >= Balance.courageMinChance ? Balance.courageLuckPerRisk * chance : 0;
+            CurrentRun.CourageLuck = chance >= Balance.courageMinChance ? Balance.courageLuckPerRisk * chance * (1.0 + Talents.RiskLuck) : 0;
             if (courage > 1.0)
             {
                 double courageGain = CurrentRun.Earnings * (courage - 1.0);
                 CurrentRun.Earnings += courageGain;
-                CurrentRun.CourageEarnings += courageGain;   // Eski kumar kazancı da katlanır: hepsi courageGain içinde
+                CurrentRun.CourageEarnings += courageGain;   // Eski cesaret kazancı da büyür: hepsi courageGain içinde
                 CurrentRun.CourageTotalMult *= courage;
                 result.CourageGain = courageGain;
             }
@@ -314,7 +307,6 @@ namespace RiskLoop.Core
             CurrentRun.Status = RunStatus.CashedOut;
             MoveLootToInventory();
             CheckBestRun();
-            Progress.pityStacks = 0;  // Başarılı dönüş: talihsizlik telafisi sıfırlanır
             return payout;
         }
 
@@ -330,23 +322,14 @@ namespace RiskLoop.Core
         }
 
         /// <summary>
-        /// Göçük ya da ölüm: tur kazancı gider, sigorta bir kısmını kurtarır. Cebe girmiş (Banked) para güvende.
+        /// Göçük ya da ölüm: risk altındaki tur kazancının TAMAMI gider. Cebe girmiş (Banked) para güvende.
         /// Turda düşen eşyalar kaybolur; ama en nadir olanı kurtarma şansıyla enkazdan çıkabilir (döndürülür).
-        /// Talihsizlik telafisi bir artar (sonraki turlar daha şanslı).
         /// </summary>
-        private GearItem BustOutcome(out double lost, out double saved, double bustChance = 1.0)
+        private GearItem BustOutcome(out double lost)
         {
-            // Sigorta sadece "normal" kazancı kurtarır; Cesaret çarpanından gelen kumar kazancı tamamen gider
-            saved = Math.Max(0, CurrentRun.Earnings - CurrentRun.CourageEarnings) * InsuranceFraction;
-            lost = CurrentRun.Earnings - saved;
-
-            Progress.money += saved;
+            lost = CurrentRun.Earnings;
             Progress.totalBusts++;
-            Progress.pityStacks = Math.Min(Progress.pityStacks + 1, Balance.maxPityStacks);
-            // Düşük riskte gelen göçük "şanssızlık": telafi fazladan birikir
-            if (bustChance < Balance.unluckyBustChance)
-                Progress.pityStacks = Math.Min(Progress.pityStacks + Balance.unluckyExtraPityStacks, Balance.maxPityStacks);
-            CurrentRun.Payout = saved;
+            CurrentRun.Payout = 0;
             CurrentRun.Monster = null;
             CurrentRun.Status = RunStatus.Busted;
             CheckBestRun();
@@ -441,6 +424,9 @@ namespace RiskLoop.Core
 
             if (type == FindType.Gear)
             {
+                // Eşyanın nadirliği ayrı zarla (eşya şansı sınırlı, derinlik eklenmez): derinde hep kırmızı/mor düşmesin
+                tier = RollGearTier(step, Math.Min(minTier, Balance.combat.maxBossDropMinTier));          // ZAR: eşya nadirliği
+                find.Tier = tier;
                 find.Item = RollGearItem(step, tier);
                 find.Value = SellValue(find.Item);
             }
@@ -467,6 +453,19 @@ namespace RiskLoop.Core
         }
 
         /// <summary>Nadirlik zarı: derinlik + yükseltme + tılsım + ekipman + yetenek şansı. Parlayış: %x ihtimalle +1.</summary>
+        /// <summary>
+        /// Eşya nadirliği: derinlik şansı YOK, toplam şans gearLuckCap ile sınırlı. Böylece derin katta da çoğunlukla
+        /// beyaz-mavi-yeşil düşer, kırmızı/mor gerçekten nadir kalır. Eşyanın gücünü derinlik (eşya seviyesi) verir.
+        /// </summary>
+        private int RollGearTier(int step, int minTier)
+        {
+            double luck = Math.Min(Balance.combat.gearLuckCap, Math.Max(0, LuckAt(step) - Balance.luckPerStep * Math.Max(step, 1)));
+            int tier = RiskMath.WeightedPick(RiskMath.TierWeights(Balance, luck, minTier), _random.NextDouble());
+            int maxTier = Balance.rarityTiers.Length - 1;
+            if (Talents.TierUpgrade > 0 && tier < maxTier && _random.NextDouble() < Talents.TierUpgrade) tier++;  // ZAR: parlayış
+            return tier;
+        }
+
         private int RollTier(int step, int minTier)
         {
             int tier = RiskMath.WeightedPick(RiskMath.TierWeights(Balance, LuckAt(step), minTier), _random.NextDouble());
@@ -502,7 +501,7 @@ namespace RiskLoop.Core
                 case FindType.Multiplier:
                     // Risk altındaki kazancı çarpar: büyük kazanç, ama göçükte hepsi gider
                     double gained = CurrentRun.Earnings * Math.Min(find.Value, Balance.maxMultiplierFindBonus);
-                    CurrentRun.CourageEarnings *= 1.0 + Math.Min(find.Value, Balance.maxMultiplierFindBonus);   // Kumar kısmı da katlanır (yine sigortasız)
+                    CurrentRun.CourageEarnings *= 1.0 + Math.Min(find.Value, Balance.maxMultiplierFindBonus);   // Cesaret kısmı da katlanır
                     CurrentRun.Earnings += gained;
                     CurrentRun.MultiplierGained += gained;
                     break;
@@ -543,7 +542,6 @@ namespace RiskLoop.Core
         {
             switch (type)
             {
-                case UpgradeType.Insurance: return Feature.Insurance;
                 case UpgradeType.FindChance: return Feature.FindChance;
                 case UpgradeType.Luck: return Feature.Luck;
                 case UpgradeType.FindValue: return Feature.FindValue;

@@ -147,7 +147,6 @@ namespace RiskLoop.Game.Art
             // Yükseltmeler
             { "up_Earnings", ("pick", "E0B040", "8A5A30") },
             { "up_Safety", ("beam", "A0703C", "707070") },
-            { "up_Insurance", ("shield", "4A90E0", "FFD23A") },
             { "up_FindChance", ("lens", "B0B4BC", "8FE0FF") },
             { "up_Luck", ("lantern", "C89A50", "FFC040") },
             { "up_FindValue", ("scale", "E0C040", "40C0A0") },

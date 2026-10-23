@@ -54,7 +54,7 @@ namespace RiskLoop.Core
         /// <summary>Bu turda geçilen katların hepsini sağ atlatma olasılığı (çarpım). Küçüldükçe oyuncu "ne şanslıyım" der.</summary>
         public double SurvivalOdds { get; internal set; } = 1.0;
 
-        /// <summary>Risk altındaki kazancın Cesaret çarpanından gelen kısmı (sigorta bunu kurtarmaz).</summary>
+        /// <summary>Risk altındaki kazancın Cesaret ödülünden gelen kısmı (özet ve hesaplar için).</summary>
         public double CourageEarnings { get; internal set; }
         /// <summary>Turda alınan toplam Cesaret çarpanı (özet ve rekor için).</summary>
         public double CourageTotalMult { get; internal set; } = 1.0;
@@ -92,7 +92,6 @@ namespace RiskLoop.Core
         public double Roll;           // Atılan zar (0..1). Roll < BustChance ise patlama
         public double RewardGained;   // Hayatta kalındıysa eklenen kazanç
         public double LostEarnings;   // Patlamada kaybedilen miktar
-        public double InsurancePayout;// Patlamada sigortanın kurtardığı miktar
         public double XpGained;       // Bu inişte kazanılan deneyim
         public int LevelsGained;      // Bu inişte atlanan seviye sayısı (yetenek puanı + yeni özellikler)
         public GearItem SalvagedItem; // Göçükte enkazdan kurtarılan eşya (yoksa null)
@@ -102,7 +101,6 @@ namespace RiskLoop.Core
 
         public MonsterInstance Encounter; // Bu katta canavar çıktıysa (bulgu zafere ertelenir)
         public double HealthRegen;        // Savaşsız katta dolan can
-        public bool Unlucky;              // Düşük riskte (unluckyBustChance altı) göçük: fazladan telafi
         public double CourageMult;        // Bu katı sağ geçince risk altındaki kazanç bununla çarpıldı (1 = yok)
         public double CourageGain;        // Cesaretten gelen ek kazanç
 

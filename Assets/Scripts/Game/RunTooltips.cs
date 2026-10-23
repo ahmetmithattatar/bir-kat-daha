@@ -70,14 +70,10 @@ namespace RiskLoop.Game
             $"<b>Tehdit: {ThreatShort(s.CurrentThreat)}</b>\n{(s.InCombat ? "Bu savaşı" : "Sonraki kattaki canavarı")} öldürene kadar canının ne kadarını kaybedeceğinin tahmini.\n" +
             "Kolay < %20, Orta < %50, Zor < %100, Ölümcül: büyük ihtimalle ölürsün.";
 
-        public static string Insurance(GameSession s) =>
-            $"<b>Sigorta: %{UIStrings.Pct(s.InsuranceFraction)}</b>\nGöçükte ya da yenilgide risk altındaki kazancın bu kadarı kurtarılır.";
-
         public static string Luck(GameSession s)
         {
-            string pity = s.PityLuck > 0 ? $"\nTalihsizlik telafisi: <b>+%{UIStrings.Pct(s.PityLuck)}</b> (göçük/yenilgilerden, başarılı dönüşte sıfırlanır)" : "";
             return $"<b>Nadirlik şansı: +%{UIStrings.Pct(s.LuckBonus)}</b>\nNadir bulgu ve eşya ihtimalini artırır. Derinlik de ayrıca ekler.\n" +
-                   $"Kaynaklar: {List(If(s, Feature.Luck, "Uğurlu fener"), If(s, Feature.Equipment, "ekipman"), "Uğur tılsımı", If(s, Feature.Talents, "yetenekler"), If(s, Feature.Prestige, "Yıldızların Lütfu"))}." + pity;
+                   $"Kaynaklar: {List(If(s, Feature.Luck, "Uğurlu fener"), If(s, Feature.Equipment, "ekipman"), "Uğur tılsımı", If(s, Feature.Talents, "yetenekler"), If(s, Feature.Prestige, "Yıldızların Lütfu"))}.";
         }
 
         public static string Gamble(GameSession s)
@@ -85,11 +81,11 @@ namespace RiskLoop.Game
             s.NextGamble(out double win, out double lose, out double chance);
             double courage = s.NextCourageMult;
             string courageLine = courage > 1.0
-                ? $"\n<color=#FFC83A><b>CESARET x{courage:0.00}</b></color>: bu katı geçersen risk altındaki TÜM kazanç katlanır ve bulgusu daha nadir gelir.\n" +
-                  "Geçme şansı ne kadar düşükse çarpan o kadar büyük. Bu kumar kazancını sigorta kurtarmaz."
-                : $"\n<color=#9AA0B4>Geçme şansı %{UIStrings.Pct(1 - s.Balance.courageMinChance)}'in altına düşünce Cesaret çarpanı başlar.</color>";
-            return $"<b>Sonraki iniş kumarı</b>\nGeçersen <b>+{UIStrings.Num(win)}</b> (%{UIStrings.Pct(1 - chance)})\n" +
-                   $"Göçerse <b>-{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) ve tur biter{(s.IsUnlocked(Feature.Insurance) ? " (sigorta normal kazancın bir kısmını kurtarır)" : "")}" +
+                ? $"\n<color=#FFC83A><b>CESARET {UIStrings.CourageBonus(courage)}</b></color>: bu katı geçersen risk altındaki TÜM kazanç bu kadar büyür ve bulgusu daha nadir gelir.\n" +
+                  "Geçme şansı ne kadar düşükse ödül o kadar büyük."
+                : $"\n<color=#9AA0B4>Geçme şansı %{UIStrings.Pct(1 - s.Balance.courageMinChance)}'in altına düşünce Cesaret ödülü başlar.</color>";
+            return $"<b>Sonraki kat</b>\nGeçersen <b>+{UIStrings.Num(win)}</b> (%{UIStrings.Pct(1 - chance)})\n" +
+                   $"Göçerse <b>-{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) ve tur biter" +
                    courageLine;
         }
 

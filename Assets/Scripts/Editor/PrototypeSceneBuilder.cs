@@ -310,7 +310,7 @@ namespace RiskLoop.EditorTools
             // ---- Sol alt HUD: büyü çubuğu (mana + 6 büyü, kısayol 1-6) ----
             SpellBarView spellBar = BuildSpellBar(panel);
 
-            // ---- Alt orta: Kumar terazisi (bir sonraki hamlenin riski ve ödülü, büyük) ----
+            // ---- Alt orta: Cesaret terazisi (sonraki kata geçme şansı, büyük) ----
             RiskGaugeView gauge = BuildRiskGauge(panel, heartbeat);
 
             // ---- Mesaj: terazinin hemen üstünde ----
@@ -355,8 +355,8 @@ namespace RiskLoop.EditorTools
         }
 
         /// <summary>
-        /// Kumar terazisi: alt ortada yarı saydam panel.
-        ///   üst satır : "GÖÇÜK RİSKİ" | büyük "%18" | yorum ("KUMAR")
+        /// Cesaret terazisi: alt ortada yarı saydam panel.
+        ///   üst satır : (kehanet notu) | büyük geçme şansı "%82" | (boş)
         ///   çubuk     : risk kadar dolu, renk yeşil → sarı → kırmızı
         ///   alt satır : "KAZANIRSAN +1.2K" | "KAYBEDERSEN -8.4K"
         /// heartbeat: tam ekran kırmızı kenar (nabız), terazi yönetir.
@@ -375,7 +375,7 @@ namespace RiskLoop.EditorTools
             RectTransform top = CreateUIObject("Top", root);
             SetHeight(top, 72);
             AddHorizontalLayout(top, spacing: 10);
-            TMP_Text title = CreateText("Title", top, UIStrings.GaugeRiskTitle, 22, 72, TextAlignmentOptions.MidlineLeft);
+            TMP_Text title = CreateText("Title", top, "", 20, 72, TextAlignmentOptions.MidlineLeft);
             title.color = HintColor;
             FillRemainingWidth(title);
             TMP_Text risk = CreateText("Risk", top, "%0", 64, 72);

@@ -57,6 +57,7 @@ namespace RiskLoop.Core
                 Attack = RiskMath.MonsterAttack(Balance.combat, def, step),
                 Milestone = milestone
             };
+            monster.Level = RiskMath.MonsterLevel(Balance.combat, step);
             monster.Difficulty = DifficultyBand(MonsterThreatRatio(monster, Stats));   // Ad rengi ve XP kuralı
             return monster;
         }
@@ -129,7 +130,7 @@ namespace RiskLoop.Core
             {
                 CurrentRun.PlayerHealth = 0;
                 CurrentRun.DiedToMonster = true;
-                result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout);
+                result.SalvagedItem = BustOutcome(out result.LostEarnings);
                 result.PlayerDied = true;
             }
             return result;
@@ -205,11 +206,11 @@ namespace RiskLoop.Core
                     break;
                 case MonsterKind.MiniBoss:
                     drops = c.miniBossDrops;
-                    minTier = monster.Milestone != null ? Math.Max(0, monster.Milestone.minTier - 1) : 1;
+                    minTier = Math.Min(monster.Milestone != null ? Math.Max(0, monster.Milestone.minTier - 1) : 1, c.maxBossDropMinTier - 1);
                     break;
                 case MonsterKind.Boss:
                     drops = c.bossDrops;
-                    minTier = monster.Milestone != null ? monster.Milestone.minTier : 3;
+                    minTier = Math.Min(monster.Milestone != null ? monster.Milestone.minTier : 3, c.maxBossDropMinTier);
                     break;
             }
 
@@ -225,7 +226,7 @@ namespace RiskLoop.Core
 
             for (int i = 0; i < drops; i++)
             {
-                int tier = RollTier(monster.Step, minTier);   // ZAR: nadirlik
+                int tier = RollGearTier(monster.Step, minTier);   // ZAR: eşya nadirliği (sınırlı şans)
                 GearItem item = RollGearItem(monster.Step, tier);
                 var drop = new FindResult
                 {

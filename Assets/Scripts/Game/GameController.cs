@@ -260,7 +260,7 @@ namespace RiskLoop.Game
                 Save();
                 yield return feedback.PlayBust();
                 upgradePanel.ShowResult(UIStrings.Busted(result, _session.CurrentRun) +
-                                        UIStrings.AfterBust(result.SalvagedItem, _session.Progress.pityStacks, _session.PityLuck));
+                                        UIStrings.AfterBust(result.SalvagedItem));
                 SetSequence(false);
                 ShowUpgradeScreen();
                 yield break;
@@ -316,7 +316,7 @@ namespace RiskLoop.Game
                 Save();
                 yield return feedback.PlayDefeat();
                 upgradePanel.ShowResult(UIStrings.Defeated(hit, run, FantasyTexts.MonsterName(monster.Definition.id)) +
-                                        UIStrings.AfterBust(hit.SalvagedItem, _session.Progress.pityStacks, _session.PityLuck));
+                                        UIStrings.AfterBust(hit.SalvagedItem));
                 SetSequence(false);
                 ShowUpgradeScreen();
                 yield break;

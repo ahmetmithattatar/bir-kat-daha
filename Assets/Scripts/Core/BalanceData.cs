@@ -107,14 +107,14 @@ namespace RiskLoop.Core
         // canavar gücüyle zorlaşır. Böylece takılan oyuncu o bölgeyi farmlayıp (eşya + para) bossu geçecek güce ulaşır.
         public int zoneSize = 10;
 
-        // --- Risk eğrisi (bölge içinde) ---
-        // f = bölge içindeki kat (1..9), z = bölge (1..)
+        // --- Risk eğrisi (13. tur: turda kazılan kat sayısıyla, boss katında SIFIRLANMAZ) ---
+        // f = bu turda kazılan kat (1, 2, 3 ...; geçitten başlandıysa oradan sayılır), z = bölge (1..)
         // raw(step)   = baseBustChance + bustChancePerZoneFloor * (f - 1) + bustChancePerZoneFloorSq * (f - 1)^2 + bustChancePerZone * (z - 1)
         // floor(step) = minBustChance + bustFloorPerZoneFloor * (f - 1) + bustFloorPerZone * (z - 1)
         // chance      = clamp(raw * safetyFactor * runSafetyFactor * yetenek, floor, max).  Boss katında (f = 10) göçük yok.
         // 11. tur: eğri yumuşatıldı. Ölçüm (gerçek kurallarla 200 bin tur): eski eğride 1. bölgenin 9 katını sağ geçme ~%25'ti,
         // oyuncu düşük yüzdelerde bile sürekli göçük yaşıyordu. Yeni eğride ~%47 (ilk kat %2, 9. kat %14).
-        // 12. tur: eğri DIŞBÜKEY (karesel). Bölgenin ilk katları neredeyse güvenli (%98 geçme), son katları gerçek kumar
+        // 12. tur: eğri DIŞBÜKEY (karesel). Bölgenin ilk katları neredeyse güvenli (%98 geçme), son katları gerçek cesaret sınavı
         // (8. kat ~%65, 9. kat ~%55 geçme). Riskli katları geçmek Cesaret çarpanıyla ödüllendirilir (aşağıda).
         public double baseBustChance = 0.02;
         public double bustChancePerZoneFloor = 0.0;
@@ -136,7 +136,7 @@ namespace RiskLoop.Core
         public double maxFindChance = 0.90;
 
         // Şans: nadirlik ağırlıkları  weight(t) = tier.weight * (1 + luck) ^ t  ile kayar.
-        // luck = luckPerStep * step + yükseltme + ekipman + tılsım + yetenek + telafi. Derine inmek nadir bulgu şansını artırır.
+        // luck = luckPerStep * step + yükseltme + ekipman + tılsım + yetenek. Derine inmek nadir bulgu şansını artırır.
         public double luckPerStep = 0.012;
         public double maxRunLuck = 1.5;          // Tılsımlardan gelen tur şansı en fazla bu kadar
 
@@ -164,20 +164,15 @@ namespace RiskLoop.Core
         public FindTypeDefinition profitBoostFind = new FindTypeDefinition(18, 0.04, 0);
         public FindTypeDefinition safetyFind = new FindTypeDefinition(15, 0.03, 0);
         public double maxSafetyFindReduction = 0.5;
+        // Kalıcı risk azaltıcıların toplam sınırı: risk en fazla %40 düşer (13. tur; ölçüm: hepsi birlikte geçme şansını
+        // 9. katta %89'a çıkarıyordu, risk hissi kayboluyordu). Büyüler ve Dağın Kalbi bu sınırın dışında.
+        public double minTotalRiskFactor = 0.6;
 
-        // --- Talihsizlik telafisi (göçük moral bozmasın) ---
-        // Her göçük/yenilgi sonraki turlara +nadirlik (birikir, sınırlı). Başarılı bir yüzeye dönüş sıfırlar.
-        public double pityLuckPerStack = 0.12;
-        public int maxPityStacks = 5;
-        // Şanssız göçük: gösterilen risk bunun altındayken göçük olursa telafi fazladan kademe kazanır (moral bozmasın)
-        public double unluckyBustChance = 0.10;
-        public int unluckyExtraPityStacks = 1;
 
         // --- Cesaret çarpanı: düşük ihtimalli katı denemek ÖDÜLLENDİRİLİR ---
         // Göçük riski p >= courageMinChance olan bir katı sağ geçince risk altındaki TÜM kazanç çarpılır:
         //   çarpan = 1 + courageEdge * p / (1 - p)   (en fazla maxCourageMult)
         // courageEdge 1 olsaydı adil bahis olurdu (rulet gibi: %50'de x2); 0.85 hafif kasa avantajı bırakır.
-        // Bu kumar kazancı SİGORTAYA DAHİL DEĞİL (yoksa sigortayla her riskli kat bedava kâr olur, ekonomi patlar).
         // Ayrıca riskli katın bulgusu daha nadir gelir: şans += courageLuckPerRisk * p.
         public double courageMinChance = 0.15;
         public double courageEdge = 0.85;
@@ -235,9 +230,7 @@ namespace RiskLoop.Core
         // Kazanç:   earningsBonus = (1 + effect) ^ level           -> 0.10 ile 40. seviye = x45
         public UpgradeDefinition earningsUpgrade = new UpgradeDefinition(50, 1.6, 0.10, 40);
         // Güvenlik: safetyFactor = (1 - effect) ^ level            -> 0.05 ile 25. seviye = x0.28
-        public UpgradeDefinition safetyUpgrade = new UpgradeDefinition(75, 1.65, 0.05, 25);
-        // Sigorta:  savedFraction = 1 - (1 - effect) ^ level       -> 0.07 ile 15. seviye = %66
-        public UpgradeDefinition insuranceUpgrade = new UpgradeDefinition(100, 1.75, 0.07, 15);
+        public UpgradeDefinition safetyUpgrade = new UpgradeDefinition(75, 1.65, 0.03, 25);   // 13. tur: 0.05 -> 0.03 (risk hep tırmanabilsin)
         // Dedektör: findChance += effect * level                   -> 0.02 ile 20. seviye = +%40
         public UpgradeDefinition findChanceUpgrade = new UpgradeDefinition(60, 1.55, 0.02, 20);
         // Fener:    luck += effect * level                         -> 0.03 ile 25. seviye = +0.75 şans
@@ -252,7 +245,6 @@ namespace RiskLoop.Core
             {
                 case UpgradeType.Earnings: return earningsUpgrade;
                 case UpgradeType.Safety: return safetyUpgrade;
-                case UpgradeType.Insurance: return insuranceUpgrade;
                 case UpgradeType.FindChance: return findChanceUpgrade;
                 case UpgradeType.Luck: return luckUpgrade;
                 case UpgradeType.FindValue: return findValueUpgrade;

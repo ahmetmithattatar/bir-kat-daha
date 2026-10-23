@@ -137,6 +137,17 @@ namespace RiskLoop.Core
         public double sellBase = 5;                    // Satış = sellBase * gearStatGrowth^(lvl-1) * (1+tier)^1.5 * güçlendirme
         public int inventoryCap = 32;
 
+        // --- Eşya seviyesi ve nadirlik dağılımı (13. tur) ---
+        // Canavar seviyesi = kat * monsterLevelPerStep (en az 1). Düşen eşyanın GİYME SEVİYESİ = o katın canavar seviyesi:
+        // seviyenin üstündeki derinlikte düşen eşyayı giymek için level atlamak gerekir (çantada bekler).
+        // Eşyanın gücü düştüğü kattan gelir: derin katın beyaz eşyası sığ katın nadir eşyasından güçlü olabilir.
+        public double monsterLevelPerStep = 0.5;
+        // Eşya nadirliği derinlikle şişmesin: derinlik şansı eşyaya uygulanmaz, toplam eşya şansı bu sınırı aşamaz.
+        // (Eskiden derinde neredeyse hep kırmızı/mor düşüyordu.)
+        public double gearLuckCap = 0.8;
+        // Boss ganimetinin garantili en düşük nadirliği bunu aşmaz (boss katının bulgusu ayrı, o yine nadir).
+        public int maxBossDropMinTier = 4;
+
         // --- Kudret (eşya puanı, WoW'daki gear score gibi) ---
         // Eşyanın "eşdeğer seviyesi": itemLevel + log(malzeme * nadirlik * güçlendirme) / log(gearStatGrowth) + ek stat * kudretPerAffix.
         // Yani nadirlik, malzeme ve güçlendirme "kaç kat derinden düşmüş gibi" sayılır. Kudret = kudretPerLevel * eşdeğer seviye.
@@ -209,6 +220,7 @@ namespace RiskLoop.Core
         public MilestoneDefinition Milestone;  // Boss ise hangi keşif katının bossu
         public int EnrageStacks;               // Boss öfkesi (zamanla artar)
         public int Difficulty;                 // Zorluk kademesi 0..8 (çıktığı anda oyuncunun gücüne göre, sabit kalır)
+        public int Level;                      // Canavar seviyesi (kattan): düşürdüğü eşyanın giyme seviyesi
 
         public MonsterKind Kind => Definition.kind;
         public bool IsDead => Health <= 0;
@@ -261,7 +273,6 @@ namespace RiskLoop.Core
         public bool Warded;            // Kalkan büyüsü hasarı azalttı
         public bool PlayerDied;        // Tur bitti (göçük gibi)
         public double LostEarnings;
-        public double InsurancePayout;
         public GearItem SalvagedItem;  // Yenilgide enkazdan kurtarılan eşya (yoksa null)
     }
 }

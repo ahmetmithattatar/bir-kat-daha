@@ -33,7 +33,7 @@ namespace RiskLoop.Game
         [Tooltip("Daha önce görülmüş bu nadirlik ve üstü (5 = sarı) hızlı kartla gösterilir. Altı adıyla uçar.")]
         [SerializeField] private int quickCardMinTier = 5;
 
-        [Header("Kumar hissi")]
+        [Header("Risk hissi")]
         [Tooltip("Hayatta kalınan katta zar, göçük sınırının bu kadar üstündeyse \"KIL PAYI!\" gösterilir (0.04 = 4 puan).")]
         [SerializeField] private float nearMissMargin = 0.04f;
 
@@ -118,20 +118,11 @@ namespace RiskLoop.Game
             }
             fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 6, Gold);   // Altınlar sayaca uçar
 
-            // Cesaret: riskli katı geçtin, tüm kazanç katlandı. Kutlama riskle büyür (düşük ihtimal = büyük şölen)
-            if (r.CourageMult > 1.0)
-            {
-                float risk = (float)r.BustChance;
-                fx.Banner(UIStrings.CourageBanner(r.CourageMult), risk >= 0.35f ? CourageOrange : Gold, 0.5f + risk);
-                fx.Flash(Gold, 0.15f + 0.4f * risk, 0.5f);
-                fx.Shake(8f + 30f * risk, 0.3f + 0.4f * risk);
-                fx.FloatText($"x{r.CourageMult:0.00}  +{UIStrings.Num(r.CourageGain)}", Gold, 56f + 40f * risk, runPanel.RunValueAnchor);
-                fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 10 + Mathf.RoundToInt(40f * risk), Gold);
-                fx.Burst(runPanel.RunValueAnchor, Gold, 20 + Mathf.RoundToInt(60f * risk), 700f);
-                runPanel.ShowMessage(UIStrings.CourageMessage(r.BustChance, r.CourageGain));
-                HitStop(0.05f + 0.15f * risk);
-                yield return UIFx.Wait(0.25f + 0.5f * risk);   // Anın tadına varsın
-            }
+            // Riskten sağ çıkma kutlaması: HER katta, ama alınan riskle büyür. Asıl zevk riskli katı geçince gelir.
+            //   risk < %5   : küçük kıvılcım          %5-%10 : "%93 şansla geçtin" yazısı
+            //   %10+        : başlık + flaş            %20+   : sarsıntı + altın yağmuru + cesaret ödülü (+%)
+            //   %35+        : turuncu şölen + hit-stop %50+   : efsanevi: çift flaş, dev sarsıntı, uzun an
+            yield return CelebrateSurvival(r);
             if (r.HealthRegen > 0) digView.SetPlayerHealth(run.PlayerHealth, run.PlayerMaxHealth);
 
             // Canavar: savaş başlar, bulgu zafere kalır
@@ -396,6 +387,56 @@ namespace RiskLoop.Game
 
             fx.Banner(UIStrings.LevelUpHeader, XpBlue, 0.6f);
             yield return popup.ShowLevelUp(level, news, session.TalentPointsAvailable, fx);
+        }
+
+        /// <summary>
+        /// Riskten sağ çıkma kutlaması. Geçme şansı yüksekse ufak bir kıvılcım; şans düştükçe başlık, flaş, sarsıntı,
+        /// altın yağmuru ve "donma" anı büyür. Cesaret ödülü (risk altındaki kazanç +%) varsa büyük yazıyla uçar.
+        /// Boss katında risk yok: kutlama da yok.
+        /// </summary>
+        private IEnumerator CelebrateSurvival(AdvanceResult r)
+        {
+            float risk = (float)r.BustChance;
+            if (risk <= 0f) yield break;
+
+            // Her zaman: kazmanın değdiği yerde küçük kıvılcım (risk arttıkça çoğalır)
+            fx.Burst(digView.WallAnchor, Gold, 4 + Mathf.RoundToInt(60f * risk), 350f + 700f * risk);
+            if (risk < 0.05f) yield break;
+
+            string title = UIStrings.CourageTitle(r.BustChance);
+            Color color = risk >= 0.35f ? CourageOrange : Gold;
+            runPanel.ShowMessage(UIStrings.CourageMessage(r.BustChance, r.CourageGain));
+            if (title == null)
+            {
+                // %5-%10: başlıksız, sadece "geçtin" yazısı
+                fx.FloatText($"%{UIStrings.Pct(1 - r.BustChance)} şansla geçtin!", Gold, 34f, digView.WallAnchor);
+                yield break;
+            }
+
+            fx.Banner(title, color, 0.35f + risk);
+            fx.Flash(color, 0.1f + 0.45f * risk, 0.4f + 0.4f * risk);
+
+            if (risk >= 0.2f)
+            {
+                fx.Shake(6f + 40f * risk, 0.2f + 0.5f * risk);
+                fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 8 + Mathf.RoundToInt(50f * risk), Gold);
+                fx.Burst(runPanel.RunValueAnchor, color, 15 + Mathf.RoundToInt(80f * risk), 700f);
+            }
+            if (r.CourageMult > 1.0)
+            {
+                fx.FloatText($"CESARET {UIStrings.CourageBonus(r.CourageMult)}  +{UIStrings.Num(r.CourageGain)}",
+                             color, 48f + 50f * risk, runPanel.RunValueAnchor);
+            }
+            if (risk >= 0.35f) HitStop(0.08f + 0.2f * risk);   // Zaman bir an durur
+            if (risk >= 0.5f)
+            {
+                // Efsanevi: ikinci flaş ve dev patlama
+                yield return UIFx.Wait(0.15f);
+                fx.Flash(Color.white, 0.5f, 0.6f);
+                fx.Burst(digView.WallAnchor, CourageOrange, 80, 1100f);
+                fx.Shake(45f, 0.6f);
+            }
+            yield return UIFx.Wait(0.1f + 0.7f * risk);   // Anın tadına varsın (risk büyükse daha uzun)
         }
 
         /// <summary>Bu tur, şimdiye kadarki en değerli turu geçtiyse bir kez duyur.</summary>

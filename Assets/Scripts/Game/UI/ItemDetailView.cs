@@ -120,7 +120,7 @@ namespace RiskLoop.Game.UI
             icon.sprite = GearArt.Icon(item);
             SetEnhanceVisuals(item);
             nameText.text = FantasyTexts.GearName(item);
-            levelText.text = UIStrings.ItemLevelLine(item, _equipped);
+            levelText.text = UIStrings.ItemLevelLine(item, _equipped, session.MeetsLevel(item));
             statsText.text = FantasyTexts.GearStatLines(item, current, c.enhanceStatBonus);
 
             // Bu eşya ne kadar güçlü? Tek sayı: Kudret (ve kuşanırsan toplam Kudret'in nasıl değişeceği; kazmada duvar vuruşu)
@@ -136,13 +136,20 @@ namespace RiskLoop.Game.UI
             equipButton.gameObject.SetActive(true);
             equipLabel.text = _equipped ? UIStrings.UnequipButton : UIStrings.EquipButton;
             equipIcon.sprite = IconArt.Get(_equipped ? "btn_unequip" : "btn_equip");
-            // Başka sınıfın silahı: kuşanılamaz (satılabilir)
+            // Seviyesi yetmeyen ya da başka sınıfın silahı: kuşanılamaz (çantada bekler, satılabilir)
             bool usable = _equipped || session.CanUseItem(item);
             equipButton.interactable = usable;
             if (!usable)
             {
-                GearBaseDefinition def = session.Balance.combat.FindGearBase(item.baseId);
-                if (def != null) compareText.text += "\n" + UIStrings.WrongClassWeapon(def.heroClass);
+                if (!session.MeetsLevel(item))
+                {
+                    compareText.text += "\n" + UIStrings.LevelTooLow(item.requiredLevel, session.Progress.level);
+                }
+                else
+                {
+                    GearBaseDefinition def = session.Balance.combat.FindGearBase(item.baseId);
+                    if (def != null) compareText.text += "\n" + UIStrings.WrongClassWeapon(def.heroClass);
+                }
             }
 
             // Güçlendirme seviyeyle açılır; o zamana kadar buton görünmez (kalabalık yapmasın)
