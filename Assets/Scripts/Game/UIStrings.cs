@@ -273,13 +273,31 @@ namespace RiskLoop.Game
 
         public static string MonsterAppears(MonsterInstance m)
         {
-            string name = $"<b>{FantasyTexts.MonsterName(m.Definition.id)}</b>";
+            string name = $"<b><color={DifficultyColor(m.Difficulty)}>{FantasyTexts.MonsterName(m.Definition.id)}</color></b>";
             return m.Kind == MonsterKind.Normal ? $"{Pick(MonsterAppearLines)} {name}" : $"<color={Gold}>{FantasyTexts.MonsterKindLabel(m.Kind)}:</color> {name}!";
         }
 
-        public static string MonsterNameLine(MonsterInstance m)
+        // Canavar zorluk renkleri (0 çok kolay .. 8 çok zor), WoW'daki "con" renkleri gibi
+        private static readonly string[] DifficultyColors =
         {
-            string name = FantasyTexts.MonsterName(m.Definition.id);
+            "#E8E8E0", // açık beyaz: çok kolay (XP yok)
+            "#9FD8FF", // açık mavi
+            "#3C8CFF", // mavi
+            "#3CCB5A", // yeşil
+            "#FFE03A", // sarı
+            "#FF9A2E", // turuncu
+            "#FF3B3B", // kırmızı
+            "#FF6EC7", // pembe
+            "#8A8A94", // gri: çok zor (XP yok)
+        };
+
+        public static string DifficultyColor(int band) => DifficultyColors[Math.Max(0, Math.Min(band, DifficultyColors.Length - 1))];
+
+        /// <summary>Canavarın adı zorluk renginde. XP vermeyen kademelerde "(XP yok)".</summary>
+        public static string MonsterNameLine(MonsterInstance m, bool givesXp)
+        {
+            string name = $"<color={DifficultyColor(m.Difficulty)}>{FantasyTexts.MonsterName(m.Definition.id)}</color>";
+            if (!givesXp) name += " <size=60%><color=#9AA0B4>(XP yok)</color></size>";
             string kind = FantasyTexts.MonsterKindLabel(m.Kind);
             return kind.Length > 0 ? $"<color={Gold}>{kind}</color>  {name}" : name;
         }
@@ -303,6 +321,7 @@ namespace RiskLoop.Game
         public static string Busted(AdvanceResult r, RunState run)
         {
             string text = $"{BustTitle()} {r.Step}. katta göçük oldu (risk %{Pct(r.BustChance)}).\nKaybedilen: {Num(r.LostEarnings)}";
+            if (r.Unlucky) text += $"\n<color=#8FD3FF>Sadece %{Pct(r.BustChance)} ihtimaldi... Şanssızlık! Telafi fazladan birikti.</color>";
             if (r.InsurancePayout > 0) text += $"   Sigorta kurtardı: {Num(r.InsurancePayout)}";
             return text + "\n" + RunSummary(run, lootSaved: false);
         }
@@ -715,6 +734,17 @@ namespace RiskLoop.Game
         // ---------------- Kumar terazisi ----------------
 
         public const string GaugeRiskTitle = "GÖÇÜK RİSKİ";
+
+        /// <summary>Başlık + bu turda geçilen katları sağ atlatma olasılığı ("%38'lik yolu geçtin": oyuncu şansını görsün).</summary>
+        public static string GaugeRiskTitleWithOdds(double survivalOdds) =>
+            survivalOdds < 0.999
+                ? $"{GaugeRiskTitle}\n<size=65%><color=#9AA0B4>bu tur %{Pct(survivalOdds)}'lik yolu geçtin</color></size>"
+                : GaugeRiskTitle;
+
+        private static readonly string[] NearMissTitles = { "KIL PAYI!", "AZ KALSIN!", "TAVAN İNLEDİ!", "ŞANSLI GÜN!" };
+        public static string NearMissTitle() => Pick(NearMissTitles);
+        public static string NearMiss(double roll, double chance) =>
+            $"<color=#FFE03A>Kıl payı!</color> Göçük sınırı %{Pct(chance)}, zar %{Pct(roll)} geldi.";
         public const string GaugeCombatTitle = "BU SAVAŞ";
         public static string GaugeWin(double win) => $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>";
         public static string GaugeLose(double lose) => $"<size=70%>KAYBEDERSEN</size>\n<color=#FF4A3A><b>-{Num(lose)}</b></color>";
@@ -744,7 +774,7 @@ namespace RiskLoop.Game
         public static string PrestigeInfo(int minStep, int bestStep, double gain) =>
             bestStep < minStep
                 ? $"Yeni Çağ {minStep}. kata ulaşınca açılır (rekor: {bestStep}).\nHer şey sıfırlanır, Yadigar kazanırsın. Kadim yükseltmeler sonsuza kadar kalır."
-                : $"Şimdi başlatırsan <color={Gold}>+{Num(gain)} Yadigar</color> kazanırsın.\nPara, yükseltmeler, eşyalar, rekor ve geçitler sıfırlanır. Kadim yükseltmeler kalır. Daha derin = çok daha fazla Yadigar.";
+                : $"Şimdi başlatırsan <color={Gold}>+{Num(gain)} Yadigar</color> kazanırsın.\nPara, yükseltmeler, eşyalar, rekor, geçitler, seviye, yetenekler ve sınıf sıfırlanır (sınıfını yeniden seçersin). Kadim yükseltmeler kalır. Daha derin = çok daha fazla Yadigar.";
         public static string PrestigeButton(double gain) => $"YENİ ÇAĞ BAŞLAT (+{Num(gain)} Yadigar)";
         public const string PrestigeConfirm = "EMİN MİSİN? Her şey sıfırlanacak!\nTekrar bas";
         public static string PrestigeDone(int age, double gained) => $"<color={Gold}>{age}. ÇAĞ BAŞLADI! +{Num(gained)} Yadigar</color>";
@@ -760,7 +790,8 @@ namespace RiskLoop.Game
         public static string SoldAll(int count, double value) =>
             count > 0 ? $"{count} eşya satıldı: +{Num(value)}" : "Çanta zaten boş.";
         public const string NoItemSelected = "Bir eşyaya tıkla: statlarını gör, kuşan ya da sat.";
-        public static string SellButton(double value) => $"Sat: +{Num(value)}";
+        public static string SellButton(double value) => $"Sat\n<size=75%>+{Num(value)}</size>";
+        public const string SellConfirm = "<color=#FF5A4A>Emin misin?</color>\n<size=75%>tekrar bas</size>";
         public static string InventoryTitle(int count, int cap) => $"Envanter ({count}/{cap})";
         public static string ItemLevelLine(GearItem item, bool equipped) =>
             $"{FantasyTexts.BaseName(item)}  ·  Seviye {item.itemLevel}{(equipped ? "  ·  <color=#3CCB5A>KUŞANILDI</color>" : "")}";

@@ -1802,15 +1802,18 @@ namespace RiskLoop.EditorTools
             TMP_Text message = CreateText("MessageText", root, "", 20, 30, TextAlignmentOptions.MidlineLeft);
             message.color = new Color(1f, 0.88f, 0.23f);
 
+            // Butonlar: Sat (küçük, solda, kırmızımsı) | Güçlendir | Kuşan (büyük, sağda, yeşil).
+            // Kuşan ile Sat birbirinden uzak ve farklı boyda: yanlışlıkla iyi eşyayı satmak zorlaşır. Her butonda ikon var.
             RectTransform buttons = CreateUIObject("Buttons", root);
-            SetHeight(buttons, 56);
+            SetHeight(buttons, 60);
             AddHorizontalLayout(buttons, spacing: 10);
-            Button equip = CreateButton("EquipButton", buttons, UIStrings.EquipButton, CashOutColor, 56, 24, out TMP_Text equipLabel);
-            FillRemainingWidth(equip);
-            Button enhance = CreateButton("EnhanceButton", buttons, "Güçlendir", new Color(0.55f, 0.35f, 0.75f), 56, 18, out TMP_Text enhanceLabel);
+            Button sell = CreateIconButton("SellButton", buttons, "Sat", new Color(0.55f, 0.22f, 0.18f), 60, 17, out TMP_Text sellLabel, out Image sellIcon);
+            SetFixedWidth(sell, 120);
+            Button enhance = CreateIconButton("EnhanceButton", buttons, "Güçlendir", new Color(0.55f, 0.35f, 0.75f), 60, 17, out TMP_Text enhanceLabel, out Image enhanceIcon);
             FillRemainingWidth(enhance);
-            Button sell = CreateButton("SellButton", buttons, "Sat", AdvanceColor, 56, 22, out TMP_Text sellLabel);
-            FillRemainingWidth(sell);
+            Button equip = CreateIconButton("EquipButton", buttons, UIStrings.EquipButton, CashOutColor, 60, 24, out TMP_Text equipLabel, out Image equipIcon);
+            FillRemainingWidth(equip);
+            equip.GetComponent<LayoutElement>().flexibleWidth = 1.4f;   // Kuşan en geniş buton
 
             var view = root.gameObject.AddComponent<ItemDetailView>();
             SetRef(view, "frame", frame);
@@ -1828,6 +1831,9 @@ namespace RiskLoop.EditorTools
             SetRef(view, "sellLabel", sellLabel);
             SetRef(view, "iconGlow", detailGlow);
             SetRef(view, "enhanceBadge", badge);
+            SetRef(view, "equipIcon", equipIcon);
+            SetRef(view, "enhanceIcon", enhanceIcon);
+            SetRef(view, "sellIcon", sellIcon);
             return view;
         }
 
@@ -1998,6 +2004,28 @@ namespace RiskLoop.EditorTools
             tmp.fontSizeMax = fontSize;
             tmp.fontSizeMin = fontSize * 0.6f;
             return tmp;
+        }
+
+        /// <summary>Solda ikon, sağda yazı olan buton (eşya işlemleri: ne yaptığı resimden de belli olsun).</summary>
+        private static Button CreateIconButton(string name, Transform parent, string label, Color color,
+            float height, float fontSize, out TMP_Text labelText, out Image icon)
+        {
+            Button button = CreateButton(name, parent, label, color, height, fontSize, out labelText);
+            RectTransform iconRt = CreateUIObject("Icon", button.transform);
+            iconRt.anchorMin = iconRt.anchorMax = new Vector2(0f, 0.5f);
+            iconRt.pivot = new Vector2(0f, 0.5f);
+            iconRt.sizeDelta = new Vector2(height - 16, height - 16);
+            iconRt.anchoredPosition = new Vector2(8f, 0f);
+            icon = AddImage(iconRt, Color.white);
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            // Yazı ikonun sağında kalsın
+            RectTransform labelRt = labelText.rectTransform;
+            labelRt.offsetMin = new Vector2(height - 4, 0f);
+            labelText.enableAutoSizing = true;
+            labelText.fontSizeMax = fontSize;
+            labelText.fontSizeMin = fontSize * 0.6f;
+            return button;
         }
 
         private static Button CreateButton(string name, Transform parent, string label, Color color,

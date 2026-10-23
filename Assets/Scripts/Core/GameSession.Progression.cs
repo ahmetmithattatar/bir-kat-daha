@@ -5,7 +5,7 @@ namespace RiskLoop.Core
 {
     /// <summary>
     /// GameSession'ın ilerleme kısmı: deneyim (XP), oyuncu seviyesi, seviyeyle açılan özellikler ve yetenek ağacı.
-    /// Seviye ve yetenekler Yeni Çağda da kalır: hesabın kalıcı gelişimi.
+    /// Seviye ve yetenekler Yeni Çağda sıfırlanır (Kadim Bilgelik yeniden yükselmeyi hızlandırır).
     /// </summary>
     public partial class GameSession
     {

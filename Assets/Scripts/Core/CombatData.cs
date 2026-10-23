@@ -161,6 +161,12 @@ namespace RiskLoop.Core
         public double threatEasy = 0.2;      // < %20 can kaybı: Kolay
         public double threatMedium = 0.5;    // < %50: Orta
         public double threatHard = 1.0;      // < %100: Zor, üstü Ölümcül
+
+        // --- Canavar zorluk rengi (WoW gibi, oyuncunun gücüne göre) ---
+        // oran = canavarı öldürene kadar kaybedilecek can oranı (ThreatRatio, canavarın kendi can/saldırısıyla).
+        // 9 kademe: 0 açık beyaz (çok kolay) .. 8 gri (çok zor). Eşikler oran içindir.
+        // En kolay ve en zor kademe XP VERMEZ: çok zayıf canavar kasmak ya da gücünün çok üstüne çıkmak ilerletmez.
+        public double[] difficultyThresholds = { 0.03, 0.08, 0.15, 0.3, 0.5, 0.75, 1.0, 1.6 };
         // Ortalama boss çarpanları (havuzların ortalaması), güç seviyesi hesabı için
         public double avgMiniBossHpMult = 3.6;
         public double avgMiniBossAtkMult = 1.3;
@@ -202,6 +208,7 @@ namespace RiskLoop.Core
         public double Attack;
         public MilestoneDefinition Milestone;  // Boss ise hangi keşif katının bossu
         public int EnrageStacks;               // Boss öfkesi (zamanla artar)
+        public int Difficulty;                 // Zorluk kademesi 0..8 (çıktığı anda oyuncunun gücüne göre, sabit kalır)
 
         public MonsterKind Kind => Definition.kind;
         public bool IsDead => Health <= 0;

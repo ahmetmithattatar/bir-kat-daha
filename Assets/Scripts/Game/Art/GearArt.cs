@@ -242,6 +242,28 @@ namespace RiskLoop.Game.Art
             return Build($"weapon_{item.baseId}", Templates[w.Item1], w.Item2, w.Item3, w.Item4, item.tier, item.enhance);
         }
 
+        /// <summary>Silahın saldırı biçimi: yakın dövüş savuruşu, uzaktan atış (ok) ya da büyü (küre).</summary>
+        public enum WeaponStyle { Melee, Ranged, Magic }
+
+        public static WeaponStyle StyleOf(string weaponId)
+        {
+            string template = weaponId != null && Weapons.TryGetValue(weaponId, out var w) ? w.Item1 : "sword";
+            switch (template)
+            {
+                case "bow":
+                case "crossbow": return WeaponStyle.Ranged;
+                case "wand":
+                case "orb":
+                case "tome":
+                case "staff": return WeaponStyle.Magic;
+                default: return WeaponStyle.Melee;
+            }
+        }
+
+        /// <summary>Saldırı animasyonu kalitesi 0..5 = nadirlik kademesi (0..2) + güçlendirme kademesi (0..3).</summary>
+        public static int AttackQuality(GearItem weapon) =>
+            weapon == null ? 0 : RarityBand(weapon.tier) + EnhanceBand(weapon.enhance);
+
         /// <summary>Güçlendirme görsel kademesi: 0 (+0..+3), 1 (+4..+6), 2 (+7..+9), 3 (+10).</summary>
         public static int EnhanceBand(int enhance) => enhance >= 10 ? 3 : enhance >= 7 ? 2 : enhance >= 4 ? 1 : 0;
 

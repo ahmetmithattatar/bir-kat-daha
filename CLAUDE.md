@@ -43,7 +43,7 @@ nadirlik açılışı sadece ilk seferde uzun, özellikler seviyeyle açılsın,
 - **Canavarlar:** normal canavar havuzları bölge içine (1-9, 11-19, ...). Tüm keşif bossları `MonsterKind.Boss`. Ölçek 1.16 can / 1.15 saldırı.
   Silah/kazma/malzeme `minStep`'leri ikiye katlandı (en derin 72). Güç göstergesi = bölge bossunu sağ yenebildiğin en derin kat.
 - **Seviye ve XP (`ProgressionBalance`, `GameSession.Progression.cs`):** kat başı `xpPerFloor*bölge`, öldürme `xpPerKill*bölge`,
-  boss `xpPerBoss*bölge`. Gereken XP `xpBase*xpGrowth^(seviye-1)`. Seviye ve yetenekler Yeni Çağda da KALIR. Kadim Bilgelik XP çarpanı.
+  boss `xpPerBoss*bölge`. Gereken XP `xpBase*xpGrowth^(seviye-1)`. Seviye ve yetenekler Yeni Çağda SIFIRLANIR (11. tur). Kadim Bilgelik XP çarpanı yeniden yükselmeyi hızlandırır.
 - **Özellik kilitleri (`Feature`):** Yetenekler 2, Ekipman/ganimet 3, Sigorta + Dedektör 4, Geçitler 5, Güçlendirme 6, Fener + Terazi 7,
   Özel bulgular (harita/kristal/put) 8, Yeni Çağ 12 (+ 30. kat rekoru). **Kilitli şey HİÇ görünmez** (8. tur kararı): sekme, yükseltme satırı,
   stat kartı (sigorta), güçlendirme notu ve ipuçlarındaki bahisler (`RunTooltips.If`) açılana kadar gizli. Açıldığında oyuna yeni bir boyut
@@ -103,6 +103,24 @@ hitap etsin, yükseltme/yetenekler ikonlu olsun, class sistemi + spell book (sev
 - **İkonlar (`Art/IconArt`):** 30 piktogram (kazma, kalkan, göz, alev...) x renk = yükseltme, yetenek, büyü, sınıf, Kadim ikonları.
 - **Config uyarısı:** silah listesi `BalanceConfig.asset`'e yazılı olduğundan yeni sınıf silahları için asset **Reset** gerekir.
 
+## Göçük hissi, zorluk renkleri, saldırı animasyonu (11. tur kararları)
+- **Göçük ölçüldü:** zar kazma vuruşu başına DEĞİL, kat başına bir kez atılır; gösterilen yüzde gerçekle birebir (Mono ile gerçek kurallarla
+  200 bin tur simülasyonu). Sık göçük hissinin sebebi birikimli risk: eski eğride 1. bölgenin 9 katını sağ geçme ~%25'ti.
+  **Eğri yumuşatıldı:** `baseBustChance` 0.04 → 0.02, `bustChancePerZoneFloor` 0.025 → 0.015 (ilk kat %2, 9. kat %14, bölgeyi geçme ~%47).
+- **Kumar hissi (dürüst):** zar göçük sınırına `nearMissMargin` (4 puan) kadar yakın gelip hayatta kalınırsa "KIL PAYI!" (gerçek zar).
+  Kumar terazisi başlığında "bu tur %X'lik yolu geçtin" (`RunState.SurvivalOdds`). Gösterilen risk %10'un (`unluckyBustChance`) altındayken
+  göçük olursa "şanssızlık" mesajı + telafiye fazladan kademe.
+- **Yeni Çağ her şeyi sıfırlar:** seviye, XP, yetenekler, görülen nadirlikler ve sınıf da (Kadim yükseltmeler, çağ ve Yadigar kalır).
+- **Canavar zorluk rengi (WoW "con" gibi):** canavar çıktığı anda oyuncunun gücüne göre 9 kademe (`MonsterInstance.Difficulty`,
+  `CombatBalance.difficultyThresholds`, öldürene kadar kaybedilecek can oranı): açık beyaz, açık mavi, mavi, yeşil, sarı, turuncu, kırmızı,
+  pembe, gri. **En kolay (açık beyaz) ve en zor (gri) XP vermez** (kullanıcı kararı); adın yanında "(XP yok)".
+- **Saldırı animasyonu eşya kalitesiyle (`UI/AttackFxView`):** kalite = nadirlik kademesi + güçlendirme kademesi (0..5, `GearArt.AttackQuality`).
+  Yakın dövüş: hayalet izler, parlak kesik, ışık halkası, enerji hilali, altın X kesik. Yay/arbalet: ok uçar (4+ üç ok). Büyü silahı: küre uçar,
+  kaliteyle büyür ve patlar. Efekt görselleri çalışırken kodla oluşur.
+- **Eşya butonları:** sıra Sat (küçük, solda, koyu kırmızı) | Güçlendir | Kuşan (en geniş, sağda), hepsinde ikon (para, çekiç, zırh).
+  Değerli eşyada (yeşil+, güçlendirilmiş ya da Kudret artıran) satış iki basış ister.
+- **Config:** risk eğrisi değiştiği için `BalanceConfig.asset` yine **Reset** edilmeli.
+
 ## Bağımlılık ve uzun oyun sistemleri (5. tur kararları)
 - **Oto-kazı 7. turda KALDIRILDI** (kullanıcı isteği; `AutoDigView` silindi, kayıtta `autoDig` yok).
 - **Geçitler:** Keşif katının bossu yenilince (`conqueredMilestones`) sonraki turlara o kattan başlanabilir (atlanan katların ödülü yok).
@@ -118,7 +136,7 @@ hitap etsin, yükseltme/yetenekler ikonlu olsun, class sistemi + spell book (sev
 - **Güçlendirme (Shaiya tarzı):** +1..+10, şans %95 → %15, her seviye statlar +%10. +4'ten sonra başarısızlık seviye düşürür,
   +7'den sonra eşya KIRILIR. Ücret satış değeri x2 x1.6^seviye (para yutağı). Ruletvari animasyon.
 - **Yeni Çağ (prestij):** seviye 12 + 30. kat rekoru. Yadigar = floor(rekor^1.6 / 10). Sıfırlanır: para, yükseltmeler, eşyalar, rekor, geçitler.
-  Kalır: çağ, yadigar, seviye, XP, yetenekler, görülen nadirlikler, 5 Kadim yükseltme (Kadim Altın, Yıldızların Lütfu, Kadim Bilgelik (XP x1.2/sv),
+  (11. turdan beri seviye, XP, yetenekler, görülen nadirlikler ve sınıf da sıfırlanır.) Kalır: çağ, yadigar, 5 Kadim yükseltme (Kadim Altın, Yıldızların Lütfu, Kadim Bilgelik (XP x1.2/sv),
   Kralların Kanı, Ejder Hazinesi).
 - **Yükseltme maks seviyeleri yükseltildi** (tek çağda dolmasın): Kazanç 40, Güvenlik 25, Sigorta 15, Dedektör 20, Fener 25, Terazi 30.
 - **İçerik:** bölge başına 6 canavarlık havuz (48), her boss katında 5 bossluk havuz (45), 19 şablon. LOTR havası ama **özgün isimler**
@@ -229,7 +247,7 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
 | Baret | 7. turda kaldırıldı. Göçük cezasını telafi, enkaz, sigorta ve Dağın Kalbi yumuşatır |
 | Fiyatlar | `ceil(baseCost * costGrowth^level)`, tam sayı |
 | Para tipi | `double` (idle oyunlar gibi büyük sayılara hazır). Gösterimde aşağı yuvarlanır |
-| Kayıt | JsonUtility ile `Application.persistentDataPath/save.json` (saveVersion 6: seviye, XP, yetenekler, görülen nadirlikler; envanter ve kuşanılan eşyalar; GearSlot/StatType sayı olarak, SADECE SONA ekle). Tur ortası kaydedilmez (risk altındaki kazanç kaybolur, Kese/rekor ödülü anında kaydedilir) |
+| Kayıt | JsonUtility ile `Application.persistentDataPath/save.json` (saveVersion 7: sınıf; seviye, XP, yetenekler, görülen nadirlikler; envanter ve kuşanılan eşyalar; GearSlot/StatType sayı olarak, SADECE SONA ekle). Tur ortası kaydedilmez (risk altındaki kazanç kaybolur, Kese/rekor ödülü anında kaydedilir) |
 | Kaydı sıfırla | Üst barın sağında (kazı butonlarından uzakta). Tur sırasında gizli, iki basış ister (3 sn içinde) |
 | Sahne | `RiskLoop > Build Prototype Scene` menüsü sahneyi koddan kurar ve bağlar. Config'i NewScene'den SONRA yükler (önce yüklenirse referans null düşer) |
 | Platform önceliği | Önce **PC (yatay 16:9)**. Mobil sonra (yatay düzen telefonda da çalışabilir, ayrıca ele alınacak) |
@@ -280,8 +298,7 @@ Assets/Scripts/
                        ClassSelectView: sınıf seçimi. SpellBarView + SpellButtonView: büyü çubuğu. SpellBookView: Büyü Kitabı sekmesi.
                        RiskGaugeView: Kumar terazisi.
                        TalentTreeView + TalentNodeView: yetenek sekmesi. FxTime: animasyon hız çarpanı (hit-stop)
-                       ClassSelectView: sınıf seçimi. SpellBarView + SpellButtonView: büyü çubuğu. SpellBookView: Büyü Kitabı.
-                       RiskGaugeView: Kumar terazisi.
+                       AttackFxView: silah kalitesine göre saldırı efektleri.
   Editor/
     PrototypeSceneBuilder.cs
 Assets/Config/BalanceConfig.asset   (menü ilk çalıştığında oluşur)

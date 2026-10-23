@@ -218,8 +218,9 @@ namespace RiskLoop.Core
 
             if (roll < chance)
             {
-                result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout);
+                result.SalvagedItem = BustOutcome(out result.LostEarnings, out result.InsurancePayout, chance);
                 result.Busted = true;
+                result.Unlucky = chance < Balance.unluckyBustChance;
                 return result;
             }
 
@@ -231,6 +232,7 @@ namespace RiskLoop.Core
             result.XpGained = Balance.progression.xpPerFloor * RiskMath.ZoneOf(Balance, nextStep);
             result.LevelsGained = GainXp(result.XpGained);
             GainMana(CB.manaPerFloor);
+            CurrentRun.SurvivalOdds *= 1.0 - chance;   // "Bu tur %X'lik yolu geçtin" (oyuncu ne kadar şanslı olduğunu görsün)
             // Kat sayılı büyüler bir kat azalır (ödül yukarıda zaten hesaplandı)
             if (CurrentRun.SafeFloors > 0 && --CurrentRun.SafeFloors == 0) CurrentRun.SafeFloorsFactor = 0;
             if (CurrentRun.RewardFloors > 0 && --CurrentRun.RewardFloors == 0) CurrentRun.RewardFloorsMult = 1.0;
@@ -313,7 +315,7 @@ namespace RiskLoop.Core
         /// Turda düşen eşyalar kaybolur; ama en nadir olanı kurtarma şansıyla enkazdan çıkabilir (döndürülür).
         /// Talihsizlik telafisi bir artar (sonraki turlar daha şanslı).
         /// </summary>
-        private GearItem BustOutcome(out double lost, out double saved)
+        private GearItem BustOutcome(out double lost, out double saved, double bustChance = 1.0)
         {
             saved = CurrentRun.Earnings * InsuranceFraction;
             lost = CurrentRun.Earnings - saved;
@@ -321,6 +323,9 @@ namespace RiskLoop.Core
             Progress.money += saved;
             Progress.totalBusts++;
             Progress.pityStacks = Math.Min(Progress.pityStacks + 1, Balance.maxPityStacks);
+            // Düşük riskte gelen göçük "şanssızlık": telafi fazladan birikir
+            if (bustChance < Balance.unluckyBustChance)
+                Progress.pityStacks = Math.Min(Progress.pityStacks + Balance.unluckyExtraPityStacks, Balance.maxPityStacks);
             CurrentRun.Payout = saved;
             CurrentRun.Monster = null;
             CurrentRun.Status = RunStatus.Busted;

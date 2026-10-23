@@ -110,6 +110,7 @@ namespace RiskLoop.Game.UI
         private float _nextPebbleTime;
         private Vector2 _pickaxeRestPos;
         private readonly List<GameObject> _fallenRocks = new List<GameObject>();
+        private AttackFxView _attackFx;   // Silah kalitesine göre saldırı efektleri
 
         private void Awake()
         {
@@ -133,6 +134,9 @@ namespace RiskLoop.Game.UI
             SetAlpha(holeImage, 0f);
             SetAlpha(darkOverlay, 0f);
             pickaxeRoot.localRotation = Quaternion.Euler(0, 0, restAngle);
+
+            _attackFx = sceneRoot.gameObject.AddComponent<AttackFxView>();
+            _attackFx.Init(sceneRoot, weaponRoot, weaponImage, monsterBody, particles);
         }
 
         private void Update()
@@ -415,6 +419,7 @@ namespace RiskLoop.Game.UI
         {
             weaponRoot.gameObject.SetActive(weapon != null);
             if (weapon != null) weaponImage.sprite = GearArt.WeaponSprite(weapon);
+            _attackFx.SetWeapon(weapon);
         }
 
         /// <summary>Oyuncu can barı: yeşilden kırmızıya.</summary>
@@ -427,12 +432,12 @@ namespace RiskLoop.Game.UI
         }
 
         /// <summary>Canavar delikten/karanlıktan çıkar. Boss daha büyük, aurası var, sahne sarsılır.</summary>
-        public IEnumerator ShowMonster(MonsterInstance m)
+        public IEnumerator ShowMonster(MonsterInstance m, bool givesXp)
         {
             monsterRoot.gameObject.SetActive(true);
             monsterImage.sprite = MonsterArt.SpriteFor(m.Definition.id);
             monsterImage.color = Color.white;
-            monsterNameText.text = UIStrings.MonsterNameLine(m);
+            monsterNameText.text = UIStrings.MonsterNameLine(m, givesXp);   // Ad zorluk renginde
             UpdateMonsterHealth(m);
 
             bool boss = m.Kind != MonsterKind.Normal;
@@ -481,9 +486,8 @@ namespace RiskLoop.Game.UI
                 yield return UIFx.Wait(0.08f);
                 yield break;
             }
-            yield return Rotate(weaponRoot, WeaponRest, WeaponWindup, 0.05f, easeIn: false);
-            yield return Rotate(weaponRoot, WeaponWindup, WeaponStrike, 0.04f, easeIn: true);
-            yield return Rotate(weaponRoot, WeaponStrike, WeaponRest, 0.07f, easeIn: false);
+            // Silahın türü (savuruş / ok / büyü) ve kalitesi (nadirlik + güçlendirme) animasyonu belirler
+            yield return _attackFx.Play(WeaponRest, WeaponWindup, WeaponStrike);
         }
 
         /// <summary>Canavar vuruldu: kırmızı parlama, geri tepme, kan/parça.</summary>

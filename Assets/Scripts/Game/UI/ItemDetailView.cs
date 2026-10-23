@@ -28,6 +28,11 @@ namespace RiskLoop.Game.UI
         [SerializeField] private TMP_Text enhanceLabel;
         [SerializeField] private Button sellButton;
         [SerializeField] private TMP_Text sellLabel;
+        [SerializeField] private Image equipIcon;
+        [SerializeField] private Image enhanceIcon;
+        [SerializeField] private Image sellIcon;
+        [Tooltip("Değerli eşyayı satmak için ikinci basışa tanınan süre (sn).")]
+        [SerializeField] private float sellConfirmSeconds = 3f;
 
         [Header("Güçlendirme görseli")]
         [SerializeField] private Image iconGlow;          // İkonun arkasında, güçlendirmeyle büyüyen parıltı
@@ -41,6 +46,9 @@ namespace RiskLoop.Game.UI
 
         private GearItem _item;
         private bool _equipped;
+        private bool _sellNeedsConfirm;
+        private float _sellConfirmUntil = -1f;
+        private string _sellText = "";
         private float _glowAlpha;
         private Color _glowColor;
 
@@ -59,11 +67,29 @@ namespace RiskLoop.Game.UI
             {
                 if (_item != null) EnhanceClicked?.Invoke(_item.uid);
             });
-            sellButton.onClick.AddListener(() =>
-            {
-                if (_item != null && !_equipped) SellClicked?.Invoke(_item.uid);
-            });
+            sellButton.onClick.AddListener(OnSell);
             iconGlow.sprite = PixelArt.Glow();
+
+            // Butonların ne yaptığı resimden de belli olsun (yanlışlıkla satmayı önler)
+            sellIcon.sprite = IconArt.Get("btn_sell");
+            enhanceIcon.sprite = IconArt.Get("btn_enhance");
+        }
+
+        /// <summary>
+        /// Sat: değerli eşyada (yeşil+, güçlendirilmiş ya da kuşanılandan iyi) iki basış ister:
+        /// ilk basış "Emin misin?" der, birkaç saniye içinde tekrar basılırsa satar.
+        /// </summary>
+        private void OnSell()
+        {
+            if (_item == null || _equipped) return;
+            if (_sellNeedsConfirm && Time.unscaledTime > _sellConfirmUntil)
+            {
+                _sellConfirmUntil = Time.unscaledTime + sellConfirmSeconds;
+                sellLabel.text = UIStrings.SellConfirm;
+                return;
+            }
+            _sellConfirmUntil = -1f;
+            SellClicked?.Invoke(_item.uid);
         }
 
         public void Show(GameSession session, GearItem item)
@@ -109,6 +135,7 @@ namespace RiskLoop.Game.UI
 
             equipButton.gameObject.SetActive(true);
             equipLabel.text = _equipped ? UIStrings.UnequipButton : UIStrings.EquipButton;
+            equipIcon.sprite = IconArt.Get(_equipped ? "btn_unequip" : "btn_equip");
             // Başka sınıfın silahı: kuşanılamaz (satılabilir)
             bool usable = _equipped || session.CanUseItem(item);
             equipButton.interactable = usable;
@@ -126,7 +153,11 @@ namespace RiskLoop.Game.UI
             enhanceButton.interactable = session.CanEnhance(item);
 
             sellButton.gameObject.SetActive(!_equipped);
-            sellLabel.text = UIStrings.SellButton(session.SellValue(item));
+            _sellText = UIStrings.SellButton(session.SellValue(item));
+            sellLabel.text = _sellText;
+            // Değerli eşya: satış iki basış ister
+            _sellNeedsConfirm = item.tier >= 4 || item.enhance > 0 || session.KudretWith(item) > session.Kudret;
+            _sellConfirmUntil = -1f;
         }
 
         public void ShowMessage(string message)
@@ -247,6 +278,12 @@ namespace RiskLoop.Game.UI
 
         private void Update()
         {
+            // Satış onayı süresi dolduysa buton normale döner
+            if (_sellConfirmUntil > 0f && Time.unscaledTime > _sellConfirmUntil)
+            {
+                _sellConfirmUntil = -1f;
+                sellLabel.text = _sellText;
+            }
             if (!iconGlow.enabled) return;
             float pulse = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 3.5f);
             iconGlow.color = new Color(_glowColor.r, _glowColor.g, _glowColor.b, _glowAlpha * pulse);

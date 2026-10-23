@@ -51,6 +51,9 @@ namespace RiskLoop.Core
         internal double ForesightRoll = -1;                       // Kehanet: önceden atılmış göçük zarı (-1 = yok)
         public bool HasForesight => ForesightRoll >= 0;
 
+        /// <summary>Bu turda geçilen katların hepsini sağ atlatma olasılığı (çarpım). Küçüldükçe oyuncu "ne şanslıyım" der.</summary>
+        public double SurvivalOdds { get; internal set; } = 1.0;
+
         // Turda düşen eşyalar: risk altında. Yüzeye dönünce envantere girer, göçük/ölümde kaybolur
         public List<GearItem> PendingLoot { get; } = new List<GearItem>();
         public int LootAutoSold { get; internal set; }             // Envanter doluydu, otomatik satıldı
@@ -92,6 +95,7 @@ namespace RiskLoop.Core
 
         public MonsterInstance Encounter; // Bu katta canavar çıktıysa (bulgu zafere ertelenir)
         public double HealthRegen;        // Savaşsız katta dolan can
+        public bool Unlucky;              // Düşük riskte (unluckyBustChance altı) göçük: fazladan telafi
 
         public bool IsMilestone;      // Bu adım bir kilometre taşı mı?
         public bool FirstMilestoneReach; // Bu kilometre taşına ilk kez mi ulaşıldı?

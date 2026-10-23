@@ -130,6 +130,10 @@ namespace RiskLoop.Game.Art
                 "...........KKK..", "..........KCWCK.", "..........KCCCK.", "...........KKK..", "..........KAK...",
                 ".........KAK....", "........KAK.....", ".......KAK......", "......KAK.......", ".....KAK........",
                 "....KAK.........", "...KAK..........", "..KAK...........", ".KaK............", ".KK.............", "................" } },
+            { "hammer", new[] {
+                "................", "...KKKKKKKK.....", "..KAAAAAAAAK....", "..KAWAAAAAAaK...", "..KAAAAAAAaaK...",
+                "...KKKKKKKKKK...", "........KCK.....", ".......KCK......", "......KCK.......", ".....KCK........",
+                "....KCK.........", "...KCK..........", "..KCK...........", "..KK............", "................", "................" } },
             { "potion", new[] {
                 "................", "......KKKK......", "......KCCK......", ".......KK.......", "......KAAK......",
                 ".....KAAAAK.....", "....KAWAAAAK....", "...KAWAAAAAAK...", "...KAAAAAAAAK...", "...KAAAAAAAaK...",
@@ -199,6 +203,12 @@ namespace RiskLoop.Game.Art
             { "class_Warrior", ("sword", "D0D5DC", "C04040") },
             { "class_Mage", ("staff", "8A5A30", "B060FF") },
             { "class_Archer", ("bow", "8A5A30", "40C060") },
+
+            // Eşya butonları (yanlışlıkla satmayı önlemek için ne yaptıkları resimden de belli olsun)
+            { "btn_equip", ("armor", "4A90E0", "FFD23A") },
+            { "btn_unequip", ("armor", "8A8F98", "606070") },
+            { "btn_enhance", ("hammer", "C8CDD4", "C89A50") },
+            { "btn_sell", ("coins", "FFD23A", "C88A1A") },
 
             // Kadim yükseltmeler
             { "pr_AncientGold", ("coins", "FFD23A", "C0C0E0") },

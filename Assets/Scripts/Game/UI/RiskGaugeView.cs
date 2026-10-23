@@ -89,7 +89,7 @@ namespace RiskLoop.Game.UI
             session.NextGamble(out double win, out double lose, out double chance);
             Color color = RiskColor(chance);
 
-            titleText.text = UIStrings.GaugeRiskTitle;
+            titleText.text = UIStrings.GaugeRiskTitleWithOdds(session.CurrentRun.SurvivalOdds);
             riskText.text = $"%{UIStrings.Pct(chance)}";
             riskText.color = color;
             barFill.anchorMax = new Vector2(Mathf.Clamp01((float)chance), 1f);

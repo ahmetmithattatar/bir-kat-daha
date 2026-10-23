@@ -15,7 +15,7 @@ namespace RiskLoop.Core
     /// <summary>
     /// Turlar arasında kalıcı olan her şey: para, yükseltmeler, ekipman, istatistikler, Yeni Çağ verileri.
     /// JSON'a kaydedilir. Alan eklerken saveVersion'ı artır.
-    /// Yeni Çağda sıfırlananlar: para, yükseltmeler, ekipman, rekorlar, geçitler. KALANLAR: çağ, yadigar, kadim yükseltmeler, seviye, yetenekler.
+    /// Yeni Çağda sıfırlananlar: para, yükseltmeler, ekipman, rekorlar, geçitler, seviye, XP, yetenekler, sınıf. KALANLAR: çağ, yadigar, kadim yükseltmeler.
     /// </summary>
     [Serializable]
     public class PlayerProgress

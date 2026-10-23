@@ -34,6 +34,29 @@ namespace RiskLoop.Core
             return damage / Math.Max(s.Health, 1.0);
         }
 
+        /// <summary>Belirli bir canavar örneğinin (kendi can ve saldırısıyla) tehdit oranı: öldürene kadar kaybedilecek can oranı.</summary>
+        public double MonsterThreatRatio(MonsterInstance m, CharacterStats s)
+        {
+            CombatBalance c = Balance.combat;
+            double dps = s.Attack * (1.0 + s.CritChance * (s.CritDamage - 1.0)) / c.estimatedSecondsPerAttack;
+            double secondsToKill = m.MaxHealth / Math.Max(dps, 0.001);
+            double hitsTaken = secondsToKill / RiskMath.MonsterAttackInterval(c, m.Definition);
+            double damage = hitsTaken * RiskMath.DamageAfterDefense(c, m.Attack, s.Defense);
+            return damage / Math.Max(s.Health, 1.0);
+        }
+
+        /// <summary>Tehdit oranından zorluk kademesi 0 (açık beyaz, çok kolay) .. 8 (gri, çok zor).</summary>
+        public int DifficultyBand(double ratio)
+        {
+            double[] t = Balance.combat.difficultyThresholds;
+            int band = 0;
+            while (band < t.Length && ratio >= t[band]) band++;
+            return band;
+        }
+
+        /// <summary>Bu kademe XP verir mi? En kolay ve en zor kademe vermez.</summary>
+        public bool DifficultyGivesXp(int band) => band > 0 && band < Balance.combat.difficultyThresholds.Length;
+
         public ThreatLevel ToThreatLevel(double ratio)
         {
             CombatBalance c = Balance.combat;

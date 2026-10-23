@@ -33,6 +33,10 @@ namespace RiskLoop.Game
         [Tooltip("Daha önce görülmüş bu nadirlik ve üstü (5 = sarı) hızlı kartla gösterilir. Altı adıyla uçar.")]
         [SerializeField] private int quickCardMinTier = 5;
 
+        [Header("Kumar hissi")]
+        [Tooltip("Hayatta kalınan katta zar, göçük sınırının bu kadar üstündeyse \"KIL PAYI!\" gösterilir (0.04 = 4 puan).")]
+        [SerializeField] private float nearMissMargin = 0.04f;
+
         private static readonly Color Gold = new Color(1f, 0.88f, 0.23f);
         private static readonly Color DangerRed = new Color(0.9f, 0.15f, 0.1f);
         private static readonly Color CashGreen = new Color(0.24f, 0.8f, 0.35f);
@@ -103,6 +107,14 @@ namespace RiskLoop.Game
             StartCoroutine(UIFx.Punch(runPanel.DepthAnchor, 0.15f, 0.25f));
             runPanel.ShowMessage(UIStrings.StepMessage(r));
             fx.FloatText($"+{UIStrings.Num(r.RewardGained)}", RewardColor(r.RewardGained, valueBefore), 46f, runPanel.RunValueAnchor);
+
+            // Kıl payı: zar göçük sınırına çok yakın geldiyse (gerçek zar, dürüst) heyecanı göster
+            if (r.BustChance > 0 && r.Roll < r.BustChance + nearMissMargin)
+            {
+                fx.Banner(UIStrings.NearMissTitle(), Gold, 0.45f);
+                fx.Shake(10f, 0.25f);
+                runPanel.ShowMessage(UIStrings.NearMiss(r.Roll, r.BustChance));
+            }
             fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 6, Gold);   // Altınlar sayaca uçar
             if (r.HealthRegen > 0) digView.SetPlayerHealth(run.PlayerHealth, run.PlayerMaxHealth);
 
@@ -118,7 +130,7 @@ namespace RiskLoop.Game
                     fx.Banner(FantasyTexts.MonsterKindLabel(r.Encounter.Kind) + "!", DangerRed, 0.7f);
                     fx.Flash(DangerRed, 0.3f, 0.5f);
                 }
-                yield return digView.ShowMonster(r.Encounter);
+                yield return digView.ShowMonster(r.Encounter, session.DifficultyGivesXp(r.Encounter.Difficulty));
                 runPanel.Refresh(session);
                 yield break;
             }

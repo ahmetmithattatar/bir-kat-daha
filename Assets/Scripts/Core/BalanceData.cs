@@ -112,8 +112,10 @@ namespace RiskLoop.Core
         // raw(step)   = baseBustChance + bustChancePerZoneFloor * (f - 1) + bustChancePerZone * (z - 1)
         // floor(step) = minBustChance + bustFloorPerZoneFloor * (f - 1) + bustFloorPerZone * (z - 1)
         // chance      = clamp(raw * safetyFactor * runSafetyFactor * yetenek, floor, max).  Boss katında (f = 10) göçük yok.
-        public double baseBustChance = 0.04;
-        public double bustChancePerZoneFloor = 0.025;
+        // 11. tur: eğri yumuşatıldı. Ölçüm (gerçek kurallarla 200 bin tur): eski eğride 1. bölgenin 9 katını sağ geçme ~%25'ti,
+        // oyuncu düşük yüzdelerde bile sürekli göçük yaşıyordu. Yeni eğride ~%47 (ilk kat %2, 9. kat %14).
+        public double baseBustChance = 0.02;
+        public double bustChancePerZoneFloor = 0.015;
         public double bustChancePerZone = 0.01;
         public double minBustChance = 0.01;
         public double bustFloorPerZoneFloor = 0.012;
@@ -164,6 +166,9 @@ namespace RiskLoop.Core
         // Her göçük/yenilgi sonraki turlara +nadirlik (birikir, sınırlı). Başarılı bir yüzeye dönüş sıfırlar.
         public double pityLuckPerStack = 0.12;
         public int maxPityStacks = 5;
+        // Şanssız göçük: gösterilen risk bunun altındayken göçük olursa telafi fazladan kademe kazanır (moral bozmasın)
+        public double unluckyBustChance = 0.10;
+        public int unluckyExtraPityStacks = 1;
 
         // --- Enkazdan kurtarma: göçükte turun en nadir eşyası bu olasılıkla kurtulur (envanterde yer varsa) ---
         public double bustSalvageChance = 0.5;

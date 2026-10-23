@@ -48,7 +48,7 @@ namespace RiskLoop.Core
         private MonsterInstance CreateMonster(MonsterDefinition def, int step, MilestoneDefinition milestone)
         {
             double hp = RiskMath.MonsterHealth(Balance.combat, def, step);
-            return new MonsterInstance
+            var monster = new MonsterInstance
             {
                 Definition = def,
                 Step = step,
@@ -57,6 +57,8 @@ namespace RiskLoop.Core
                 Attack = RiskMath.MonsterAttack(Balance.combat, def, step),
                 Milestone = milestone
             };
+            monster.Difficulty = DifficultyBand(MonsterThreatRatio(monster, Stats));   // Ad rengi ve XP kuralı
+            return monster;
         }
 
         /// <summary>Oyuncu canavara bir kez vurur. Canavar ölürse zafer (ödül + bulgu + ganimet).</summary>
@@ -171,6 +173,7 @@ namespace RiskLoop.Core
             // Deneyim: boss çok, normal canavar orta (bölgeyle artar)
             int zone = RiskMath.ZoneOf(Balance, monster.Step);
             victory.XpGained = (monster.Kind == MonsterKind.Normal ? Balance.progression.xpPerKill : Balance.progression.xpPerBoss) * zone;
+            if (!DifficultyGivesXp(monster.Difficulty)) victory.XpGained = 0;   // Çok kolay ya da çok zor: XP yok
             victory.LevelsGained = GainXp(victory.XpGained);
 
             // Keşif katının bossu yenildi: geçit açılır (sonraki turlara buradan başlanabilir)
