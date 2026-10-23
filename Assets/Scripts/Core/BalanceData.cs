@@ -174,8 +174,17 @@ namespace RiskLoop.Core
         //   çarpan = 1 + courageEdge * p / (1 - p)   (en fazla maxCourageMult)
         // courageEdge 1 olsaydı adil bahis olurdu (rulet gibi: %50'de x2); 0.85 hafif kasa avantajı bırakır.
         // Ayrıca riskli katın bulgusu daha nadir gelir: şans += courageLuckPerRisk * p.
-        public double courageMinChance = 0.15;
-        public double courageEdge = 0.85;
+        // 14. tur: bonus İLK KATTAN başlar (küçük riskte küçük bonus) ve turun toplamı ekranda büyür.
+        public double courageMinChance = 0.0;
+        public double courageEdge = 0.7;
+
+        // --- Gösterilen risk ile gerçek risk (oyuncu lehine şans, Fire Emblem / XCOM tekniği) ---
+        // Ekranda GÖSTERİLEN göçük riski p; zar GERÇEKTE p^riskDisplayExponent ile atılır (her zaman daha düşük).
+        // Örnek (1.6): gösterilen geçme %75 -> gerçek %89, %50 -> %67, %30 -> %44. Oyuncu düşük görünen ihtimali
+        // başardığını hisseder; insanlar %65-75'i "kesin" sanıp sık göçük yiyince oyundan soğuyordu (kullanıcı kararı).
+        // Cesaret bonusu GÖSTERİLEN riske göre verilir: risk almak gerçekte de kârlıdır.
+        // Gerçek parayla rastgelelik YOK; ileride parayla satılan rastgele içerik olursa orada gerçek ihtimal gösterilmeli.
+        public double riskDisplayExponent = 1.6;
         public double maxCourageMult = 3.0;
         public double courageLuckPerRisk = 1.0;
 

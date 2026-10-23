@@ -68,10 +68,7 @@ MonoBehaviour:
       baseValue: 0.03
       minTier: 0
     maxSafetyFindReduction: 0.5
-    pityLuckPerStack: 0.12
-    maxPityStacks: 5
-    unluckyBustChance: 0.1
-    unluckyExtraPityStacks: 1
+    minTotalRiskFactor: 0.6
     courageMinChance: 0.15
     courageEdge: 0.85
     maxCourageMult: 3
@@ -221,6 +218,9 @@ MonoBehaviour:
       pctStatPerLevel: 0.02
       sellBase: 5
       inventoryCap: 32
+      monsterLevelPerStep: 0.5
+      gearLuckCap: 0.8
+      maxBossDropMinTier: 4
       kudretPerLevel: 10
       kudretPerAffix: 1.5
       enhanceMax: 10
@@ -1888,7 +1888,6 @@ MonoBehaviour:
       talentPointsPerLevel: 1
       talentsLevel: 2
       equipmentLevel: 3
-      insuranceLevel: 4
       findChanceLevel: 4
       checkpointsLevel: 5
       enhanceLevel: 6
@@ -2089,7 +2088,7 @@ MonoBehaviour:
         row: 2
         maxRank: 3
         effect: 4
-        perRank: 0.05
+        perRank: 0.08
       - id: rubble_hunter
         branch: 0
         row: 2
@@ -2179,7 +2178,7 @@ MonoBehaviour:
         row: 2
         maxRank: 3
         effect: 19
-        perRank: 0.04
+        perRank: 0.4
       - id: dragon_eye
         branch: 2
         row: 3
@@ -2223,13 +2222,8 @@ MonoBehaviour:
     safetyUpgrade:
       baseCost: 75
       costGrowth: 1.65
-      effectPerLevel: 0.05
+      effectPerLevel: 0.03
       maxLevel: 25
-    insuranceUpgrade:
-      baseCost: 100
-      costGrowth: 1.75
-      effectPerLevel: 0.07
-      maxLevel: 15
     findChanceUpgrade:
       baseCost: 60
       costGrowth: 1.55

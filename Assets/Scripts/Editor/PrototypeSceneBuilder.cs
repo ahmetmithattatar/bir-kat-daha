@@ -375,7 +375,7 @@ namespace RiskLoop.EditorTools
             RectTransform top = CreateUIObject("Top", root);
             SetHeight(top, 72);
             AddHorizontalLayout(top, spacing: 10);
-            TMP_Text title = CreateText("Title", top, "", 20, 72, TextAlignmentOptions.MidlineLeft);
+            TMP_Text title = CreateText("Title", top, "", 40, 72, TextAlignmentOptions.MidlineLeft);   // Turun toplam RİSK BONUSU
             title.color = HintColor;
             FillRemainingWidth(title);
             TMP_Text risk = CreateText("Risk", top, "%0", 64, 72);

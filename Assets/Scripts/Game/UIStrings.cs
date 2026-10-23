@@ -731,18 +731,25 @@ namespace RiskLoop.Game
 
         private static readonly string[] NearMissTitles = { "KIL PAYI!", "AZ KALSIN!", "TAVAN İNLEDİ!", "ŞANSLI GÜN!" };
         public static string NearMissTitle() => Pick(NearMissTitles);
-        public static string NearMiss(double roll, double chance) =>
-            $"<color=#FFE03A>Kıl payı!</color> Göçük sınırı %{Pct(chance)}, zar %{Pct(roll)} geldi.";
+        public static string NearMiss() => "<color=#FFE03A>Kıl payı!</color> Tavan son anda dayandı.";
         public const string GaugeCombatTitle = "BU SAVAŞ";
         public static string GaugeWin(double win) => $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>";
 
         /// <summary>Cesaret ödülü yüzde olarak: çarpan 1.69 -> "+%69" (1,xx yerine tatmin edici büyük sayı).</summary>
         public static string CourageBonus(double mult) => $"+%{(mult - 1.0) * 100.0:0}";
 
-        /// <summary>Kazanırsan: Cesaret ödülü varsa yanında altın "+%45" (tüm kazancın büyüyeceğini göstersin).</summary>
+        /// <summary>
+        /// Turun TOPLAM risk bonusu (terazinin solunda, büyük altın): "RİSK BONUSU +%57". Her geçilen katta artar.
+        /// </summary>
+        public static string RiskBonusTotal(double totalMult) =>
+            totalMult > 1.0005
+                ? $"<size=55%><color=#C8B070>RİSK BONUSU</color></size>\n<color=#FFC83A><b>{CourageBonus(totalMult)}</b></color>"
+                : "<size=55%><color=#8A8A94>RİSK BONUSU</color></size>\n<color=#8A8A94><b>+%0</b></color>";
+
+        /// <summary>Kazanırsan: bu katın risk bonusu yanında altın "+%12" (tüm kazancın büyüyeceğini göstersin).</summary>
         public static string GaugeWin(double win, double courage) =>
             courage > 1.0
-                ? $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>  <color=#FFC83A><b>{CourageBonus(courage)} cesaret</b></color>"
+                ? $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>  <color=#FFC83A><b>{CourageBonus(courage)} bonus</b></color>"
                 : GaugeWin(win);
 
         // Kutlama başlıkları: alınan risk büyüdükçe daha görkemli (geçme şansı yüksekse başlık yok, sadece küçük efekt)
@@ -751,19 +758,19 @@ namespace RiskLoop.Game
         private static readonly string[] FearlessTitles = { "GÖZÜ KARA!", "KADER SENDEN YANA!", "ÖLÜMLE DANS!" };
         private static readonly string[] LegendTitles = { "EFSANEVİ CESARET!", "İMKANSIZI BAŞARDIN!", "DESTANLIK!" };
 
-        /// <summary>Riske göre kutlama başlığı (risk %10'un altındaysa null: başlıksız küçük kutlama).</summary>
+        /// <summary>Riske (gösterilen) göre kutlama başlığı. %8'in altında null: başlıksız küçük kutlama.</summary>
         public static string CourageTitle(double bustChance)
         {
-            if (bustChance >= 0.5) return Pick(LegendTitles);
-            if (bustChance >= 0.35) return Pick(FearlessTitles);
+            if (bustChance >= 0.45) return Pick(LegendTitles);
+            if (bustChance >= 0.32) return Pick(FearlessTitles);
             if (bustChance >= 0.2) return Pick(BoldTitles);
-            if (bustChance >= 0.1) return Pick(BraveTitles);
+            if (bustChance >= 0.08) return Pick(BraveTitles);
             return null;
         }
 
         public static string CourageMessage(double chance, double gain) =>
             gain > 0
-                ? $"<color=#FFC83A>%{Pct(1 - chance)} şansla geçtin!</color> Cesaret ödülü: <b>+{Num(gain)}</b>"
+                ? $"<color=#FFC83A>%{Pct(1 - chance)} şansla geçtin!</color> Risk bonusu: <b>+{Num(gain)}</b>"
                 : $"<color=#FFE03A>%{Pct(1 - chance)} şansla geçtin!</color>";
         public static string GaugeLose(double lose) => $"<size=70%>KAYBEDERSEN</size>\n<color=#FF4A3A><b>-{Num(lose)}</b></color>";
         public const string GaugeNothingToLose = "<size=70%>KAYBEDERSEN</size>\n<color=#9AA0B4><b>henüz bir şey yok</b></color>";

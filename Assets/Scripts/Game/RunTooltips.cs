@@ -81,9 +81,9 @@ namespace RiskLoop.Game
             s.NextGamble(out double win, out double lose, out double chance);
             double courage = s.NextCourageMult;
             string courageLine = courage > 1.0
-                ? $"\n<color=#FFC83A><b>CESARET {UIStrings.CourageBonus(courage)}</b></color>: bu katı geçersen risk altındaki TÜM kazanç bu kadar büyür ve bulgusu daha nadir gelir.\n" +
+                ? $"\n<color=#FFC83A><b>RİSK BONUSU {UIStrings.CourageBonus(courage)}</b></color>: bu katı geçersen risk altındaki TÜM kazanç bu kadar büyür ve bulgusu daha nadir gelir.\n" +
                   "Geçme şansı ne kadar düşükse ödül o kadar büyük."
-                : $"\n<color=#9AA0B4>Geçme şansı %{UIStrings.Pct(1 - s.Balance.courageMinChance)}'in altına düşünce Cesaret ödülü başlar.</color>";
+                : $"\n<color=#9AA0B4>Geçme şansı %{UIStrings.Pct(1 - s.Balance.courageMinChance)}'in altına düşünce risk bonusu başlar.</color>";
             return $"<b>Sonraki kat</b>\nGeçersen <b>+{UIStrings.Num(win)}</b> (%{UIStrings.Pct(1 - chance)})\n" +
                    $"Göçerse <b>-{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) ve tur biter" +
                    courageLine;

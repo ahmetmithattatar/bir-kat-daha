@@ -79,6 +79,10 @@ namespace RiskLoop.Core
             return Clamp(reduced, BustFloor(b, step, runFloor), b.maxBustChance);
         }
 
+        /// <summary>Zarın gerçekte kullandığı göçük olasılığı: gösterilen^riskDisplayExponent (oyuncu lehine, hep daha düşük).</summary>
+        public static double TrueBustChance(BalanceData b, double shownBustChance) =>
+            shownBustChance <= 0 ? 0 : Math.Pow(shownBustChance, Math.Max(1.0, b.riskDisplayExponent));
+
         /// <summary>
         /// Cesaret çarpanı: göçük riski p olan katı sağ geçince risk altındaki kazanç bununla çarpılır.
         /// p küçükse (courageMinChance altı) 1: güvenli katta ödül yok, riskli katta neredeyse adil bahis.

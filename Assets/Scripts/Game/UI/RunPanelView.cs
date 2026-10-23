@@ -64,6 +64,7 @@ namespace RiskLoop.Game.UI
         public RectTransform RunValueAnchor => runValueText.rectTransform;
         public RectTransform DepthAnchor => depthText.rectTransform;
         public RectTransform CollectionAnchor => (RectTransform)collection.transform;
+        public RectTransform RiskBonusAnchor => riskGauge.BonusAnchor;   // Turun toplam risk bonusu sayacı
 
         // Sayaç animasyonu: ekrandaki değer hedefe doğru akar
         private double _shownValue;

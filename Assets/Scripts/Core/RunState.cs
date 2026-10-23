@@ -89,6 +89,7 @@ namespace RiskLoop.Core
         public bool Busted;           // Patlama oldu mu?
         public int Step;              // İnilmeye çalışılan adım
         public double BustChance;     // O adımın patlama olasılığı
+        public double TrueBustChance; // Zarın gerçekte kullandığı olasılık (gösterilenden düşük, oyuncu lehine)
         public double Roll;           // Atılan zar (0..1). Roll < BustChance ise patlama
         public double RewardGained;   // Hayatta kalındıysa eklenen kazanç
         public double LostEarnings;   // Patlamada kaybedilen miktar

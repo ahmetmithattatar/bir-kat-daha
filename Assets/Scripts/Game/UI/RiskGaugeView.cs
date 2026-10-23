@@ -44,11 +44,15 @@ namespace RiskLoop.Game.UI
         private float _bpm = 60f;
         private float _phase;         // Kalp atışı döngüsü (0..1)
         private double _lastRisk = -1;
+        private double _lastBonus = -1;   // Toplam risk bonusu arttığında sayaç "pat" desin
 
         private void Awake()
         {
             heartbeat.sprite = PixelArt.Vignette();   // Kenarlar dolu, orta saydam: sadece ekran kenarı kızarır
         }
+
+        /// <summary>Turun toplam risk bonusu sayacı (uçan "+%X" yazıları buraya gider).</summary>
+        public RectTransform BonusAnchor => titleText.rectTransform;
 
         private void Update()
         {
@@ -92,10 +96,16 @@ namespace RiskLoop.Game.UI
             // Risk SADECE bu büyük sayıyla anlatılır: sonraki kata GEÇME şansı (%95 = hiç düşünmeden kaz, %40 = gözü kara).
             // Yanında yorum ya da ek yazı yok; oyuncu kararını bu sayıya göre verir. Çubuk da geçme şansı kadar dolu.
             double success = 1.0 - chance;
-            bool? foresight = session.ForesightSaysBust;   // Kehanet büyüsünün sonucu (varsa) solda kısa not
-            titleText.text = foresight.HasValue
-                ? (foresight.Value ? "<color=#FF3B3B>KEHANET:\nGÖÇECEK</color>" : "<color=#3CCB5A>KEHANET:\nGÜVENLİ</color>")
-                : "";
+            // Solda turun TOPLAM risk bonusu (büyük, altın). Her geçilen katta artar ve "pat" diye büyür:
+            // oyuncu kazarken bu sayıya bakıp tatmin olsun.
+            double totalBonus = session.CurrentRun.CourageTotalMult;
+            titleText.text = UIStrings.RiskBonusTotal(totalBonus);
+            if (_lastBonus >= 0 && totalBonus > _lastBonus + 1e-6)
+            {
+                StartCoroutine(UIFx.Punch(titleText.rectTransform, 0.25f + Mathf.Min(0.6f, (float)(totalBonus - _lastBonus)), 0.35f));
+            }
+            _lastBonus = totalBonus;
+
             riskText.text = $"%{UIStrings.Pct(success)}";
             riskText.color = color;
             barFill.anchorMax = new Vector2(Mathf.Clamp01((float)success), 1f);
@@ -105,7 +115,11 @@ namespace RiskLoop.Game.UI
             double courage = session.NextCourageMult;
             winText.text = UIStrings.GaugeWin(win, courage);
             loseText.text = lose > 0 ? UIStrings.GaugeLose(lose) : UIStrings.GaugeNothingToLose;
-            verdictText.text = "";
+            // Sağ: sadece Kehanet büyüsünün sonucu (varsa)
+            bool? foresight = session.ForesightSaysBust;
+            verdictText.text = foresight.HasValue
+                ? (foresight.Value ? "<color=#FF3B3B>KEHANET:\nGÖÇECEK</color>" : "<color=#3CCB5A>KEHANET:\nGÜVENLİ</color>")
+                : "";
             tooltip.SetText(RunTooltips.Gamble(session));
 
             // Nabız: risk büyüdükçe ve kaybedilecek bir şey varken
@@ -144,6 +158,7 @@ namespace RiskLoop.Game.UI
 
         public void Clear()
         {
+            _lastBonus = -1;
             _intensity = 0f;
             _lastRisk = -1;
         }

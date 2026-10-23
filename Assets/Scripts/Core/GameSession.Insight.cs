@@ -155,7 +155,7 @@ namespace RiskLoop.Core
             for (int n = 1; n <= InsightMaxStep; n++)
             {
                 int step = startStep + n;
-                alive *= 1.0 - BustChanceAt(step);
+                alive *= 1.0 - RiskMath.TrueBustChance(Balance, BustChanceAt(step));
                 expected += alive;
                 if (RiskMath.IsBossFloor(Balance, step) || alive < 1e-4) break;
             }
@@ -170,7 +170,7 @@ namespace RiskLoop.Core
             for (int step = startStep + 1; step <= startStep + InsightMaxStep; step++)
             {
                 if (RiskMath.IsBossFloor(Balance, step)) break;
-                alive *= 1.0 - BustChanceAt(step);
+                alive *= 1.0 - RiskMath.TrueBustChance(Balance, BustChanceAt(step));
             }
             return alive;
         }

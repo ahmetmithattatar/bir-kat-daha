@@ -114,6 +114,9 @@ namespace RiskLoop.Core
         /// <summary>Bu adım turun kaçıncı kazılan katı? (Geçitten başlandıysa başlangıçtan sayılır.) Risk buna göre artar.</summary>
         private int RunFloorOf(int step) => step - (CurrentRun != null ? CurrentRun.StartStep : 0);
 
+        /// <summary>Sonraki katın GERÇEK göçük olasılığı (zar bununla atılır; ekranda NextBustChance gösterilir).</summary>
+        public double NextTrueBustChance => RiskMath.TrueBustChance(Balance, NextBustChance);
+
         /// <summary>Sonraki katı sağ geçersen risk altındaki kazanç bununla çarpılır (Cesaret, 1 = yok).</summary>
         public double NextCourageMult => RiskMath.CourageMultiplier(Balance, NextBustChance, Talents.CourageBonus);
 
@@ -207,15 +210,16 @@ namespace RiskLoop.Core
             if (InCombat) throw new InvalidOperationException("Savaş sürerken kazılamaz.");
 
             int nextStep = CurrentRun.Step + 1;
-            double chance = NextBustChance;
+            double chance = NextBustChance;                              // Ekranda gösterilen (bonus buna göre)
+            double trueChance = RiskMath.TrueBustChance(Balance, chance);   // Zarın gerçekte kullandığı (daha düşük)
             // ZAR 1: göçük. Kehanet bu zarı önceden attıysa o kullanılır (yeni zar atılmaz).
             double roll = CurrentRun.HasForesight ? CurrentRun.ForesightRoll : _random.NextDouble();
             CurrentRun.ForesightRoll = -1;
             CurrentRun.CourageLuck = 0;   // Önceki riskli katın bulgu bonusu bu katta geçmez
 
-            var result = new AdvanceResult { Step = nextStep, BustChance = chance, Roll = roll };
+            var result = new AdvanceResult { Step = nextStep, BustChance = chance, TrueBustChance = trueChance, Roll = roll };
 
-            if (roll < chance)
+            if (roll < trueChance)
             {
                 result.SalvagedItem = BustOutcome(out result.LostEarnings);
                 result.Busted = true;

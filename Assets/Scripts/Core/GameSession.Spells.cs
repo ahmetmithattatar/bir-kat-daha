@@ -182,7 +182,7 @@ namespace RiskLoop.Core
 
                 case SpellEffect.Foresight:
                     run.ForesightRoll = _random.NextDouble();                    // ZAR: kehanet (sonraki katın göçük zarı ŞİMDİ atılır)
-                    result.ForesightBust = run.ForesightRoll < NextBustChance;
+                    result.ForesightBust = run.ForesightRoll < NextTrueBustChance;
                     break;
 
                 case SpellEffect.FindBoost:
@@ -218,7 +218,7 @@ namespace RiskLoop.Core
 
         /// <summary>Kehanet varsa: sonraki kat göçecek mi? (Yoksa null.) Risk o arada değişse bile güncel riske göre.</summary>
         public bool? ForesightSaysBust =>
-            CurrentRun != null && CurrentRun.HasForesight ? CurrentRun.ForesightRoll < NextBustChance : (bool?)null;
+            CurrentRun != null && CurrentRun.HasForesight ? CurrentRun.ForesightRoll < NextTrueBustChance : (bool?)null;
 
         /// <summary>Mana kazan (kat ve öldürme). Üst sınır MaxMana.</summary>
         private void GainMana(double amount)

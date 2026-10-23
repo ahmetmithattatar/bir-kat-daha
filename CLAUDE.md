@@ -121,6 +121,19 @@ hitap etsin, yükseltme/yetenekler ikonlu olsun, class sistemi + spell book (sev
   Değerli eşyada (yeşil+, güçlendirilmiş ya da Kudret artıran) satış iki basış ister.
 - **Config:** risk eğrisi değiştiği için `BalanceConfig.asset` yine **Reset** edilmeli.
 
+## Oyuncu lehine şans ve görünür risk bonusu (14. tur kararları)
+Kullanıcı: %65-75'te hâlâ çok göçük geliyor; oyuncu düşük ihtimali başardığını görmeli; her katta efekt; risk bonusu görünür olmalı.
+- **Gösterilen risk ≠ gerçek risk (oyuncu lehine, Fire Emblem/XCOM tekniği):** ekranda gösterilen göçük p, zar `p^1.6` ile atılır
+  (`riskDisplayExponent`, `RiskMath.TrueBustChance`). Ölçüm (200 bin tur): gösterilen geçme %92 → gerçek %98, %74 → %88, %65 → %81, %55 → %72.
+  Risk bonusu GÖSTERİLEN riske göre: risk almak gerçekten kârlı. Kehanet, Insight ve kıl payı GERÇEK olasılığı kullanır.
+  Gerçek parayla rastgelelik yok; ileride parayla satılan rastgele içerik olursa orada gerçek ihtimal gösterilmeli (mağaza kuralı).
+- **Risk bonusu ilk kattan:** `courageMinChance` 0, `courageEdge` 0.7 (1. kat +%1, 5. kat +%10, 9. kat +%57).
+  "k. katta dön" ort. kazanç: 3 → 35, 5 → 70, 7 → 123, 9 → 194 (başarılı turda 430). Ekonomi ~2.5 kat hızlandı: fiyatlar izlenmeli.
+- **Terazinin solunda turun TOPLAM "RİSK BONUSU +%57"** (`RunState.CourageTotalMult`, büyük altın, her katta "pat"); sağda sadece Kehanet.
+  KAZANIRSAN satırında bu katın bonusu.
+- **Kutlama her katta:** kıvılcım + "+%X RİSK BONUSU" yazısı toplam sayaca uçar; %3+ flaş, %8+ başlık, %20+ sarsıntı + altın,
+  %32+ turuncu + donma, %45+ efsanevi. Kıl payı gerçek zarla orantılı (`nearMissMargin` 0.35, gerçek risk %5+).
+
 ## Sade risk, kalıcı tırmanış, eşya seviyesi (13. tur kararları)
 - **Sigorta ve Talihsizlik telafisi KALDIRILDI** (kullanıcı isteği). Göçükte risk altındaki her şey gider (enkazdan eşya kurtarma kaldı).
   `UpgradeType.Insurance` silindi (kayıt adla tuttuğu için eski kayıtlar bozulmaz), `pityStacks` silindi.
