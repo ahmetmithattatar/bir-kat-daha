@@ -109,6 +109,9 @@ namespace RiskLoop.Core
             return RiskMath.BustChance(Balance, step, Level(UpgradeType.Safety), factor);
         }
 
+        /// <summary>Sonraki katı sağ geçersen risk altındaki kazanç bununla çarpılır (Cesaret, 1 = yok).</summary>
+        public double NextCourageMult => RiskMath.CourageMultiplier(Balance, NextBustChance);
+
         /// <summary>Bir sonraki inişte hayatta kalınırsa eklenecek kazanç.</summary>
         public double NextStepReward => RewardFor(CurrentStep + 1);
 
@@ -153,6 +156,7 @@ namespace RiskLoop.Core
         private double LuckAt(int step) =>
             RiskMath.Luck(Balance, step, Level(UpgradeType.Luck), RunLuck) + Stats.Luck + Talents.Luck
             + Balance.prestige.ancientLuck.effectPerLevel * Progress.GetPrestigeLevel(PrestigeType.AncientLuck)
+            + (CurrentRun != null ? CurrentRun.CourageLuck : 0)   // Riskli katın bulgusu daha nadir
             + PityLuck;
 
         /// <summary>Talihsizlik telafisi: art arda göçük/yenilgilerden gelen ek şans (yetenekle güçlenir).</summary>
@@ -213,6 +217,7 @@ namespace RiskLoop.Core
             // ZAR 1: göçük. Kehanet bu zarı önceden attıysa o kullanılır (yeni zar atılmaz).
             double roll = CurrentRun.HasForesight ? CurrentRun.ForesightRoll : _random.NextDouble();
             CurrentRun.ForesightRoll = -1;
+            CurrentRun.CourageLuck = 0;   // Önceki riskli katın bulgu bonusu bu katta geçmez
 
             var result = new AdvanceResult { Step = nextStep, BustChance = chance, Roll = roll };
 
@@ -233,6 +238,20 @@ namespace RiskLoop.Core
             result.LevelsGained = GainXp(result.XpGained);
             GainMana(CB.manaPerFloor);
             CurrentRun.SurvivalOdds *= 1.0 - chance;   // "Bu tur %X'lik yolu geçtin" (oyuncu ne kadar şanslı olduğunu görsün)
+
+            // Cesaret: riskli katı sağ geçmek risk altındaki tüm kazancı katlar (bu kısım sigortaya dahil değil).
+            // Riskli katın bulgusu da daha nadir gelir.
+            double courage = RiskMath.CourageMultiplier(Balance, chance);
+            result.CourageMult = courage;
+            CurrentRun.CourageLuck = chance >= Balance.courageMinChance ? Balance.courageLuckPerRisk * chance : 0;
+            if (courage > 1.0)
+            {
+                double courageGain = CurrentRun.Earnings * (courage - 1.0);
+                CurrentRun.Earnings += courageGain;
+                CurrentRun.CourageEarnings += courageGain;   // Eski kumar kazancı da katlanır: hepsi courageGain içinde
+                CurrentRun.CourageTotalMult *= courage;
+                result.CourageGain = courageGain;
+            }
             // Kat sayılı büyüler bir kat azalır (ödül yukarıda zaten hesaplandı)
             if (CurrentRun.SafeFloors > 0 && --CurrentRun.SafeFloors == 0) CurrentRun.SafeFloorsFactor = 0;
             if (CurrentRun.RewardFloors > 0 && --CurrentRun.RewardFloors == 0) CurrentRun.RewardFloorsMult = 1.0;
@@ -317,7 +336,8 @@ namespace RiskLoop.Core
         /// </summary>
         private GearItem BustOutcome(out double lost, out double saved, double bustChance = 1.0)
         {
-            saved = CurrentRun.Earnings * InsuranceFraction;
+            // Sigorta sadece "normal" kazancı kurtarır; Cesaret çarpanından gelen kumar kazancı tamamen gider
+            saved = Math.Max(0, CurrentRun.Earnings - CurrentRun.CourageEarnings) * InsuranceFraction;
             lost = CurrentRun.Earnings - saved;
 
             Progress.money += saved;
@@ -482,6 +502,7 @@ namespace RiskLoop.Core
                 case FindType.Multiplier:
                     // Risk altındaki kazancı çarpar: büyük kazanç, ama göçükte hepsi gider
                     double gained = CurrentRun.Earnings * Math.Min(find.Value, Balance.maxMultiplierFindBonus);
+                    CurrentRun.CourageEarnings *= 1.0 + Math.Min(find.Value, Balance.maxMultiplierFindBonus);   // Kumar kısmı da katlanır (yine sigortasız)
                     CurrentRun.Earnings += gained;
                     CurrentRun.MultiplierGained += gained;
                     break;

@@ -89,17 +89,22 @@ namespace RiskLoop.Game.UI
             session.NextGamble(out double win, out double lose, out double chance);
             Color color = RiskColor(chance);
 
+            // Büyük sayı GEÇME şansı (%95 = hiç düşünmeden kaz, %55 = kumar). Çubuk da geçme şansı kadar dolu.
+            double success = 1.0 - chance;
             titleText.text = UIStrings.GaugeRiskTitleWithOdds(session.CurrentRun.SurvivalOdds);
-            riskText.text = $"%{UIStrings.Pct(chance)}";
+            riskText.text = $"%{UIStrings.Pct(success)}";
             riskText.color = color;
-            barFill.anchorMax = new Vector2(Mathf.Clamp01((float)chance), 1f);
+            barFill.anchorMax = new Vector2(Mathf.Clamp01((float)success), 1f);
             barFillImage.color = color;
 
-            winText.text = UIStrings.GaugeWin(win);
+            // Cesaret: riskli katı geçersen tüm kazanç katlanır. Çarpan varsa "KAZANIRSAN" altında büyük yazar
+            double courage = session.NextCourageMult;
+            winText.text = UIStrings.GaugeWin(win, courage);
             loseText.text = lose > 0 ? UIStrings.GaugeLose(lose) : UIStrings.GaugeNothingToLose;
             bool? foresight = session.ForesightSaysBust;
             verdictText.text = foresight.HasValue
                 ? (foresight.Value ? "<color=#FF3B3B>KEHANET: GÖÇECEK</color>" : "<color=#3CCB5A>KEHANET: GÜVENLİ</color>")
+                : courage > 1.0 ? UIStrings.CourageVerdict(courage)
                 : UIStrings.GambleVerdict(session.NextGambleExpectedValue(), win, lose);
             tooltip.SetText(RunTooltips.Gamble(session));
 
@@ -110,6 +115,7 @@ namespace RiskLoop.Game.UI
 
             // Risk bir öncekinden belirgin arttıysa sayı "pat" diye büyür: oyuncu fark etsin
             if (_lastRisk >= 0 && chance > _lastRisk + 0.015) StartCoroutine(UIFx.Punch(riskText.rectTransform, 0.35f, 0.3f));
+            if (courage > 1.0) StartCoroutine(UIFx.Punch(winText.rectTransform, 0.15f, 0.3f));   // Cesaret çarpanı dikkat çeksin
             _lastRisk = chance;
         }
 

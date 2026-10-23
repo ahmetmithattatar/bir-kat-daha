@@ -43,6 +43,7 @@ namespace RiskLoop.Game
         private static readonly Color CritYellow = new Color(1f, 0.85f, 0.2f);
         private static readonly Color XpBlue = new Color(0.55f, 0.85f, 1f);
         private static readonly Color SpellPurple = new Color(0.7f, 0.45f, 1f);
+        private static readonly Color CourageOrange = new Color(1f, 0.55f, 0.15f);
 
         private int _hits;               // Bu duvara kaç vuruş yapıldı
         private int _swingsNeeded = 3;   // Bu duvar kaç vuruşta yıkılır (kazı gücü / duvar sertliği)
@@ -116,6 +117,21 @@ namespace RiskLoop.Game
                 runPanel.ShowMessage(UIStrings.NearMiss(r.Roll, r.BustChance));
             }
             fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 6, Gold);   // Altınlar sayaca uçar
+
+            // Cesaret: riskli katı geçtin, tüm kazanç katlandı. Kutlama riskle büyür (düşük ihtimal = büyük şölen)
+            if (r.CourageMult > 1.0)
+            {
+                float risk = (float)r.BustChance;
+                fx.Banner(UIStrings.CourageBanner(r.CourageMult), risk >= 0.35f ? CourageOrange : Gold, 0.5f + risk);
+                fx.Flash(Gold, 0.15f + 0.4f * risk, 0.5f);
+                fx.Shake(8f + 30f * risk, 0.3f + 0.4f * risk);
+                fx.FloatText($"x{r.CourageMult:0.00}  +{UIStrings.Num(r.CourageGain)}", Gold, 56f + 40f * risk, runPanel.RunValueAnchor);
+                fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 10 + Mathf.RoundToInt(40f * risk), Gold);
+                fx.Burst(runPanel.RunValueAnchor, Gold, 20 + Mathf.RoundToInt(60f * risk), 700f);
+                runPanel.ShowMessage(UIStrings.CourageMessage(r.BustChance, r.CourageGain));
+                HitStop(0.05f + 0.15f * risk);
+                yield return UIFx.Wait(0.25f + 0.5f * risk);   // Anın tadına varsın
+            }
             if (r.HealthRegen > 0) digView.SetPlayerHealth(run.PlayerHealth, run.PlayerMaxHealth);
 
             // Canavar: savaş başlar, bulgu zafere kalır

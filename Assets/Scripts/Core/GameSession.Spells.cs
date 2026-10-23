@@ -160,6 +160,7 @@ namespace RiskLoop.Core
 
                 case SpellEffect.BankEarnings:
                     double moved = run.Earnings * s.value;
+                    run.CourageEarnings -= run.CourageEarnings * s.value;   // Cebe giden kısım orantılı
                     run.Earnings -= moved;
                     run.Banked += moved;
                     Progress.money += moved;

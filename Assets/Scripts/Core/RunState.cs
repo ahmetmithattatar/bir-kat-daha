@@ -54,6 +54,13 @@ namespace RiskLoop.Core
         /// <summary>Bu turda geçilen katların hepsini sağ atlatma olasılığı (çarpım). Küçüldükçe oyuncu "ne şanslıyım" der.</summary>
         public double SurvivalOdds { get; internal set; } = 1.0;
 
+        /// <summary>Risk altındaki kazancın Cesaret çarpanından gelen kısmı (sigorta bunu kurtarmaz).</summary>
+        public double CourageEarnings { get; internal set; }
+        /// <summary>Turda alınan toplam Cesaret çarpanı (özet ve rekor için).</summary>
+        public double CourageTotalMult { get; internal set; } = 1.0;
+        /// <summary>Son geçilen riskli katın bulgu şansı bonusu (o katın bulgusu/zaferi için).</summary>
+        internal double CourageLuck;
+
         // Turda düşen eşyalar: risk altında. Yüzeye dönünce envantere girer, göçük/ölümde kaybolur
         public List<GearItem> PendingLoot { get; } = new List<GearItem>();
         public int LootAutoSold { get; internal set; }             // Envanter doluydu, otomatik satıldı
@@ -96,6 +103,8 @@ namespace RiskLoop.Core
         public MonsterInstance Encounter; // Bu katta canavar çıktıysa (bulgu zafere ertelenir)
         public double HealthRegen;        // Savaşsız katta dolan can
         public bool Unlucky;              // Düşük riskte (unluckyBustChance altı) göçük: fazladan telafi
+        public double CourageMult;        // Bu katı sağ geçince risk altındaki kazanç bununla çarpıldı (1 = yok)
+        public double CourageGain;        // Cesaretten gelen ek kazanç
 
         public bool IsMilestone;      // Bu adım bir kilometre taşı mı?
         public bool FirstMilestoneReach; // Bu kilometre taşına ilk kez mi ulaşıldı?

@@ -338,6 +338,7 @@ namespace RiskLoop.Game
             string text = $"Turun toplam değeri: <b>{Num(run.TotalValue)}</b>";
             if (run.IsNewBestRun) text += $"  <color={Gold}>EN DEĞERLİ TUR REKORU!</color>";
             if (run.Kills > 0) text += $"   Yenilen canavar: {run.Kills}";
+            if (run.CourageTotalMult > 1.01) text += $"   <color=#FFC83A>Cesaret toplam x{run.CourageTotalMult:0.00}</color>";
 
             if (run.PendingLoot.Count > 0)
             {
@@ -733,7 +734,7 @@ namespace RiskLoop.Game
 
         // ---------------- Kumar terazisi ----------------
 
-        public const string GaugeRiskTitle = "GÖÇÜK RİSKİ";
+        public const string GaugeRiskTitle = "GEÇME ŞANSI";
 
         /// <summary>Başlık + bu turda geçilen katları sağ atlatma olasılığı ("%38'lik yolu geçtin": oyuncu şansını görsün).</summary>
         public static string GaugeRiskTitleWithOdds(double survivalOdds) =>
@@ -747,6 +748,21 @@ namespace RiskLoop.Game
             $"<color=#FFE03A>Kıl payı!</color> Göçük sınırı %{Pct(chance)}, zar %{Pct(roll)} geldi.";
         public const string GaugeCombatTitle = "BU SAVAŞ";
         public static string GaugeWin(double win) => $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>";
+
+        /// <summary>Kazanırsan: Cesaret çarpanı varsa yanında altın "x1.45" (tüm kazancın katlanacağını göstersin).</summary>
+        public static string GaugeWin(double win, double courage) =>
+            courage > 1.0
+                ? $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>  <color=#FFC83A><b>x{courage:0.00}</b></color>"
+                : GaugeWin(win);
+
+        /// <summary>Riskli katın yorumu: Cesaret çarpanı (renk riskle sararıp turuncu olur).</summary>
+        public static string CourageVerdict(double courage) =>
+            $"<color={(courage >= 1.6 ? "#FF7A2E" : "#FFC83A")}>CESARET x{courage:0.00}</color>";
+
+        private static readonly string[] CourageTitles = { "CESARET!", "YÜREKLİ!", "GÖZÜ KARA!", "KADER SENDEN YANA!" };
+        public static string CourageBanner(double mult) => $"{Pick(CourageTitles)}  x{mult:0.00}";
+        public static string CourageMessage(double chance, double gain) =>
+            $"<color=#FFC83A>%{Pct(1 - chance)} şansla geçtin!</color> Risk altındaki kazanç katlandı: <b>+{Num(gain)}</b>";
         public static string GaugeLose(double lose) => $"<size=70%>KAYBEDERSEN</size>\n<color=#FF4A3A><b>-{Num(lose)}</b></color>";
         public const string GaugeNothingToLose = "<size=70%>KAYBEDERSEN</size>\n<color=#9AA0B4><b>henüz bir şey yok</b></color>";
         public static string GaugeFlee(double value) => $"<size=70%>KAÇARSAN</size>\n<color=#3CCB5A><b>{Num(value)} cebe</b></color>";
@@ -762,7 +778,10 @@ namespace RiskLoop.Game
         }
 
         /// <summary>KAZ butonu: altında küçük göçük yüzdesi (basmadan önce bir daha görsün).</summary>
-        public static string AdvanceButtonWithRisk(double risk) => $"{AdvanceButton}\n<size=40%>göçük %{Pct(risk)}</size>";
+        public static string AdvanceButtonWithRisk(double risk, double courage = 1.0) =>
+            courage > 1.0
+                ? $"{AdvanceButton}\n<size=40%>geçme %{Pct(1 - risk)}  <color=#FFC83A>x{courage:0.00}</color></size>"
+                : $"{AdvanceButton}\n<size=40%>geçme %{Pct(1 - risk)}</size>";
 
         public static string SwingsCompare(int now, int with) =>
             with == now ? "" : with < now ? $"   Duvar: {now} → <color=#3CCB5A>{with} vuruş</color>" : $"   Duvar: {now} → <color=#FF5A4A>{with} vuruş</color>";

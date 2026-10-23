@@ -67,9 +67,20 @@ namespace RiskLoop.Core
             if (IsBossFloor(b, step)) return 0;
             int f = FloorInZone(b, step);
             int z = ZoneOf(b, step);
-            double raw = b.baseBustChance + b.bustChancePerZoneFloor * (f - 1) + b.bustChancePerZone * (z - 1);
+            double raw = b.baseBustChance + b.bustChancePerZoneFloor * (f - 1) + b.bustChancePerZoneFloorSq * (f - 1) * (f - 1)
+                         + b.bustChancePerZone * (z - 1);
             double reduced = raw * SafetyFactor(b, safetyLevel) * runSafetyFactor;
             return Clamp(reduced, BustFloor(b, step), b.maxBustChance);
+        }
+
+        /// <summary>
+        /// Cesaret çarpanı: göçük riski p olan katı sağ geçince risk altındaki kazanç bununla çarpılır.
+        /// p küçükse (courageMinChance altı) 1: güvenli katta ödül yok, riskli katta neredeyse adil bahis.
+        /// </summary>
+        public static double CourageMultiplier(BalanceData b, double bustChance)
+        {
+            if (bustChance < b.courageMinChance || bustChance >= 1.0) return 1.0;
+            return Math.Min(1.0 + b.courageEdge * bustChance / (1.0 - bustChance), b.maxCourageMult);
         }
 
         /// <summary>Bu katta riskin inebileceği en düşük değer. Hiçbir yükseltme bunun altına indiremez.</summary>

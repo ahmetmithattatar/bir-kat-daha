@@ -109,13 +109,16 @@ namespace RiskLoop.Core
 
         // --- Risk eğrisi (bölge içinde) ---
         // f = bölge içindeki kat (1..9), z = bölge (1..)
-        // raw(step)   = baseBustChance + bustChancePerZoneFloor * (f - 1) + bustChancePerZone * (z - 1)
+        // raw(step)   = baseBustChance + bustChancePerZoneFloor * (f - 1) + bustChancePerZoneFloorSq * (f - 1)^2 + bustChancePerZone * (z - 1)
         // floor(step) = minBustChance + bustFloorPerZoneFloor * (f - 1) + bustFloorPerZone * (z - 1)
         // chance      = clamp(raw * safetyFactor * runSafetyFactor * yetenek, floor, max).  Boss katında (f = 10) göçük yok.
         // 11. tur: eğri yumuşatıldı. Ölçüm (gerçek kurallarla 200 bin tur): eski eğride 1. bölgenin 9 katını sağ geçme ~%25'ti,
         // oyuncu düşük yüzdelerde bile sürekli göçük yaşıyordu. Yeni eğride ~%47 (ilk kat %2, 9. kat %14).
+        // 12. tur: eğri DIŞBÜKEY (karesel). Bölgenin ilk katları neredeyse güvenli (%98 geçme), son katları gerçek kumar
+        // (8. kat ~%65, 9. kat ~%55 geçme). Riskli katları geçmek Cesaret çarpanıyla ödüllendirilir (aşağıda).
         public double baseBustChance = 0.02;
-        public double bustChancePerZoneFloor = 0.015;
+        public double bustChancePerZoneFloor = 0.0;
+        public double bustChancePerZoneFloorSq = 0.0067;
         public double bustChancePerZone = 0.01;
         public double minBustChance = 0.01;
         public double bustFloorPerZoneFloor = 0.012;
@@ -169,6 +172,17 @@ namespace RiskLoop.Core
         // Şanssız göçük: gösterilen risk bunun altındayken göçük olursa telafi fazladan kademe kazanır (moral bozmasın)
         public double unluckyBustChance = 0.10;
         public int unluckyExtraPityStacks = 1;
+
+        // --- Cesaret çarpanı: düşük ihtimalli katı denemek ÖDÜLLENDİRİLİR ---
+        // Göçük riski p >= courageMinChance olan bir katı sağ geçince risk altındaki TÜM kazanç çarpılır:
+        //   çarpan = 1 + courageEdge * p / (1 - p)   (en fazla maxCourageMult)
+        // courageEdge 1 olsaydı adil bahis olurdu (rulet gibi: %50'de x2); 0.85 hafif kasa avantajı bırakır.
+        // Bu kumar kazancı SİGORTAYA DAHİL DEĞİL (yoksa sigortayla her riskli kat bedava kâr olur, ekonomi patlar).
+        // Ayrıca riskli katın bulgusu daha nadir gelir: şans += courageLuckPerRisk * p.
+        public double courageMinChance = 0.15;
+        public double courageEdge = 0.85;
+        public double maxCourageMult = 3.0;
+        public double courageLuckPerRisk = 1.0;
 
         // --- Enkazdan kurtarma: göçükte turun en nadir eşyası bu olasılıkla kurtulur (envanterde yer varsa) ---
         public double bustSalvageChance = 0.5;

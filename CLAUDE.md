@@ -121,6 +121,19 @@ hitap etsin, yükseltme/yetenekler ikonlu olsun, class sistemi + spell book (sev
   Değerli eşyada (yeşil+, güçlendirilmiş ya da Kudret artıran) satış iki basış ister.
 - **Config:** risk eğrisi değiştiği için `BalanceConfig.asset` yine **Reset** edilmeli.
 
+## Geçme şansı ve Cesaret çarpanı (12. tur kararları)
+Kullanıcı: "%6.5 göçük" yerine sonraki kata geçme ihtimali görünsün (%95 = hiç düşünmeden, %55 = kumar), ve %45-%30 gibi düşük
+ihtimalleri denemek ÖDÜLLENDİRİLSİN.
+- **Kumar terazisi büyük sayısı = GEÇME ŞANSI** (1 - göçük). KAZ butonu "geçme %X". Çubuk geçme şansı kadar dolu.
+- **Dışbükey risk eğrisi:** `raw = 0.02 + 0.0067*(f-1)^2 (+ bölge)`: geçme şansı 1-5. katta %98 → %87 (rahat), 6-9. katta %81 → %55 (kumar).
+- **Cesaret çarpanı (`RiskMath.CourageMultiplier`):** göçük riski p >= %15 olan katı geçince risk altındaki TÜM kazanç x(1 + 0.85*p/(1-p))
+  (maks x3; %55 geçmede x1.69). Rulet gibi neredeyse adil bahis, 0.85 hafif kasa avantajı. **Sigorta kumar kazancını kurtarmaz**
+  (`RunState.CourageEarnings`), yoksa sigortayla her riskli kat bedava kâr olur. Riskli katın bulgusu daha nadir: şans += p.
+  Kutlama riskle büyür (banner, flaş, sarsıntı, altın yağmuru, hit-stop). Terazide ve KAZ butonunda "x1.45" altın renkte.
+- **Ölçüm (200 bin tur, canavar/bulgu kapalı, yükseltmesiz):** "k. katta dön" ort. kazanç 4: 40 (%84 başarı), 6: 58, 8: 72, 9: 74 (%16).
+  Riskli strateji ortalamada da kazandırıyor ve başarılı turda ~10 kat büyük vuruyor (jackpot hissi).
+- **Config:** risk eğrisi ve yeni alanlar için `BalanceConfig.asset` **Reset** gerekir.
+
 ## Bağımlılık ve uzun oyun sistemleri (5. tur kararları)
 - **Oto-kazı 7. turda KALDIRILDI** (kullanıcı isteği; `AutoDigView` silindi, kayıtta `autoDig` yok).
 - **Geçitler:** Keşif katının bossu yenilince (`conqueredMilestones`) sonraki turlara o kattan başlanabilir (atlanan katların ödülü yok).

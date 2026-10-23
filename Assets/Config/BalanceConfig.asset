@@ -17,8 +17,8 @@ MonoBehaviour:
     baseStepReward: 10
     stepMultiplierGrowth: 1.12
     zoneSize: 10
-    baseBustChance: 0.04
-    bustChancePerZoneFloor: 0.025
+    baseBustChance: 0.02
+    bustChancePerZoneFloor: 0.015
     bustChancePerZone: 0.01
     minBustChance: 0.01
     bustFloorPerZoneFloor: 0.012
@@ -69,6 +69,8 @@ MonoBehaviour:
     maxSafetyFindReduction: 0.5
     pityLuckPerStack: 0.12
     maxPityStacks: 5
+    unluckyBustChance: 0.1
+    unluckyExtraPityStacks: 1
     bustSalvageChance: 0.5
     luckCharmFind:
       weight: 10
@@ -237,6 +239,15 @@ MonoBehaviour:
       threatEasy: 0.2
       threatMedium: 0.5
       threatHard: 1
+      difficultyThresholds:
+      - 0.03
+      - 0.08
+      - 0.15
+      - 0.3
+      - 0.5
+      - 0.75
+      - 1
+      - 1.6
       avgMiniBossHpMult: 3.6
       avgMiniBossAtkMult: 1.3
       avgBossHpMult: 5.4

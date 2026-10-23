@@ -143,7 +143,7 @@ namespace RiskLoop.Game.UI
 
             // Savaş durumuna göre etiketler. KAZ butonu riski de söyler: basmadan önce bir daha görsün.
             keyHintText.text = combat ? UIStrings.KeyHintCombat : UIStrings.KeyHintRun;
-            advanceLabel.text = combat ? UIStrings.AttackButton : UIStrings.AdvanceButtonWithRisk(session.NextBustChance);
+            advanceLabel.text = combat ? UIStrings.AttackButton : UIStrings.AdvanceButtonWithRisk(session.NextBustChance, session.NextCourageMult);
             cashOutLabel.text = combat ? UIStrings.FleeButton : UIStrings.CashOutButton;
 
             // Turun değeri: yeni turda sıfırdan başla, sonra sayarak art

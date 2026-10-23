@@ -177,13 +177,18 @@ namespace RiskLoop.Core
 
         // ---------------- Kumar oranı ----------------
 
-        /// <summary>Sonraki iniş: kazanırsan (kat ödülü), kaybedersen (risk altındaki - sigorta), olasılık.</summary>
+        /// <summary>
+        /// Sonraki iniş: kazanırsan (kat ödülü + Cesaret çarpanının kazandırdığı), kaybedersen (risk altındaki;
+        /// sigorta sadece normal kısmı kurtarır, kumar kazancı tamamen gider), olasılık (göçük).
+        /// </summary>
         public void NextGamble(out double win, out double lose, out double chance)
         {
-            win = NextStepReward;
             chance = NextBustChance;
             double atRisk = CurrentRun != null ? CurrentRun.Earnings : 0;
-            lose = atRisk * (1.0 - InsuranceFraction);
+            double courage = CurrentRun != null ? CurrentRun.CourageEarnings : 0;
+            double reward = NextStepReward;
+            win = (atRisk + reward) * NextCourageMult - atRisk;
+            lose = Math.Max(0, atRisk - courage) * (1.0 - InsuranceFraction) + courage;
         }
 
         /// <summary>Beklenen değer: kazanırsan * (1-olasılık) - kaybedersen * olasılık.</summary>

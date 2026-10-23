@@ -83,9 +83,14 @@ namespace RiskLoop.Game
         public static string Gamble(GameSession s)
         {
             s.NextGamble(out double win, out double lose, out double chance);
-            return $"<b>Sonraki iniş kumarı</b>\nKazanırsan <b>+{UIStrings.Num(win)}</b> (%{UIStrings.Pct(1 - chance)})\n" +
-                   $"Kaybedersen <b>{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) ve tur biter{(s.IsUnlocked(Feature.Insurance) ? " (sigorta bir kısmını kurtarır)" : "")}\n" +
-                   $"Beklenen değer: {UIStrings.Num(s.NextGambleExpectedValue())}";
+            double courage = s.NextCourageMult;
+            string courageLine = courage > 1.0
+                ? $"\n<color=#FFC83A><b>CESARET x{courage:0.00}</b></color>: bu katı geçersen risk altındaki TÜM kazanç katlanır ve bulgusu daha nadir gelir.\n" +
+                  "Geçme şansı ne kadar düşükse çarpan o kadar büyük. Bu kumar kazancını sigorta kurtarmaz."
+                : $"\n<color=#9AA0B4>Geçme şansı %{UIStrings.Pct(1 - s.Balance.courageMinChance)}'in altına düşünce Cesaret çarpanı başlar.</color>";
+            return $"<b>Sonraki iniş kumarı</b>\nGeçersen <b>+{UIStrings.Num(win)}</b> (%{UIStrings.Pct(1 - chance)})\n" +
+                   $"Göçerse <b>-{UIStrings.Num(lose)}</b> (%{UIStrings.Pct(chance)}) ve tur biter{(s.IsUnlocked(Feature.Insurance) ? " (sigorta normal kazancın bir kısmını kurtarır)" : "")}" +
+                   courageLine;
         }
 
         public static string Buffs(GameSession s) =>
