@@ -145,8 +145,11 @@ taşlar değişiyor: derine indiğini hissediyordun). İstek: o konsept gerçek�
   matematik), Sprite ana iş parçacığında oluşur. Önbellek: bölge + geçiş oranı (tünel), + 4 çeşit (yüz).
 - **Kutlama 7 renk (`UIStrings.CourageTier`, `RunFeedbackDirector.CourageColors`):** beyaz → mavi → yeşil → sarı → turuncu → kırmızı →
   pembe (bossa giden yolda 1. kat beyaz ... 8-9. kat pembe). Her katta kademe renginde kıvılcım, flaş, titreyen başlık, "+%X RİSK BONUSU".
-  **Turda yeni renge çıkınca (`TierUp`):** şok dalgaları (`FxLayerView.Shockwave`), ekran çatlar (`ScreenCracks`, `PixelArt.GlassCracks`),
-  başlığın arkasında dönen hüzmeler (`Rays`), donma, sarsıntı; her renkte katlanır, kırmızı/pembede ikinci dalga, pembede gökkuşağı patlaması.
+  **20. tur:** kutlama gücü SADECE renge bağlı (aynı renk her seferinde aynı kutlama; eskiden sadece turda ilk kez o renge çıkınca
+  büyüktü ve "bazen gelmiyor" hissi veriyordu). Beyaz: yok. Mavi: kıvılcım + bonus yazısı. Yeşil: + başlık, hafif flaş. Sarı: + şok dalgası,
+  altın, kısa donma. Turuncu: + hüzmeler, beyaz dalga. Kırmızı: + ikinci patlama dalgası. Pembe: + gökkuşağı, son büyük dalga.
+  **Ekran çatlağı kaldırıldı** (görüşü kapatıyordu): görüşü kapatan efekt yok, flaş ve dalgalar hızla solar. Kıl payı başlığı kutlamaya katıldı.
+- **Duvar çatlakları kaya yüzünde kalır:** `wallImage` üzerinde `Mask`, `crackImage` onun çocuğu (çalışırken taşınır): elips dışına taşmaz.
 
 ## Oynanabilir oyun: menüler, ses, Windows sürümü (16. tur)
 Kullanıcı: arkadaşına göndermek için standart bir oyun (menü vb.).

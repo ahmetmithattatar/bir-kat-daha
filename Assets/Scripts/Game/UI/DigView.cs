@@ -139,6 +139,12 @@ namespace RiskLoop.Game.UI
             RectTransform passing = tunnelRings[1].rectTransform;
             passing.offsetMin = passing.offsetMax = Vector2.zero;
             for (int i = 1; i < tunnelRings.Length; i++) tunnelRings[i].enabled = false;
+            // Duvardaki çatlaklar kaya yüzünün şekliyle kırpılsın (yüz elips, çatlak görseli kare: köşelere taşmasın).
+            // Mask, kaya görselinin saydam piksellerini dışarıda bırakır; çatlak onun çocuğu olunca içeride kalır.
+            var faceMask = wallImage.gameObject.AddComponent<Mask>();
+            faceMask.showMaskGraphic = true;
+            crackImage.transform.SetParent(wallImage.transform, true);
+
             MineArt.Prewarm(1);   // İlk katın görselleri oyun açılırken arka planda hazırlansın
 
             _attackFx = sceneRoot.gameObject.AddComponent<AttackFxView>();

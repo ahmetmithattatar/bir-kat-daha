@@ -38,7 +38,7 @@ namespace RiskLoop.Game.UI
             bannerText.outlineColor = new Color32(20, 12, 8, 255);
 
             // Hüzmeler banner'ın hemen arkasında (kodla eklenir, sahne kurucuya gerek yok)
-            _raysImage = CreateLayerImage("CelebrationRays", PixelArt.Rays(16, 96), new Vector2(1100, 1100));
+            _raysImage = CreateLayerImage("CelebrationRays", PixelArt.Rays(16, 96), new Vector2(850, 850));
             _raysImage.transform.SetSiblingIndex(bannerText.transform.GetSiblingIndex());
             _raysImage.gameObject.SetActive(false);
         }
@@ -256,7 +256,7 @@ namespace RiskLoop.Game.UI
             rt.localScale = Vector3.one;
         }
 
-        // ---------------- Kutlama: şok dalgası, ekran çatlağı, hüzmeler ----------------
+        // ---------------- Kutlama: şok dalgası, hüzmeler (görüşü kapatmaz: hızla solar) ----------------
 
         /// <summary>from'dan yayılan renkli halka (patlamanın dalgası). Büyüdükçe incelir ve solar.</summary>
         public void Shockwave(RectTransform from, Color color, float maxSize, float duration, float delay = 0f)
@@ -283,35 +283,6 @@ namespace RiskLoop.Game.UI
             Destroy(ring.gameObject);
         }
 
-        /// <summary>
-        /// Ekran çatlar: merkezden dallanan parlak çizgiler bir anda belirir, hafifçe büyüyüp solar.
-        /// branches arttıkça çatlak çoğalır (kademe yükseldikçe daha çok "kırılır").
-        /// </summary>
-        public void ScreenCracks(Color color, int branches, float duration, int seed)
-        {
-            if (!GameSettings.Flashes) color.a *= 0.4f;
-            StartCoroutine(CracksRoutine(color, branches, duration, seed));
-        }
-
-        private IEnumerator CracksRoutine(Color color, int branches, float duration, int seed)
-        {
-            Image cracks = CreateLayerImage("ScreenCracks", PixelArt.GlassCracks(seed, branches), new Vector2(1400, 1400));
-            cracks.transform.SetSiblingIndex(bannerText.transform.GetSiblingIndex());   // Yazının arkasında
-            cracks.transform.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
-            float peak = color.a;
-            float t = 0f;
-            while (t < duration)
-            {
-                t += FxTime.Delta;
-                float k = Mathf.Clamp01(t / duration);
-                cracks.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.92f, 1.08f, k);
-                color.a = peak * (k < 0.5f ? 1f : 1f - (k - 0.5f) / 0.5f);
-                cracks.color = color;
-                yield return null;
-            }
-            Destroy(cracks.gameObject);
-        }
-
         /// <summary>Banner'ın arkasında dönen, büyüyen ışık hüzmeleri.</summary>
         public void Rays(Color color, float duration)
         {
@@ -330,7 +301,7 @@ namespace RiskLoop.Game.UI
                 float k = Mathf.Clamp01(t / duration);
                 _raysImage.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.3f, 1.2f, 1f - (1f - k) * (1f - k));
                 _raysImage.rectTransform.Rotate(0f, 0f, 70f * FxTime.Delta);
-                color.a = 0.55f * (k < 0.2f ? k / 0.2f : 1f - (k - 0.2f) / 0.8f);
+                color.a = 0.4f * (k < 0.2f ? k / 0.2f : 1f - (k - 0.2f) / 0.8f);
                 _raysImage.color = color;
                 yield return null;
             }
