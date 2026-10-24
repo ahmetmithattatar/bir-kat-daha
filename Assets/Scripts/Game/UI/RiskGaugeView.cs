@@ -29,9 +29,9 @@ namespace RiskLoop.Game.UI
 
         [Header("Kalp atışı")]
         [Tooltip("Bu riskin altında nabız yok.")]
-        [SerializeField] private float pulseStartRisk = 0.08f;
+        [SerializeField] private float pulseStartRisk = 0.30f;
         [Tooltip("Bu riskte nabız en güçlü.")]
-        [SerializeField] private float pulseFullRisk = 0.45f;
+        [SerializeField] private float pulseFullRisk = 0.70f;
         [SerializeField] private float maxPulseAlpha = 0.55f;
         [SerializeField] private float minBpm = 60f;
         [SerializeField] private float maxBpm = 150f;
@@ -164,6 +164,7 @@ namespace RiskLoop.Game.UI
         }
 
         private static Color RiskColor(double risk) =>
-            risk < 0.12 ? Color.Lerp(Safe, Warn, (float)(risk / 0.12)) : Color.Lerp(Warn, Danger, Mathf.Clamp01((float)((risk - 0.12) / 0.3)));
+            // Gösterilen risk bossa giden yolda %12 -> %68: yeşil -> sarı (%35) -> kırmızı (%65)
+            risk < 0.35 ? Color.Lerp(Safe, Warn, (float)((risk - 0.1) / 0.25)) : Color.Lerp(Warn, Danger, Mathf.Clamp01((float)((risk - 0.35) / 0.3)));
     }
 }

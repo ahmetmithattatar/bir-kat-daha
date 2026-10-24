@@ -121,6 +121,19 @@ hitap etsin, yükseltme/yetenekler ikonlu olsun, class sistemi + spell book (sev
   Değerli eşyada (yeşil+, güçlendirilmiş ya da Kudret artıran) satış iki basış ister.
 - **Config:** risk eğrisi değiştiği için `BalanceConfig.asset` yine **Reset** edilmeli.
 
+## Bossa giden yol baştan sona risk (15. tur kararları)
+Kullanıcı: oyuncu her bossta yüzeye çıkacak (bosstan eşya düştü), o yüzden bossa giden 9 katın risk/ödülü önemli;
+%75 bağımlı oyuncu için "kesin"; en yüksek ihtimallerde de az da olsa efekt olmalı.
+- **Gösterilen risk doğrusal ve yüksek:** `baseBustChance` 0.12, `bustChancePerZoneFloor` 0.07, karesel terim 0.
+  Gösterilen geçme 1. kat %88, 5. kat %60, 9. kat %32. **Gerçek zar `p^2.4`** (`riskDisplayExponent`): ölçülen gerçek geçme %99, %89, %60.
+  Yeni oyuncu bossa (9 kat) sağ ulaşma ~%21 (yükseltme, yetenek, bulgu, büyüyle artar).
+- **Risk bonusu `courageEdge` 0.35:** kat başı +%5 → +%74; 9 katın toplamı ~+%700. "k. katta dön" ort. kazanç 3 → 38, 5 → 76,
+  7 → 122, 9 → 158 (başarılı turda 756): risk almak en kârlı yol, ekonomi patlamadı.
+- **5 kademeli kutlama (`UIStrings.CourageTier`):** her katta en az kıvılcım + hafif flaş + kısa başlık (SAĞLAM ADIM!) + "+%X RİSK BONUSU";
+  2 (geçme <%80) altın + sarsıntı, 3 (<%65) patlama, 4 (<%50, GÖZÜ KARA!) turuncu + donma, 5 (<%38) efsanevi.
+  Terazi rengi yeşil → sarı (%35 risk) → kırmızı (%65), nabız %30 riskten başlar.
+- **Config:** `BalanceConfig.asset` **Reset** gerekir.
+
 ## Oyuncu lehine şans ve görünür risk bonusu (14. tur kararları)
 Kullanıcı: %65-75'te hâlâ çok göçük geliyor; oyuncu düşük ihtimali başardığını görmeli; her katta efekt; risk bonusu görünür olmalı.
 - **Gösterilen risk ≠ gerçek risk (oyuncu lehine, Fire Emblem/XCOM tekniği):** ekranda gösterilen göçük p, zar `p^1.6` ile atılır

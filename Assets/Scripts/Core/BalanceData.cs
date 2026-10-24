@@ -116,9 +116,11 @@ namespace RiskLoop.Core
         // oyuncu düşük yüzdelerde bile sürekli göçük yaşıyordu. Yeni eğride ~%47 (ilk kat %2, 9. kat %14).
         // 12. tur: eğri DIŞBÜKEY (karesel). Bölgenin ilk katları neredeyse güvenli (%98 geçme), son katları gerçek cesaret sınavı
         // (8. kat ~%65, 9. kat ~%55 geçme). Riskli katları geçmek Cesaret çarpanıyla ödüllendirilir (aşağıda).
-        public double baseBustChance = 0.02;
-        public double bustChancePerZoneFloor = 0.0;
-        public double bustChancePerZoneFloorSq = 0.0067;
+        // 15. tur: GÖSTERİLEN risk bossa giden 9 katın tamamında tırmanır (doğrusal): geçme 1. kat ~%88, 5. kat ~%63, 9. kat ~%32.
+        // Kullanıcı: %75 bağımlı oyuncu için "kesin" demek, risk hissi ilk kattan olmalı. Gerçek zar riskDisplayExponent ile bükülür.
+        public double baseBustChance = 0.12;
+        public double bustChancePerZoneFloor = 0.07;
+        public double bustChancePerZoneFloorSq = 0.0;
         public double bustChancePerZone = 0.01;
         public double minBustChance = 0.01;
         public double bustFloorPerZoneFloor = 0.012;
@@ -176,15 +178,16 @@ namespace RiskLoop.Core
         // Ayrıca riskli katın bulgusu daha nadir gelir: şans += courageLuckPerRisk * p.
         // 14. tur: bonus İLK KATTAN başlar (küçük riskte küçük bonus) ve turun toplamı ekranda büyür.
         public double courageMinChance = 0.0;
-        public double courageEdge = 0.7;
+        public double courageEdge = 0.35;   // 15. tur: risk her katta yüksek gösterildiği için düşürüldü (ekonomi patlamasın)
 
         // --- Gösterilen risk ile gerçek risk (oyuncu lehine şans, Fire Emblem / XCOM tekniği) ---
         // Ekranda GÖSTERİLEN göçük riski p; zar GERÇEKTE p^riskDisplayExponent ile atılır (her zaman daha düşük).
-        // Örnek (1.6): gösterilen geçme %75 -> gerçek %89, %50 -> %67, %30 -> %44. Oyuncu düşük görünen ihtimali
+        // Ölçüm (2.4, 200 bin tur): gösterilen geçme %88 -> gerçek %99, %67 -> %93, %53 -> %84, %39 -> %69, %32 -> %60.
+        // Yeni oyuncu bossa (9 kat) sağ ulaşma ~%21; yükseltme, yetenek, bulgu ve büyülerle artar. Oyuncu düşük görünen ihtimali
         // başardığını hisseder; insanlar %65-75'i "kesin" sanıp sık göçük yiyince oyundan soğuyordu (kullanıcı kararı).
         // Cesaret bonusu GÖSTERİLEN riske göre verilir: risk almak gerçekte de kârlıdır.
         // Gerçek parayla rastgelelik YOK; ileride parayla satılan rastgele içerik olursa orada gerçek ihtimal gösterilmeli.
-        public double riskDisplayExponent = 1.6;
+        public double riskDisplayExponent = 2.4;   // 15. tur: 1.6 -> 2.4 (gösterilen eğri düştüğü için bossa ulaşılabilsin)
         public double maxCourageMult = 3.0;
         public double courageLuckPerRisk = 1.0;
 

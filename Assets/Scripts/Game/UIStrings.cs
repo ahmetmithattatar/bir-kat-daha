@@ -752,20 +752,36 @@ namespace RiskLoop.Game
                 ? $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>  <color=#FFC83A><b>{CourageBonus(courage)} bonus</b></color>"
                 : GaugeWin(win);
 
-        // Kutlama başlıkları: alınan risk büyüdükçe daha görkemli (geçme şansı yüksekse başlık yok, sadece küçük efekt)
+        // Kutlama başlıkları: 5 kademe, gösterilen risk büyüdükçe daha görkemli. En güvenli katta bile kısa bir başlık var.
+        private static readonly string[] SteadyTitles = { "SAĞLAM ADIM!", "İYİ GİDİYOR!", "DEVAM!" };
         private static readonly string[] BraveTitles = { "CESUR ADIM!", "YİĞİTÇE!", "SAĞLAM YÜREK!" };
         private static readonly string[] BoldTitles = { "YÜREKLİ!", "KORKUSUZ!", "DAĞ GİBİ!" };
         private static readonly string[] FearlessTitles = { "GÖZÜ KARA!", "KADER SENDEN YANA!", "ÖLÜMLE DANS!" };
         private static readonly string[] LegendTitles = { "EFSANEVİ CESARET!", "İMKANSIZI BAŞARDIN!", "DESTANLIK!" };
 
-        /// <summary>Riske (gösterilen) göre kutlama başlığı. %8'in altında null: başlıksız küçük kutlama.</summary>
+        /// <summary>
+        /// Kutlama kademesi 1..5 (gösterilen göçük riskine göre; geçme şansı ~%80 üstü 1, %65-80 2, %50-65 3, %38-50 4, altı 5).
+        /// Bossa giden 9 katta (geçme %88 -> %32) oyuncu her kademeyi sırayla yaşar.
+        /// </summary>
+        public static int CourageTier(double bustChance)
+        {
+            if (bustChance >= 0.62) return 5;
+            if (bustChance >= 0.50) return 4;
+            if (bustChance >= 0.35) return 3;
+            if (bustChance >= 0.20) return 2;
+            return 1;
+        }
+
         public static string CourageTitle(double bustChance)
         {
-            if (bustChance >= 0.45) return Pick(LegendTitles);
-            if (bustChance >= 0.32) return Pick(FearlessTitles);
-            if (bustChance >= 0.2) return Pick(BoldTitles);
-            if (bustChance >= 0.08) return Pick(BraveTitles);
-            return null;
+            switch (CourageTier(bustChance))
+            {
+                case 5: return Pick(LegendTitles);
+                case 4: return Pick(FearlessTitles);
+                case 3: return Pick(BoldTitles);
+                case 2: return Pick(BraveTitles);
+                default: return Pick(SteadyTitles);
+            }
         }
 
         public static string CourageMessage(double chance, double gain) =>

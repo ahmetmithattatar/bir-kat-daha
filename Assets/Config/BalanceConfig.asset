@@ -69,8 +69,9 @@ MonoBehaviour:
       minTier: 0
     maxSafetyFindReduction: 0.5
     minTotalRiskFactor: 0.6
-    courageMinChance: 0.15
-    courageEdge: 0.85
+    courageMinChance: 0
+    courageEdge: 0.7
+    riskDisplayExponent: 1.6
     maxCourageMult: 3
     courageLuckPerRisk: 1
     bustSalvageChance: 0.5

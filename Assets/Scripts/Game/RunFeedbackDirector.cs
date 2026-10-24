@@ -388,52 +388,48 @@ namespace RiskLoop.Game
 
         /// <summary>
         /// Riskten sağ çıkma kutlaması: HER katta (ilk kattan itibaren), gösterilen riskle sürekli büyür.
-        ///   her kat : kıvılcım + "+%X RİSK BONUSU" yazısı toplam sayaca uçar (sayaç da "pat" der)
-        ///   %3+     : hafif flaş          %8+  : başlık (CESUR ADIM!)        %20+ : sarsıntı + altın yağmuru
-        ///   %32+    : turuncu + donma anı  %45+ : efsanevi (çift flaş, dev patlama, uzun an)
+        ///   5 kademe (gösterilen göçük riskine göre, UIStrings.CourageTier): her katta en az kıvılcım, flaş, kısa başlık ve
+        ///   "+%X RİSK BONUSU" yazısı; 2+ altın + sarsıntı, 3+ patlama, 4+ turuncu + donma, 5 efsanevi (çift flaş, dev patlama).
         /// Boss katında risk yok: kutlama da yok.
         /// </summary>
         private IEnumerator CelebrateSurvival(AdvanceResult r)
         {
             float risk = (float)r.BustChance;
             if (risk <= 0f) yield break;
-            Color color = risk >= 0.32f ? CourageOrange : Gold;
+            int tier = UIStrings.CourageTier(r.BustChance);   // 1..5: gösterilen riske göre kutlama kademesi
+            Color color = tier >= 4 ? CourageOrange : Gold;
 
-            // Her kat: kıvılcım ve risk bonusu yazısı (büyüklüğü riskle artar), sayaca doğru
-            fx.Burst(digView.WallAnchor, Gold, 6 + Mathf.RoundToInt(70f * risk), 380f + 800f * risk);
+            // 1+ (her kat, en güvenlisinde bile): kıvılcım, hafif flaş, kısa başlık, "+%X RİSK BONUSU" sayaca uçar
+            fx.Burst(digView.WallAnchor, Gold, 12 + 18 * tier, 400f + 160f * tier);
+            fx.Flash(color, 0.06f + 0.08f * tier, 0.3f + 0.1f * tier);
+            fx.Banner(UIStrings.CourageTitle(r.BustChance), color, 0.15f + 0.15f * tier);
             if (r.CourageMult > 1.0)
             {
-                fx.FloatText($"+{UIStrings.CourageBonus(r.CourageMult).Substring(1)} RİSK BONUSU", color, 30f + 70f * risk, runPanel.RiskBonusAnchor);
-                fx.Burst(runPanel.RiskBonusAnchor, color, 4 + Mathf.RoundToInt(40f * risk), 300f + 500f * risk);
+                fx.FloatText($"+{UIStrings.CourageBonus(r.CourageMult).Substring(1)} RİSK BONUSU", color, 32f + 12f * tier, runPanel.RiskBonusAnchor);
+                fx.Burst(runPanel.RiskBonusAnchor, color, 8 + 10 * tier, 300f + 120f * tier);
             }
-            if (risk >= 0.03f) fx.Flash(color, 0.04f + 0.5f * risk, 0.25f + 0.5f * risk);
             runPanel.ShowMessage(UIStrings.CourageMessage(r.BustChance, r.CourageGain));
 
-            string title = UIStrings.CourageTitle(r.BustChance);
-            if (title == null)
+            // 2+: altınlar sayaca, hafif sarsıntı
+            if (tier >= 2)
             {
-                yield return UIFx.Wait(0.05f + 0.6f * risk);
-                yield break;
+                fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 6 * tier, Gold);
+                fx.Shake(4f + 5f * tier, 0.15f + 0.08f * tier);
             }
-            fx.Banner(title, color, 0.3f + risk);
-
-            if (risk >= 0.2f)
+            // 3+: turun değerinde patlama
+            if (tier >= 3) fx.Burst(runPanel.RunValueAnchor, color, 20 * tier, 700f);
+            // 4+: zaman bir an durur
+            if (tier >= 4) HitStop(0.06f * tier);
+            // 5: efsanevi: ikinci flaş, dev patlama, büyük sarsıntı
+            if (tier >= 5)
             {
-                fx.Shake(6f + 45f * risk, 0.2f + 0.5f * risk);
-                fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 8 + Mathf.RoundToInt(55f * risk), Gold);
-                fx.Burst(runPanel.RunValueAnchor, color, 15 + Mathf.RoundToInt(80f * risk), 700f);
-            }
-            if (risk >= 0.32f) HitStop(0.08f + 0.25f * risk);   // Zaman bir an durur
-            if (risk >= 0.45f)
-            {
-                // Efsanevi: ikinci flaş ve dev patlama
                 yield return UIFx.Wait(0.15f);
                 fx.Flash(Color.white, 0.55f, 0.6f);
                 fx.Burst(digView.WallAnchor, CourageOrange, 90, 1150f);
                 fx.Burst(runPanel.RiskBonusAnchor, Gold, 50, 900f);
                 fx.Shake(45f, 0.6f);
             }
-            yield return UIFx.Wait(0.1f + 0.8f * risk);   // Anın tadına varsın (risk büyükse daha uzun)
+            yield return UIFx.Wait(0.12f + 0.14f * tier);   // Anın tadına varsın (risk büyükse daha uzun)
         }
 
         /// <summary>Bu tur, şimdiye kadarki en değerli turu geçtiyse bir kez duyur.</summary>
