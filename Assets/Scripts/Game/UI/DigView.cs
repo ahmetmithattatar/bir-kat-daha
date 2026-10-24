@@ -214,7 +214,8 @@ namespace RiskLoop.Game.UI
             Color rockColor = DepthTheme.WallColor(_digStep);
             Color oreColor = DepthTheme.OreColor(_digStep);
             int variant = _digStep % 4;  // Her bölgede 4 farklı kaya yüzü dönüşümlü
-            wallImage.sprite = MineArt.RockFace($"face_{zone}_{variant}", zone * 100 + variant, rockColor, oreColor);
+            int detail = DepthTheme.DetailLevel(_digStep);   // Görsel zenginlik: ilk katlar sade, her 10 katta artar
+            wallImage.sprite = MineArt.RockFace($"face_{zone}_{detail}_{variant}", zone * 100 + variant, rockColor, oreColor, detail);
 
             // Tünel tek tam ekran perspektif görsel (destek çerçeveleri, raylar, fenerler).
             // Eski iç içe halkalardan sadece ilki (tam ekran olan) kullanılır, diğerleri kapalı.
@@ -222,7 +223,7 @@ namespace RiskLoop.Game.UI
             {
                 tunnelRings[i].enabled = i == 0;
                 if (i > 0) continue;
-                tunnelRings[i].sprite = MineArt.Tunnel($"tunnel_{zone}", zone * 31 + 5, rockColor, oreColor);
+                tunnelRings[i].sprite = MineArt.Tunnel($"tunnel_{zone}_{detail}", zone * 31 + 5, rockColor, oreColor, detail);
                 tunnelRings[i].color = Color.white;
             }
 

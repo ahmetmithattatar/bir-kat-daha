@@ -132,6 +132,10 @@ Kullanıcı: kazı "kahverengi çamurda blok kazıyormuş" gibi duruyor, derin m
 - **Kaya yüzü (`MineArt.RockFace`, 128x120):** kırık taş blokları (Voronoi), aralarında çatlak, üst-sol ışıkla kabartma, tortu katmanları,
   bölge renginde parıltılı cevher damarı, düzensiz saydam kenar. Cevher rengi `DepthTheme.OreColor` (altın, gümüş, ametist, safir, bakır,
   kemik, zümrüt, magma, hiçlik). 1. bölge kaya rengi daha taşsı yapıldı.
+- **Görsel zenginlik derinlikle artar (18. tur, kullanıcı: ilk katlar çok karmaşık):** `DepthTheme.DetailLevel` = (kat-1)/10, en fazla 5,
+  ayarlar tek tabloda (`MineArt.Levels`). 0 (1-10): yumuşak kaya, tek çerçeve, 6 büyük taş, damar/benek yok. 1: hafif katmanlar,
+  2 çerçeve, ilk cevher taneleri. 2: raylar, çatlaklar, ince damar. 3: asılı fener, 4 çerçeve, parıltılı damar. 4: iki fener, iki damar.
+  5 (51+): cevher karanlıkta parlar. Renkler 9 bölgede döner, zenginlik dönmez. Neden: sade başlangıç + derine inmenin görsel ödülü.
 
 ## Oynanabilir oyun: menüler, ses, Windows sürümü (16. tur)
 Kullanıcı: arkadaşına göndermek için standart bir oyun (menü vb.).

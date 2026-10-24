@@ -44,5 +44,11 @@ namespace RiskLoop.Game.Art
         };
 
         public static Color OreColor(int step) => OreColors[ZoneIndex(step)];
+
+        /// <summary>
+        /// Maden görselinin zenginliği: 1-10. kat 0 (sade), her 10 katta +1, en fazla MineArt.MaxLevel.
+        /// Renkler 9 bölgede bir döner ama zenginlik dönmez: derindeki maden hep daha gösterişli.
+        /// </summary>
+        public static int DetailLevel(int step) => System.Math.Min((System.Math.Max(step, 1) - 1) / ZoneSize, MineArt.MaxLevel);
     }
 }
