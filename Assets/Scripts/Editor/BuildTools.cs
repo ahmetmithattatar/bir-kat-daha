@@ -36,6 +36,34 @@ namespace RiskLoop.EditorTools
                 return;
             }
 
+            BuildResult result = BuildAndZip();
+            if (result != BuildResult.Succeeded)
+            {
+                EditorUtility.DisplayDialog("Derleme başarısız",
+                    $"Sonuç: {result}. Ayrıntı için Console penceresine bak.", "Tamam");
+                return;
+            }
+            EditorUtility.RevealInFinder(ZipPath);
+            EditorUtility.DisplayDialog("Hazır!",
+                $"Windows sürümü hazır:\n{Path.GetFullPath(ZipPath)}\n\nBu zip'i arkadaşına gönder. Zip'i bir klasöre çıkarıp " +
+                $"{ExeName}.exe'ye çift tıklaması yeterli.\n(Windows \"bilinmeyen yayıncı\" uyarısı verirse: Ek bilgi > Yine de çalıştır.)",
+                "Tamam");
+        }
+
+        /// <summary>
+        /// Komut satırından (soru sormadan) aynı zip'i üretir:
+        ///   Unity.exe -batchmode -quit -projectPath &lt;proje&gt; -executeMethod RiskLoop.EditorTools.BuildTools.BuildWindowsBatch
+        /// </summary>
+        public static void BuildWindowsBatch()
+        {
+            BuildResult result = BuildAndZip();
+            Debug.Log($"Windows sürümü: {result} -> {Path.GetFullPath(ZipPath)}");
+            if (result != BuildResult.Succeeded) EditorApplication.Exit(1);
+        }
+
+        /// <summary>Oyun ayarlarını uygular, Builds/Windows'a derler ve zip'ler.</summary>
+        private static BuildResult BuildAndZip()
+        {
             ApplyPlayerSettings();
 
             string exePath = Path.Combine(BuildFolder, ExeName + ".exe");
@@ -49,19 +77,8 @@ namespace RiskLoop.EditorTools
                 options = BuildOptions.None
             };
             BuildReport report = BuildPipeline.BuildPlayer(options);
-            if (report.summary.result != BuildResult.Succeeded)
-            {
-                EditorUtility.DisplayDialog("Derleme başarısız",
-                    $"Sonuç: {report.summary.result}. Ayrıntı için Console penceresine bak.", "Tamam");
-                return;
-            }
-
-            ZipBuild();
-            EditorUtility.RevealInFinder(ZipPath);
-            EditorUtility.DisplayDialog("Hazır!",
-                $"Windows sürümü hazır:\n{Path.GetFullPath(ZipPath)}\n\nBu zip'i arkadaşına gönder. Zip'i bir klasöre çıkarıp " +
-                $"{ExeName}.exe'ye çift tıklaması yeterli.\n(Windows \"bilinmeyen yayıncı\" uyarısı verirse: Ek bilgi > Yine de çalıştır.)",
-                "Tamam");
+            if (report.summary.result == BuildResult.Succeeded) ZipBuild();
+            return report.summary.result;
         }
 
         /// <summary>Oyun adı, şirket, pencere modu ve çözünürlük.</summary>
@@ -89,7 +106,7 @@ namespace RiskLoop.EditorTools
                 foreach (string file in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
                 {
                     string relative = file.Substring(root.Length + 1).Replace('\\', '/');
-                    if (relative.Contains("DoNotShip")) continue;   // *_BurstDebugInformation_DoNotShip vb.
+                    if (relative.Contains("DoNotShip") || relative.Contains("DontShip")) continue;   // *_BurstDebugInformation_DoNotShip, *_BackUpThisFolder_ButDontShipItWithYourGame
                     zip.CreateEntryFromFile(file, $"{ExeName}/{relative}", System.IO.Compression.CompressionLevel.Optimal);
                 }
             }
