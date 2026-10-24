@@ -78,6 +78,8 @@ namespace RiskLoop.EditorTools
             // Açık sahnede kaydedilmemiş değişiklik varsa kullanıcıya sor
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
+            UISkin.Generate(force: false);   // Arayüz kaplaması: eksik PNG'ler üretilir (Assets/Art/UI)
+
             // Önce sahneyi aç, SONRA config'i yükle: NewScene kullanılmayan asset'leri bellekten atar,
             // önceden yüklenmiş referans boşa düşer ve GameController'a null bağlanır.
             EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
@@ -134,7 +136,7 @@ namespace RiskLoop.EditorTools
 
             RectTransform background = CreateUIObject("Background", canvas);
             Stretch(background);
-            AddImage(background, BackgroundColor).raycastTarget = false;
+            AddSkinned(background, Color.white, UISkin.Style.Background).raycastTarget = false;
 
             // --- Dünya: sarsıntı efekti bunun hepsini sallar ---
             RectTransform world = CreateUIObject("World", canvas);
@@ -203,7 +205,7 @@ namespace RiskLoop.EditorTools
             bar.anchorMax = new Vector2(1f, 1f);
             bar.pivot = new Vector2(0.5f, 1f);
             bar.sizeDelta = new Vector2(0f, TopBarHeight);
-            AddImage(bar, HudColor).raycastTarget = false;
+            AddSkinned(bar, Color.white, UISkin.Style.TopBar).raycastTarget = false;
             var layout = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 30;
             layout.padding = new RectOffset(30, 30, 8, 8);
@@ -228,13 +230,13 @@ namespace RiskLoop.EditorTools
             levelText.color = new Color(0.55f, 0.85f, 1f);
             RectTransform xpBar = CreateUIObject("XpBar", level);
             SetHeight(xpBar, 12);
-            AddImage(xpBar, BarBackColor).raycastTarget = false;
+            AddSkinned(xpBar, BarBackColor, UISkin.Style.BarBack).raycastTarget = false;
             RectTransform xpFill = CreateUIObject("Fill", xpBar);
             xpFill.anchorMin = Vector2.zero;
             xpFill.anchorMax = new Vector2(0.1f, 1f);
             xpFill.offsetMin = Vector2.zero;
             xpFill.offsetMax = Vector2.zero;
-            AddImage(xpFill, new Color(0.35f, 0.7f, 1f)).raycastTarget = false;
+            AddSkinned(xpFill, new Color(0.35f, 0.7f, 1f), UISkin.Style.BarFill).raycastTarget = false;
             TMP_Text xpText = CreateText("XpText", level, "", 16, 18, TextAlignmentOptions.MidlineLeft);
             xpText.color = HintColor;
 
@@ -398,13 +400,13 @@ namespace RiskLoop.EditorTools
 
             RectTransform bar = CreateUIObject("Bar", root);
             SetHeight(bar, 16);
-            AddImage(bar, BarBackColor).raycastTarget = false;
+            AddSkinned(bar, BarBackColor, UISkin.Style.BarBack).raycastTarget = false;
             RectTransform fill = CreateUIObject("Fill", bar);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(0.1f, 1f);
             fill.offsetMin = Vector2.zero;
             fill.offsetMax = Vector2.zero;
-            Image fillImage = AddImage(fill, Color.green);
+            Image fillImage = AddSkinned(fill, Color.green, UISkin.Style.BarFill);
             fillImage.raycastTarget = false;
 
             RectTransform bottom = CreateUIObject("Bottom", root);
@@ -441,10 +443,10 @@ namespace RiskLoop.EditorTools
             rt.pivot = corner;
             rt.sizeDelta = new Vector2(width, 0f);
             rt.anchoredPosition = offset;
-            AddImage(rt, HudColor);
+            AddSkinned(rt, Color.white, UISkin.Style.PanelHud);
             var layout = rt.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 8;
-            layout.padding = new RectOffset(14, 14, 12, 12);
+            layout.padding = new RectOffset(22, 22, 20, 20);
             layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
@@ -459,7 +461,7 @@ namespace RiskLoop.EditorTools
         private static StatChipView BuildStatChip(Transform parent, int index)
         {
             RectTransform root = CreateUIObject($"Chip_{index}", parent);
-            AddImage(root, BackgroundColor);   // raycastTarget açık: ipucu için
+            AddSkinned(root, BackgroundColor, UISkin.Style.Slot);   // raycastTarget açık: ipucu için
 
             RectTransform accentRt = CreateUIObject("Accent", root);
             accentRt.anchorMin = new Vector2(0f, 0f);
@@ -628,13 +630,13 @@ namespace RiskLoop.EditorTools
             RectTransform bar = CreateUIObject("ManaBar", manaRow);
             SetHeight(bar, 20);
             FillRemainingWidth(bar);
-            AddImage(bar, BarBackColor).raycastTarget = false;
+            AddSkinned(bar, BarBackColor, UISkin.Style.BarBack).raycastTarget = false;
             RectTransform fill = CreateUIObject("Fill", bar);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(0.5f, 1f);
             fill.offsetMin = Vector2.zero;
             fill.offsetMax = Vector2.zero;
-            AddImage(fill, new Color(0.3f, 0.5f, 1f)).raycastTarget = false;
+            AddSkinned(fill, new Color(0.3f, 0.5f, 1f), UISkin.Style.BarFill).raycastTarget = false;
             RectTransform manaTextRt = CreateUIObject("ManaText", bar);
             Stretch(manaTextRt);
             var manaText = manaTextRt.gameObject.AddComponent<TextMeshProUGUI>();
@@ -662,13 +664,13 @@ namespace RiskLoop.EditorTools
             RectTransform root = CreateUIObject($"Spell_{index}", parent);
             SetHeight(root, size);
             SetFixedWidth(root, size);
-            Image frame = AddImage(root, Color.gray);   // raycastTarget açık: tıklama + ipucu
+            Image frame = AddSkinned(root, Color.gray, UISkin.Style.Frame);   // raycastTarget açık: tıklama + ipucu
 
             RectTransform innerRt = CreateUIObject("Inner", root);
             Stretch(innerRt);
             innerRt.offsetMin = new Vector2(3, 3);
             innerRt.offsetMax = new Vector2(-3, -3);
-            AddImage(innerRt, new Color(0.07f, 0.06f, 0.1f)).raycastTarget = false;
+            AddSkinned(innerRt, new Color(0.07f, 0.06f, 0.1f), UISkin.Style.Slot).raycastTarget = false;
 
             RectTransform iconRt = CreateUIObject("Icon", root);
             Stretch(iconRt);
@@ -803,7 +805,7 @@ namespace RiskLoop.EditorTools
             for (int i = 0; i < n; i++)
             {
                 RectTransform card = CreateUIObject($"Card_{ClassSelectView.Cards[i]}", cards);
-                AddImage(card, PanelColor).raycastTarget = false;
+                AddSkinned(card, Color.white, UISkin.Style.Panel).raycastTarget = false;
                 AddVerticalLayout(card, spacing: 12, padding: 24);
                 card.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.UpperCenter;
 
@@ -862,12 +864,17 @@ namespace RiskLoop.EditorTools
             RectTransform panel = CreateUIObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
             panel.sizeDelta = size;
-            AddImage(panel, new Color(0.11f, 0.11f, 0.15f, 0.97f)).raycastTarget = false;
+            AddSkinned(panel, Color.white, UISkin.Style.PanelOrnate).raycastTarget = false;
             AddVerticalLayout(panel, spacing: 14, padding: 36);
 
             titleText = CreateText("Title", panel, title, 56, 80);
             titleText.fontStyle = FontStyles.Bold;
-            titleText.color = new Color(1f, 0.88f, 0.23f);
+            titleText.color = Color.white;
+            // Altın gradyan: üstte açık, altta koyu altın (dövme metal yazı)
+            titleText.enableVertexGradient = true;
+            titleText.colorGradient = new VertexGradient(new Color(1f, 0.95f, 0.65f), new Color(1f, 0.95f, 0.65f),
+                                                         new Color(0.95f, 0.6f, 0.15f), new Color(0.95f, 0.6f, 0.15f));
+            titleText.characterSpacing = 4f;
 
             group.alpha = 0f;
             group.blocksRaycasts = false;
@@ -1000,7 +1007,7 @@ namespace RiskLoop.EditorTools
             bg.anchorMin = new Vector2(0f, 0.4f);
             bg.anchorMax = new Vector2(1f, 0.6f);
             bg.offsetMin = bg.offsetMax = Vector2.zero;
-            AddImage(bg, BarBackColor);
+            AddSkinned(bg, BarBackColor, UISkin.Style.BarBack);
 
             RectTransform fillArea = CreateUIObject("FillArea", root);
             fillArea.anchorMin = new Vector2(0f, 0.4f);
@@ -1010,7 +1017,7 @@ namespace RiskLoop.EditorTools
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(0.7f, 1f);
             fill.offsetMin = fill.offsetMax = Vector2.zero;
-            AddImage(fill, new Color(1f, 0.82f, 0.25f)).raycastTarget = false;
+            AddSkinned(fill, new Color(1f, 0.82f, 0.25f), UISkin.Style.BarFill).raycastTarget = false;
 
             RectTransform handleArea = CreateUIObject("HandleArea", root);
             Stretch(handleArea);
@@ -1018,7 +1025,7 @@ namespace RiskLoop.EditorTools
             handleArea.offsetMax = new Vector2(-12, 0);
             RectTransform handle = CreateUIObject("Handle", handleArea);
             handle.sizeDelta = new Vector2(26, 40);
-            Image handleImage = AddImage(handle, Color.white);
+            Image handleImage = AddSkinned(handle, new Color(0.85f, 0.8f, 0.7f), UISkin.Style.Button);
 
             var slider = root.gameObject.AddComponent<Slider>();
             slider.fillRect = fill;
@@ -1075,9 +1082,9 @@ namespace RiskLoop.EditorTools
             RectTransform panel = CreateUIObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0f, 0f);
             panel.pivot = new Vector2(0f, 1f);
-            AddImage(panel, new Color(0.06f, 0.06f, 0.09f, 0.96f)).raycastTarget = false;
+            AddSkinned(panel, Color.white, UISkin.Style.Panel).raycastTarget = false;
             var layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(16, 16, 12, 12);
+            layout.padding = new RectOffset(24, 24, 20, 20);
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
@@ -1342,14 +1349,14 @@ namespace RiskLoop.EditorTools
             bar.anchorMin = bar.anchorMax = new Vector2(0.5f, 1f);
             bar.sizeDelta = size;
             bar.anchoredPosition = position;
-            AddImage(bar, new Color(0.08f, 0.08f, 0.1f, 0.9f)).raycastTarget = false;
+            AddSkinned(bar, new Color(0.12f, 0.12f, 0.15f, 0.95f), UISkin.Style.BarBack).raycastTarget = false;
 
             RectTransform fill = CreateUIObject("Fill", bar);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = Vector2.one;
             fill.offsetMin = new Vector2(3, 3);
             fill.offsetMax = new Vector2(-3, -3);
-            Image fillImage = AddImage(fill, fillColor);
+            Image fillImage = AddSkinned(fill, fillColor, UISkin.Style.BarFill);
             fillImage.raycastTarget = false;
 
             RectTransform textRt = CreateUIObject("Text", bar);
@@ -1369,7 +1376,7 @@ namespace RiskLoop.EditorTools
             RectTransform box = CreateUIObject("IconBox", parent);
             SetHeight(box, size);
             SetFixedWidth(box, size);
-            AddImage(box, new Color(0.06f, 0.06f, 0.09f)).raycastTarget = false;
+            AddSkinned(box, new Color(0.08f, 0.08f, 0.11f), UISkin.Style.Slot).raycastTarget = false;
             RectTransform iconRt = CreateUIObject("Icon", box);
             Stretch(iconRt);
             iconRt.offsetMin = new Vector2(8, 8);
@@ -1430,14 +1437,14 @@ namespace RiskLoop.EditorTools
         private static FindMiniCardView BuildMiniCard(Transform parent, int index)
         {
             RectTransform card = CreateUIObject($"MiniCard_{index}", parent);
-            Image frame = AddImage(card, Color.white);
+            Image frame = AddSkinned(card, Color.white, UISkin.Style.Frame);
             // raycastTarget açık: fareyle üstüne gelince ipucu (ne verdiği)
 
             RectTransform inner = CreateUIObject("Inner", card);
             Stretch(inner);
             inner.offsetMin = new Vector2(5, 5);
             inner.offsetMax = new Vector2(-5, -5);
-            AddImage(inner, BackgroundColor).raycastTarget = false;
+            AddSkinned(inner, BackgroundColor, UISkin.Style.Slot).raycastTarget = false;
             AddVerticalLayout(inner, spacing: 0, padding: 3);
             inner.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
 
@@ -1489,14 +1496,14 @@ namespace RiskLoop.EditorTools
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
             card.sizeDelta = new Vector2(980, 660);
             card.anchoredPosition = Vector2.zero;
-            Image frame = AddImage(card, Color.white);
+            Image frame = AddSkinned(card, Color.white, UISkin.Style.Frame);
             frame.raycastTarget = false;
 
             RectTransform inner = CreateUIObject("Inner", card);
             Stretch(inner);
             inner.offsetMin = new Vector2(12, 12);
             inner.offsetMax = new Vector2(-12, -12);
-            AddImage(inner, PanelColor).raycastTarget = false;
+            AddSkinned(inner, Color.white, UISkin.Style.Panel).raycastTarget = false;
             AddVerticalLayout(inner, spacing: 10, padding: 24);
 
             TMP_Text header = CreateText("HeaderText", inner, "", 34, 50);
@@ -1753,13 +1760,13 @@ namespace RiskLoop.EditorTools
             RectTransform root = CreateUIObject($"Talent_{t.id}", parent);
             SetHeight(root, size.y);
             SetFixedWidth(root, size.x);
-            Image border = AddImage(root, Color.gray);   // raycastTarget açık: tıklama + ipucu
+            Image border = AddSkinned(root, Color.gray, UISkin.Style.Frame);   // raycastTarget açık: tıklama + ipucu
 
             RectTransform innerRt = CreateUIObject("Inner", root);
             Stretch(innerRt);
             innerRt.offsetMin = new Vector2(4, 4);
             innerRt.offsetMax = new Vector2(-4, -4);
-            Image background = AddImage(innerRt, BackgroundColor);
+            Image background = AddSkinned(innerRt, BackgroundColor, UISkin.Style.Slot);
             background.raycastTarget = false;
 
             RectTransform talentIconRt = CreateUIObject("Icon", root);
@@ -1904,13 +1911,13 @@ namespace RiskLoop.EditorTools
         private static GearSlotView BuildGearSlot(Transform parent, string name, bool withLabel)
         {
             RectTransform root = CreateUIObject(name, parent);
-            Image frame = AddImage(root, Color.gray);
+            Image frame = AddSkinned(root, Color.gray, UISkin.Style.Frame);
 
             RectTransform innerRt = CreateUIObject("Inner", root);
             Stretch(innerRt);
             innerRt.offsetMin = new Vector2(4, 4);
             innerRt.offsetMax = new Vector2(-4, -4);
-            Image inner = AddImage(innerRt, BackgroundColor);
+            Image inner = AddSkinned(innerRt, BackgroundColor, UISkin.Style.Slot);
             inner.raycastTarget = false;
 
             RectTransform slotGlowRt = CreateUIObject("EnhanceGlow", root);
@@ -1973,7 +1980,7 @@ namespace RiskLoop.EditorTools
         {
             RectTransform root = CreateUIObject("ItemDetail", parent);
             SetHeight(root, 420);
-            AddImage(root, BackgroundColor).raycastTarget = false;
+            AddSkinned(root, Color.white, UISkin.Style.Panel).raycastTarget = false;
             AddVerticalLayout(root, spacing: 8, padding: 12);
 
             // Üst satır: ikon kutusu + ad/seviye
@@ -1983,13 +1990,13 @@ namespace RiskLoop.EditorTools
 
             RectTransform iconBox = CreateUIObject("IconBox", top);
             SetHeight(iconBox, 100);
-            Image frame = AddImage(iconBox, Color.gray);
+            Image frame = AddSkinned(iconBox, Color.gray, UISkin.Style.Frame);
             frame.raycastTarget = false;
             RectTransform innerRt = CreateUIObject("Inner", iconBox);
             Stretch(innerRt);
             innerRt.offsetMin = new Vector2(5, 5);
             innerRt.offsetMax = new Vector2(-5, -5);
-            AddImage(innerRt, PanelColor).raycastTarget = false;
+            AddSkinned(innerRt, BackgroundColor, UISkin.Style.Slot).raycastTarget = false;
             RectTransform detailGlowRt = CreateUIObject("EnhanceGlow", iconBox);
             Stretch(detailGlowRt);
             detailGlowRt.offsetMin = new Vector2(-20, -20);
@@ -2124,12 +2131,20 @@ namespace RiskLoop.EditorTools
             return image;
         }
 
+        /// <summary>Kaplamalı Image (metal panel, oyuk yuva, kabartmalı buton, parlak çubuk...). Bkz. UISkin.</summary>
+        private static Image AddSkinned(RectTransform rt, Color color, UISkin.Style style)
+        {
+            Image image = AddImage(rt, color);
+            UISkin.Apply(image, style, color);
+            return image;
+        }
+
         /// <summary>Ekranı kaplayan panel; içine yan yana sütunlar konur. Sütunlar tam yüksekliği kullanır.</summary>
         private static RectTransform CreatePanelWithColumns(string name, Transform parent)
         {
             RectTransform panel = CreateUIObject(name, parent);
             Stretch(panel);
-            AddImage(panel, PanelColor).raycastTarget = false;
+            AddSkinned(panel, Color.white, UISkin.Style.Panel).raycastTarget = false;
 
             var layout = panel.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 40;
@@ -2226,6 +2241,7 @@ namespace RiskLoop.EditorTools
             tmp.text = text;
             tmp.fontSize = fontSize;
             tmp.alignment = alignment;
+            UISkin.ApplyTextShadow(tmp);   // Gölgeli yazı: sahnenin ve flaşların üstünde de okunur
             tmp.color = Color.white;
             tmp.raycastTarget = false;
             // Metin kutuya sığmazsa yazı boyutu kendiliğinden küçülür (en fazla %40). Taşma olmaz.
@@ -2265,6 +2281,8 @@ namespace RiskLoop.EditorTools
             Image image = AddImage(rt, color);
             var button = rt.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
+            UISkin.ApplyButton(button, image, color);   // Kabartmalı taş tuş: üstünde parlar, basınca içe göçer
+            rt.gameObject.AddComponent<ButtonFeel>();     // Üstüne gelince hafif büyür, basınca küçülür
             // Klavye kısayolları ok tuşlarını kullanıyor; UI'ın ok tuşlarıyla butonlar arasında
             // gezinip yanlış butonu seçili bırakmasını istemiyoruz.
             button.navigation = new Navigation { mode = Navigation.Mode.None };
@@ -2276,6 +2294,7 @@ namespace RiskLoop.EditorTools
             tmp.fontSize = fontSize;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = Color.white;
+            UISkin.ApplyTextShadow(tmp);   // Gölgeli yazı
             tmp.fontStyle = FontStyles.Bold;
             tmp.raycastTarget = false;
 

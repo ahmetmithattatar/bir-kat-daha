@@ -128,6 +128,18 @@ Kullanıcı: kazı "kahverengi çamurda blok kazıyormuş" gibi duruyor, derin m
   Kayıt klasörü ürün adıyla değişti (`LocalLow/MT/Bir Kat Daha`): `SaveSystem.MigrateOldSave` eski `RiskLoop` klasöründeki kaydı bir kez taşır.
 - Maden görseli 17-18. turda ahşap kolonlu galeri oldu, 19. turda kaldırıldı (bkz. 19. tur).
 
+## Oyun gibi görünen arayüz (21. tur)
+Kullanıcı: arayüz "yapay zeka yapımı basit" görünüyor; oynanabilir bir oyun görünümü istendi.
+- **UI kaplaması (`Editor/UISkin.cs`):** kodla çizilen ama GERÇEK PNG olarak kaydedilen 9-dilimli görseller (`Assets/Art/UI`):
+  kabartmalı taş tuş (normal / üstünde / basılı / pasif, SpriteSwap), dövme metal çerçeveli panel (altın iç çizgi, perçinler),
+  yarı saydam HUD paneli, süslü menü paneli (altın köşe süsleri, yakut), oyuk yuva, nadirlik renginde boyanan metal çerçeve,
+  oyuk çubuk + parlak dolgu, altın çizgili üst bar, döşenen koyu taş zemin. Pikseller 3 kat (spritePixelsPerUnit 100/3): oyunun pixel art diliyle aynı.
+  Gri tonlu stiller Image rengiyle boyanır (aynı buton turuncu/yeşil, çerçeve nadirlik renginde); ortalar düz (esneyince bant oluşmaz).
+- **Sahne kurucu:** `AddSkinned(rt, renk, UISkin.Style.X)` ile uygulanır; `CreateButton` kaplama + `ButtonFeel` (üstünde büyür,
+  basınca küçülür) ekler. Tüm `CreateText` ve buton yazıları gölgeli malzeme (`TextShadow.mat`, TMP underlay). Menü başlıkları altın gradyan.
+- Sahne kurucu sadece EKSİK PNG'leri üretir (sanatçı aynı adla kendi çizimini koyabilir). Yeniden çizmek için menü
+  **RiskLoop > UI Kaplamasını Yeniden Üret**. Kaplamayı görmek için sahne yeniden kurulmalı.
+
 ## Kazdığın malzeme, 3B tünel, 7 renkli kutlama (19. tur)
 Kullanıcı: 17-18. turdaki maden (ahşap kolonlar, raylar, fenerler) beğenilmedi; eski basit konsept daha iyiydi (önce toprak, sonra taş,
 taşlar değişiyor: derine indiğini hissediyordun). İstek: o konsept gerçekçi + 3B + kazarak ilerleme hissi; kutlama renk renk büyüsün.
