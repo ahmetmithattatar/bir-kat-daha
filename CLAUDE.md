@@ -128,6 +128,20 @@ Kullanıcı: kazı "kahverengi çamurda blok kazıyormuş" gibi duruyor, derin m
   Kayıt klasörü ürün adıyla değişti (`LocalLow/MT/Bir Kat Daha`): `SaveSystem.MigrateOldSave` eski `RiskLoop` klasöründeki kaydı bir kez taşır.
 - Maden görseli 17-18. turda ahşap kolonlu galeri oldu, 19. turda kaldırıldı (bkz. 19. tur).
 
+## Ortadaki nesne açık kalsın + otomatik ekran görüntüsü (23. tur)
+Kullanıcı: kazı mesajı kutusu ve terazi kayanın altını kapatıyor; "denemedim" deme, kendin deneyip doğrula.
+- **Mesaj satırı üstte ve kutusuz:** üst barın altında (yukarıdan 102-146), altında olay başlığı (banner, 150-240); can barı sol HUD'da karakterin altında, konturlu + gölgeli Rubik (`Rubik SDF Outline.mat`).
+  Kaya yüzü 640x600 ortada (yukarıdan ve aşağıdan 240): mesaj üst boşlukta, terazi alt boşlukta (aşağıdan 20-220). Sabitler: `MessageTop/Height/Width`.
+- **Otomatik ekran görüntüsü (`Game/DevAutoShot.cs`, `Editor/DevBuild.cs`):** test sürümü komut satırından derlenir
+  (`-executeMethod RiskLoop.EditorTools.DevBuild.BuildAutoShot -devOut <klasör>`, ürün adı "... AutoTest": gerçek kayda dokunmaz),
+  `Game.exe -autoshot <klasör>` kendi kendine oynar (menü, rehber, yükseltme, sınıf, kazı, açılır pencereler, duraklatma, ayarlar) ve
+  görüntü alır. Arayüz değişikliği bununla doğrulanır. Unity açıkken proje kilitli olduğu için kopyada derlenir.
+  `PrototypeSceneBuilder.BuildScene()` soru sormadan kurar (menü onaylardan sonra onu çağırır).
+- Görüntülerle bulunup düzeltilenler: olay başlığı (banner) üst bara biniyordu (artık mesajın altında, kayanın üstünde, otomatik küçülür);
+  ayarlar paneli arkadaki duraklatma menüsünü gösteriyordu (paneller tam opak; `UISkin.SkinVersion` artınca PNG'ler kendiliğinden yeniden çizilir);
+  ok işaretleri (↓ ↑) Rubik'te yoktu (LiberationSans yedek yazı tipi); yetenek düğümleri büyütüldü (104 yükseklik, yazı 20).
+- **Kayıt taşıma artık KOPYALAR** (eski dosyaya dokunmaz, bir kez: PlayerPrefs `SaveMigrated`): aynı bilgisayardaki editör kaydı bozulmaz.
+
 ## Okunabilirlik ve yazı tipleri (22. tur)
 Kullanıcı: okunabilirlik ve UX'e özen, gerekirse düzen değişsin, şekiller ve yazı tipleri göze hitap etsin.
 - **Yazı tipleri (`Editor/UIFonts.cs`, `Assets/Fonts`):** Google Fonts, SIL OFL (ticari oyunda serbest; `*_OFL.txt` lisanslar yanında,

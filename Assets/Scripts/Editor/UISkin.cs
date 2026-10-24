@@ -29,6 +29,8 @@ namespace RiskLoop.EditorTools
 
         private const string Folder = "Assets/Art/UI";
         private const float PixelScale = 3f;   // Bir doku pikseli ekranda kaç birim
+        private const int SkinVersion = 2;     // Çizim kodu değişince artır: PNG'ler kendiliğinden yeniden çizilir (GUID korunur)
+        private const string VersionFile = Folder + "/skin_version.txt";
 
         /// <summary>Gri tonlu (Image rengiyle boyanan) stiller. Gövdeleri ~0.8 parlaklıkta: renk biraz yükseltilerek verilir.</summary>
         public static bool IsTinted(Style s) =>
@@ -46,6 +48,8 @@ namespace RiskLoop.EditorTools
         public static void Generate(bool force)
         {
             Directory.CreateDirectory(Folder);
+            if (!File.Exists(VersionFile) || File.ReadAllText(VersionFile).Trim() != SkinVersion.ToString()) force = true;
+            File.WriteAllText(VersionFile, SkinVersion.ToString());
             foreach (Style s in System.Enum.GetValues(typeof(Style)))
             {
                 string path = PathOf(s);
@@ -100,9 +104,9 @@ namespace RiskLoop.EditorTools
                 case Style.ButtonHover: size = 24; border = 8; px = Button(size, 0.07f, false, false); break;
                 case Style.ButtonPressed: size = 24; border = 8; px = Button(size, 0f, true, false); break;
                 case Style.ButtonDisabled: size = 24; border = 8; px = Button(size, 0f, false, true); break;
-                case Style.Panel: size = 48; border = 16; px = Panel(size, 0.97f, false); break;
+                case Style.Panel: size = 48; border = 16; px = Panel(size, 1f, false); break;   // Tam opak: üst üste açılan pencerelerde arkadaki yazı sızmaz
                 case Style.PanelHud: size = 48; border = 16; px = Panel(size, 0.72f, false); break;
-                case Style.PanelOrnate: size = 64; border = 22; px = Panel(size, 0.97f, true); break;
+                case Style.PanelOrnate: size = 64; border = 22; px = Panel(size, 1f, true); break;
                 case Style.Slot: size = 24; border = 8; px = Slot(size); break;
                 case Style.Frame: size = 24; border = 8; px = Frame(size); break;
                 case Style.BarBack: size = 12; border = 4; scale = 2f; px = BarBack(size); break;

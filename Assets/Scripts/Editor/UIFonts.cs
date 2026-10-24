@@ -27,6 +27,7 @@ namespace RiskLoop.EditorTools
         public static TMP_FontAsset Body => Load(BodyTtf, "Rubik SDF");
         public static TMP_FontAsset Title => Load(TitleTtf, "Cinzel SDF");
         public static Material BodyShadow => AssetDatabase.LoadAssetAtPath<Material>($"{Folder}/Rubik SDF Shadow.mat");
+        public static Material BodyOutline => AssetDatabase.LoadAssetAtPath<Material>($"{Folder}/Rubik SDF Outline.mat");
         public static Material TitleShadow => AssetDatabase.LoadAssetAtPath<Material>($"{Folder}/Cinzel SDF Shadow.mat");
 
         /// <summary>Yazı tipi dosyaları yoksa üretir ve Rubik'i TMP varsayılanı yapar. Sahne kurulmadan önce çağrılır.</summary>
@@ -39,7 +40,12 @@ namespace RiskLoop.EditorTools
                 Debug.LogWarning("Yazı tipi dosyaları (Assets/Fonts/Rubik.ttf, Cinzel.ttf) bulunamadı: varsayılan yazı tipi kullanılacak.");
                 return;
             }
+            // Yedek yazı tipleri: Rubik'te olmayan işaretler (ok, üçgen) LiberationSans'tan gelir; Cinzel'de olmayanlar Rubik'ten
+            AddFallback(body, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(LiberationFallback));
+            AddFallback(title, body);
+            AddFallback(title, AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(LiberationFallback));
             EnsureShadow(body);
+            EnsureOutline(body);
             EnsureShadow(title);
 
             // Varsayılan yazı tipi: kodla eklenen her TextMeshPro bunu alır
@@ -57,6 +63,13 @@ namespace RiskLoop.EditorTools
             if (BodyShadow != null) text.fontSharedMaterial = BodyShadow;
         }
 
+        /// <summary>Kutusuz, her zeminde okunması gereken yazı: Rubik + koyu kontur + gölge.</summary>
+        public static void ApplyBodyOutlined(TMP_Text text)
+        {
+            ApplyBody(text);
+            if (BodyOutline != null) text.fontSharedMaterial = BodyOutline;
+        }
+
         /// <summary>Başlık yazısı: Cinzel + gölge, harfler arası biraz açık.</summary>
         public static void ApplyTitle(TMP_Text text)
         {
@@ -64,6 +77,17 @@ namespace RiskLoop.EditorTools
             text.font = Title;
             if (TitleShadow != null) text.fontSharedMaterial = TitleShadow;
             text.characterSpacing = Mathf.Max(text.characterSpacing, 2f);
+        }
+
+        private const string LiberationFallback = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset";
+
+        private static void AddFallback(TMP_FontAsset font, TMP_FontAsset fallback)
+        {
+            if (fallback == null) return;
+            if (font.fallbackFontAssetTable == null) font.fallbackFontAssetTable = new System.Collections.Generic.List<TMP_FontAsset>();
+            if (font.fallbackFontAssetTable.Contains(fallback)) return;
+            font.fallbackFontAssetTable.Add(fallback);
+            EditorUtility.SetDirty(font);
         }
 
         private static TMP_FontAsset Load(string ttfPath, string name) =>
@@ -93,6 +117,25 @@ namespace RiskLoop.EditorTools
             EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
             return asset;
+        }
+
+        /// <summary>Konturlu + gölgeli kopya (kutusuz mesaj satırı gibi her zeminde okunması gereken yazılar).</summary>
+        private static void EnsureOutline(TMP_FontAsset font)
+        {
+            string path = $"{Folder}/{font.name} Outline.mat";
+            if (AssetDatabase.LoadAssetAtPath<Material>(path) != null) return;
+            var mat = new Material(font.material) { name = $"{font.name} Outline" };
+            mat.EnableKeyword("OUTLINE_ON");
+            mat.SetColor("_OutlineColor", new Color(0.06f, 0.04f, 0.02f, 1f));
+            mat.SetFloat("_OutlineWidth", 0.18f);
+            mat.SetFloat("_FaceDilate", 0.12f);   // Kontur yazıyı inceltmesin
+            mat.EnableKeyword("UNDERLAY_ON");
+            mat.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.8f));
+            mat.SetFloat("_UnderlayOffsetX", 0.7f);
+            mat.SetFloat("_UnderlayOffsetY", -0.7f);
+            mat.SetFloat("_UnderlayDilate", 0.4f);
+            mat.SetFloat("_UnderlaySoftness", 0.3f);
+            AssetDatabase.CreateAsset(mat, path);
         }
 
         /// <summary>Yazı tipinin malzemesinden gölgeli kopya (TMP "underlay").</summary>

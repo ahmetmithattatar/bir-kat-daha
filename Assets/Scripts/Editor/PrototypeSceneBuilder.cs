@@ -54,6 +54,13 @@ namespace RiskLoop.EditorTools
         private const float HudSideWidth = 460;
         private const float GaugeHeight = 200;   // Çerçeve payı dahil
         private const float GaugeWidth = 760;   // Dar tutulur: kazma ve silah iki yanında görünsün
+        // Üst orta şerit (üst bar ile kaya yüzünün üst kenarı arası, yukarıdan 90-240): önce mesaj satırı, altında olay başlığı (banner).
+        // Can barı sol HUD'da karakterin altında: bu şerit sadece yazılara kalır, kaya yüzü hiç kapanmaz.
+        private const float MessageTop = TopBarHeight + 12;
+        private const float MessageHeight = 44;
+        private const float MessageWidth = 960;
+        private const float BannerHeight = 90;
+        private const float BannerCenterFromTop = MessageTop + MessageHeight + 4 + BannerHeight / 2;   // Kaya yüzü 240'ta başlar
 
         [MenuItem("RiskLoop/Build Prototype Scene")]
         public static void Build()
@@ -79,6 +86,16 @@ namespace RiskLoop.EditorTools
             // Açık sahnede kaydedilmemiş değişiklik varsa kullanıcıya sor
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
+            BuildScene();
+
+            Debug.Log($"Prototip sahnesi hazır: {ScenePath}. Game penceresinde 1920x1080 (16:9) seçip Play'e bas.");
+        }
+
+        /// <summary>
+        /// Sahneyi soru sormadan kurar ve kaydeder (menü bunu onaylardan sonra çağırır; otomatik test derlemesi doğrudan).
+        /// </summary>
+        public static void BuildScene()
+        {
             UISkin.Generate(force: false);   // Arayüz kaplaması: eksik PNG'ler üretilir (Assets/Art/UI)
             UIFonts.Ensure();                 // Cinzel (başlık) + Rubik (metin) yazı tipleri, Rubik varsayılan olur
 
@@ -93,8 +110,6 @@ namespace RiskLoop.EditorTools
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), ScenePath);
             AddSceneToBuildSettings();
-
-            Debug.Log($"Prototip sahnesi hazır: {ScenePath}. Game penceresinde 1920x1080 (16:9) seçip Play'e bas.");
         }
 
         // ---------------- Kurulum adımları ----------------
@@ -298,6 +313,13 @@ namespace RiskLoop.EditorTools
             runValue.color = new Color(1f, 0.88f, 0.23f);
             TMP_Text breakdown = CreateText("RunValueBreakdownText", topTexts, "", 18, 34, TextAlignmentOptions.MidlineLeft);
 
+            // Can barı karakterin hemen altında (DigView kurar, buraya taşınır): üst orta şerit mesaj ve başlıklara kalır
+            RectTransform hpRow = CreateUIObject("HpRow", left);
+            SetHeight(hpRow, 30);
+            RectTransform hpBar = (RectTransform)digView.transform.Find("PlayerHpBar");
+            hpBar.SetParent(hpRow, false);
+            Stretch(hpBar);
+
             // Sade kartlar (2 sütun, en fazla 4). Sadece açık özellikler görünür; ızgara görünenlere göre boy alır.
             RectTransform chipGrid = CreateUIObject("StatChips", left);
             var chipLayout = chipGrid.gameObject.AddComponent<GridLayoutGroup>();
@@ -329,26 +351,24 @@ namespace RiskLoop.EditorTools
             // ---- Alt orta: Cesaret terazisi (sonraki kata geçme şansı, büyük) ----
             RiskGaugeView gauge = BuildRiskGauge(panel, heartbeat);
 
-            // ---- Mesaj: terazinin hemen üstünde ----
+            // ---- Mesaj: üstte, can barının hemen altında, KUTUSUZ ----
+            // Kaya yüzü ekranın ortasında 640x600 (üst kenarı yukarıdan 240, alt kenarı aşağıdan 240). Mesaj üst bar ile kayanın
+            // arasındaki şeritte (102-146), olay başlığı onun altında; terazi kayanın altında (aşağıdan 20-220): ortadaki nesne hiç kapanmaz.
+            // Kutu yok: gölgeli ve konturlu yazı kayanın üstünde de okunur.
             RectTransform messageRt = CreateUIObject("MessageText", panel);
-            messageRt.anchorMin = messageRt.anchorMax = new Vector2(0.5f, 0f);
-            messageRt.pivot = new Vector2(0.5f, 0f);
-            messageRt.sizeDelta = new Vector2(GaugeWidth, 78);
-            messageRt.anchoredPosition = new Vector2(0f, 20f + GaugeHeight + 10f);
-            AddSkinned(messageRt, Color.white, UISkin.Style.PanelHud).raycastTarget = false;
-            RectTransform messageTextRt = CreateUIObject("Text", messageRt);
-            Stretch(messageTextRt);
-            messageTextRt.offsetMin = new Vector2(24, 14);
-            messageTextRt.offsetMax = new Vector2(-24, -14);
-            var message = messageTextRt.gameObject.AddComponent<TextMeshProUGUI>();
-            message.fontSize = 24;
+            messageRt.anchorMin = messageRt.anchorMax = new Vector2(0.5f, 1f);
+            messageRt.pivot = new Vector2(0.5f, 1f);
+            messageRt.sizeDelta = new Vector2(MessageWidth, MessageHeight);
+            messageRt.anchoredPosition = new Vector2(0f, -MessageTop);
+            var message = messageRt.gameObject.AddComponent<TextMeshProUGUI>();
+            message.fontSize = 26;
             message.alignment = TextAlignmentOptions.Center;
             message.color = TextColor;
             message.raycastTarget = false;
             message.enableAutoSizing = true;
-            message.fontSizeMax = 24;
-            message.fontSizeMin = 17;
-            UIFonts.ApplyBody(message);
+            message.fontSizeMax = 26;
+            message.fontSizeMin = 18;
+            UIFonts.ApplyBodyOutlined(message);   // Kutusuz: koyu kontur + gölge, kayanın üstünde de okunur
 
             var view = panel.gameObject.AddComponent<RunPanelView>();
             SetRef(view, "avatar", avatar);
@@ -1291,7 +1311,7 @@ namespace RiskLoop.EditorTools
             Image vignette = AddImage(vignetteRt, Color.black);
             vignette.raycastTarget = false;
 
-            // Oyuncu can barı: üst barın hemen altında, ortada
+            // Oyuncu can barı (tur ekranında sol HUD'a, karakterin altına taşınır: BuildRunPanel)
             Image playerHpFill = BuildBar("PlayerHpBar", view, new Vector2(520, 32), Vector2.zero,
                                           new Color(0.25f, 0.8f, 0.3f), out TMP_Text playerHpText);
             RectTransform playerBar = (RectTransform)playerHpFill.transform.parent;
@@ -1376,6 +1396,7 @@ namespace RiskLoop.EditorTools
             text.alignment = TextAlignmentOptions.Center;
             text.color = Color.white;
             text.raycastTarget = false;
+            UIFonts.ApplyBody(text);
             return fillImage;
         }
 
@@ -1585,12 +1606,15 @@ namespace RiskLoop.EditorTools
 
             // Ortadaki büyük yazı
             RectTransform bannerRt = CreateUIObject("BannerText", layer);
-            bannerRt.anchorMin = bannerRt.anchorMax = new Vector2(0.5f, 0.5f);
+            bannerRt.anchorMin = bannerRt.anchorMax = new Vector2(0.5f, 1f);   // Üste yapışık: her ekran oranında mesajın altında
             // Açılır kartın (660 yüksekliğinde, ortada) hemen üstünde dursun ki ikisi aynı anda görünebilsin
-            bannerRt.sizeDelta = new Vector2(1800, 160);
-            bannerRt.anchoredPosition = new Vector2(0, 430);
+            bannerRt.sizeDelta = new Vector2(1800, BannerHeight);
+            bannerRt.anchoredPosition = new Vector2(0, -BannerCenterFromTop);   // Mesajın altında, kayanın üstünde
             var banner = bannerRt.gameObject.AddComponent<TextMeshProUGUI>();
-            banner.fontSize = 96;
+            banner.fontSize = 80;
+            banner.enableAutoSizing = true;   // Uzun başlık (KADERE MEYDAN OKUDUN!) da tek satırda kalsın
+            banner.fontSizeMin = 50;
+            banner.fontSizeMax = 80;
             banner.fontStyle = FontStyles.Bold;
             banner.alignment = TextAlignmentOptions.Center;
             banner.raycastTarget = false;
@@ -1702,7 +1726,7 @@ namespace RiskLoop.EditorTools
         private static TalentTreeView BuildTalentTree(Transform parent)
         {
             const float nodeWidth = 150;
-            const float nodeHeight = 78;
+            const float nodeHeight = 104;   // Büyük düğüm: ikon ve yazılar rahat okunur (sekmede boş yer var)
             var balance = new TalentBalance();
 
             RectTransform root = CreateUIObject("TalentsRoot", parent);
@@ -1788,15 +1812,15 @@ namespace RiskLoop.EditorTools
             RectTransform talentIconRt = CreateUIObject("Icon", root);
             talentIconRt.anchorMin = talentIconRt.anchorMax = new Vector2(0.5f, 1f);
             talentIconRt.pivot = new Vector2(0.5f, 1f);
-            talentIconRt.sizeDelta = new Vector2(34, 34);
-            talentIconRt.anchoredPosition = new Vector2(0f, -6f);
+            talentIconRt.sizeDelta = new Vector2(44, 44);
+            talentIconRt.anchoredPosition = new Vector2(0f, -8f);
             Image talentIcon = AddImage(talentIconRt, Color.white);
             talentIcon.raycastTarget = false;
             talentIcon.preserveAspect = true;
 
-            TMP_Text nameText = AddChipText(root, "Name", 18, new Vector2(4, 22), new Vector2(-4, -40), TextAlignmentOptions.Center);
+            TMP_Text nameText = AddChipText(root, "Name", 20, new Vector2(6, size.y - 80), new Vector2(-6, -54), TextAlignmentOptions.Center);
             nameText.fontStyle = FontStyles.Bold;
-            TMP_Text rankText = AddChipText(root, "Rank", 17, new Vector2(4, 3), new Vector2(-4, -58), TextAlignmentOptions.Center);
+            TMP_Text rankText = AddChipText(root, "Rank", 18, new Vector2(6, 6), new Vector2(-6, -80), TextAlignmentOptions.Center);
             rankText.color = new Color(1f, 0.88f, 0.23f);
 
             var button = root.gameObject.AddComponent<Button>();

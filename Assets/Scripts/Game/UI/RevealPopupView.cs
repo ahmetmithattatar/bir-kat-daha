@@ -197,6 +197,7 @@ namespace RiskLoop.Game.UI
         /// <summary>Bu karede tıklama, dokunma ya da herhangi bir tuş var mı?</summary>
         private static bool DismissPressed()
         {
+            if (DevAutoShot.ConsumeDismiss()) return true;   // Otomatik ekran görüntüsü modu (geliştirici aracı)
 #if ENABLE_INPUT_SYSTEM
             if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) return true;
             if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) return true;

@@ -15,17 +15,25 @@ namespace RiskLoop.Game
     {
         private const string FileName = "save.json";
 
-        private static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
+        // Otomatik ekran görüntüsü modunda kayıt kendi klasöründe: gerçek kayda asla dokunulmaz
+        private static string FilePath => DevAutoShot.Active
+            ? Path.Combine(DevAutoShot.Folder, FileName)
+            : Path.Combine(Application.persistentDataPath, FileName);
+        private const string MigratedKey = "SaveMigrated";
 
         // Oyunun eski adı. Ad değişince kayıt klasörü de değişti (LocalLow/MT/RiskLoop -> LocalLow/MT/Bir Kat Daha).
         private const string OldProductFolder = "RiskLoop";
 
         /// <summary>
-        /// Eski addaki klasörde kayıt varsa ve yenisinde yoksa kaydı yeni yere taşır (ilerleme kaybolmasın).
-        /// Eski dosya ".migrated" diye yeniden adlandırılır: kayıt sıfırlanınca eski kayıt geri gelmez.
+        /// Eski addaki klasörde kayıt varsa ve yenisinde yoksa kaydı yeni yere KOPYALAR (ilerleme kaybolmasın).
+        /// Eski dosyaya dokunulmaz (aynı bilgisayardaki editör ya da eski sürüm onu kullanmaya devam edebilir).
+        /// Bir kez yapılır (PlayerPrefs işareti): kayıt sıfırlanınca eski kayıt geri gelmez.
         /// </summary>
         private static void MigrateOldSave()
         {
+            if (DevAutoShot.Active || PlayerPrefs.GetInt(MigratedKey, 0) == 1) return;
+            PlayerPrefs.SetInt(MigratedKey, 1);   // Kayıt olsa da olmasa da bir daha bakılmaz
+            PlayerPrefs.Save();
             if (File.Exists(FilePath)) return;
             try
             {
@@ -35,7 +43,6 @@ namespace RiskLoop.Game
                 if (oldPath == FilePath || !File.Exists(oldPath)) return;
                 Directory.CreateDirectory(Application.persistentDataPath);
                 File.Copy(oldPath, FilePath);
-                File.Move(oldPath, oldPath + ".migrated");
             }
             catch (Exception e)
             {
