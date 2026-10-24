@@ -23,8 +23,8 @@ namespace RiskLoop.Game.UI
     {
         [Header("Tünel")]
         [SerializeField] private RectTransform sceneRoot;     // Tüm sahne; büyük sarsıntılarda bu sarsılır
-        [SerializeField] private Image[] tunnelRings;        // Dıştan içe iç içe çerçeveler (derinlik hissi)
-        [SerializeField] private RectTransform tunnelRoot;    // İlerleme animasyonunda büyütülür
+        [SerializeField] private Image[] tunnelRings;        // 0: tünel, 1: ilerlerken yanımızdan geçen eski görüntü (2-3 kullanılmaz)
+        [SerializeField] private RectTransform tunnelRoot;    // Tünel katmanlarının kabı
         [SerializeField] private Image ceilingCrack;          // Riskle koyulaşan tavan çatlağı
 
         [Header("Duvar")]
@@ -134,6 +134,13 @@ namespace RiskLoop.Game.UI
             SetAlpha(darkOverlay, 0f);
             pickaxeRoot.localRotation = Quaternion.Euler(0, 0, restAngle);
 
+            // Tünel katmanları: 0 = şu anki tünel, 1 = ilerlerken kameranın yanından geçip giden eski görüntü
+            // (tam ekrana açılır). Eski sahnelerden kalan 2 ve 3 kullanılmaz.
+            RectTransform passing = tunnelRings[1].rectTransform;
+            passing.offsetMin = passing.offsetMax = Vector2.zero;
+            for (int i = 1; i < tunnelRings.Length; i++) tunnelRings[i].enabled = false;
+            MineArt.Prewarm(1);   // İlk katın görselleri oyun açılırken arka planda hazırlansın
+
             _attackFx = sceneRoot.gameObject.AddComponent<AttackFxView>();
             _attackFx.Init(sceneRoot, weaponRoot, weaponImage, monsterBody, particles);
         }
@@ -210,22 +217,11 @@ namespace RiskLoop.Game.UI
             _digStep = currentStep + 1;
             _wallSeed = _digStep * 7919;
 
-            int zone = DepthTheme.ZoneIndex(_digStep);
-            Color rockColor = DepthTheme.WallColor(_digStep);
-            Color oreColor = DepthTheme.OreColor(_digStep);
-            int variant = _digStep % 4;  // Her bölgede 4 farklı kaya yüzü dönüşümlü
-            int detail = DepthTheme.DetailLevel(_digStep);   // Görsel zenginlik: ilk katlar sade, her 10 katta artar
-            wallImage.sprite = MineArt.RockFace($"face_{zone}_{detail}_{variant}", zone * 100 + variant, rockColor, oreColor, detail);
-
-            // Tünel tek tam ekran perspektif görsel (destek çerçeveleri, raylar, fenerler).
-            // Eski iç içe halkalardan sadece ilki (tam ekran olan) kullanılır, diğerleri kapalı.
-            for (int i = 0; i < tunnelRings.Length; i++)
-            {
-                tunnelRings[i].enabled = i == 0;
-                if (i > 0) continue;
-                tunnelRings[i].sprite = MineArt.Tunnel($"tunnel_{zone}_{detail}", zone * 31 + 5, rockColor, oreColor, detail);
-                tunnelRings[i].color = Color.white;
-            }
+            // Malzeme bölgeye göre (toprak, taş, kristal...). Bölge sonunda sonraki malzeme yamalar halinde belirir.
+            wallImage.sprite = MineArt.FaceFor(_digStep);
+            tunnelRings[0].sprite = MineArt.TunnelFor(_digStep);
+            tunnelRings[0].color = Color.white;
+            MineArt.Prewarm(_digStep + 1);   // Sonraki kat arka planda hazırlansın (ilerlerken takılma olmasın)
 
             depthLabel.text = $"{_digStep}. KAT";
             crackImage.enabled = false;
@@ -316,27 +312,59 @@ namespace RiskLoop.Game.UI
         /// <summary>Tünelde ilerle: halkalar büyüyüp geçer, karanlıktan yeni duvar belirir.</summary>
         public IEnumerator Emerge(int currentStep, double nextRisk)
         {
+            // Öne doğru ilerleme (birinci şahıs): eski tünel görüntüsü büyüyerek kameranın yanından geçip gider,
+            // altındaki yeni tünel uzaktan yaklaşır, yeni kaya yüzü karanlıktan çıkar, kamera adım adım sallanır,
+            // toz zerreleri yanımızdan geriye akar. Tünel perspektifinde büyütmek = ileri gitmek.
+            Image passing = tunnelRings[1];
+            passing.sprite = tunnelRings[0].sprite;
+            passing.enabled = true;
+            passing.color = Color.white;
             SetDepth(currentStep, nextRisk);
 
             wallRoot.gameObject.SetActive(true);
-            const float duration = 0.3f;
+            Vector3 center = wallRoot.position;
+            Color dust = DepthTheme.WallColor(_digStep) * 1.3f;
+            dust.a = 0.6f;
+            const float duration = 0.6f;
+            const float steps = 2f;   // Yürürken iki adım (kamera inip kalkar)
             float t = 0f;
+            float nextDust = 0f;
             while (t < duration)
             {
                 t += FxTime.Delta;
                 float k = Mathf.Clamp01(t / duration);
-                float ease = 1f - (1f - k) * (1f - k);
-                tunnelRoot.localScale = Vector3.one * Mathf.Lerp(1.25f, 1f, ease);   // Öne doğru hareket hissi
-                wallRoot.localScale = Vector3.one * Mathf.Lerp(0.35f, 1f, ease);      // Yeni duvar uzaktan yaklaşır
-                float b = Mathf.Lerp(0.15f, 1f, ease);
+                float move = k * k * (3f - 2f * k);   // Yumuşak başla, hızlan, yumuşak dur
+
+                passing.rectTransform.localScale = Vector3.one * Mathf.Lerp(1f, 2.6f, move);
+                SetAlpha(passing, 1f - Smooth01((k - 0.25f) / 0.6f));
+                tunnelRings[0].rectTransform.localScale = Vector3.one * Mathf.Lerp(0.72f, 1f, move);
+                wallRoot.localScale = Vector3.one * Mathf.Lerp(0.3f, 1f, move);
+                float b = Mathf.Lerp(0.05f, 1f, Smooth01(k * 1.3f - 0.2f));
                 wallImage.color = new Color(b, b, b, 1f);
-                SetAlpha(holeImage, 0.95f * (1f - ease));
+                SetAlpha(holeImage, 0.95f * (1f - move));
+                sceneRoot.anchoredPosition = new Vector2(0f, -Mathf.Abs(Mathf.Sin(k * Mathf.PI * steps)) * 14f * (1f - k * 0.5f));
+
+                // Toz ve küçük taşlar merkezden kenarlara akar (yanımızdan geçiyor gibi)
+                if (t >= nextDust && k < 0.85f)
+                {
+                    nextDust = t + 0.03f;
+                    particles.Spawn(center, dust, 2, 900f, gravity: 0f, minSize: 4f, maxSize: 12f, lifetime: 0.45f, rotate: false);
+                }
                 yield return null;
             }
-            tunnelRoot.localScale = Vector3.one;
+            passing.enabled = false;
+            passing.rectTransform.localScale = Vector3.one;
+            tunnelRings[0].rectTransform.localScale = Vector3.one;
+            sceneRoot.anchoredPosition = Vector2.zero;
             wallRoot.localScale = Vector3.one;
             wallImage.color = Color.white;
             SetAlpha(holeImage, 0f);
+        }
+
+        private static float Smooth01(float x)
+        {
+            x = Mathf.Clamp01(x);
+            return x * x * (3f - 2f * x);
         }
 
         // ---------------- Bulgu ----------------

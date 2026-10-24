@@ -3,52 +3,53 @@ using UnityEngine;
 namespace RiskLoop.Game.Art
 {
     /// <summary>
-    /// Derinliğe göre kaya katmanının rengi. Her 10 katlık bölge (sonunda boss) kendi rengindedir; 90. kattan sonra renkler döner,
-    /// böylece oyuncu derine indikçe dünyanın değiştiğini GÖRÜR (ilerleme hissi).
+    /// Derinliğe göre kazılan malzeme. Her 10 katlık bölge (sonunda boss) kendi malzemesindedir:
+    /// toprak → taş → kristal → göl taşı → demir → fosil → ejder pulu → bazalt/lav → hiçlik; 90. kattan sonra döner.
+    /// Bölgenin son 3 katında bir sonraki malzeme yamalar halinde belirir (toprağın içinden taş çıkar):
+    /// oyuncu derine indikçe dünyanın değiştiğini GÖRÜR (ilerleme hissi).
     /// </summary>
     public static class DepthTheme
     {
-        private const int ZoneSize = 10;   // BalanceData.zoneSize ile aynı (sadece renk için)
+        private const int ZoneSize = 10;   // BalanceData.zoneSize ile aynı (sadece görsel için)
 
-        private static readonly Color[] WallColors =
+        // Bölge sırası = MineArt.Material sırası. baseColor: ana renk, accent: çakıl/kristal/cevher/lav rengi.
+        private static readonly MineArt.Palette[] Palettes =
         {
-            new Color(0.50f, 0.41f, 0.33f), // toprak ve kumtaşı (çamur gibi durmasın diye taşsı)
-            new Color(0.50f, 0.50f, 0.53f), // taş
-            new Color(0.45f, 0.38f, 0.68f), // kristal mağarası
-            new Color(0.26f, 0.40f, 0.55f), // yeraltı gölü
-            new Color(0.55f, 0.28f, 0.20f), // cüce demirhanesi
-            new Color(0.66f, 0.62f, 0.48f), // fosil mezarlığı
-            new Color(0.24f, 0.38f, 0.28f), // ejderin ini
-            new Color(0.70f, 0.24f, 0.10f), // lav kalbi
-            new Color(0.20f, 0.17f, 0.26f), // dünyanın kökleri
+            P(MineArt.Material.Soil,     new Color(0.46f, 0.32f, 0.21f), new Color(0.56f, 0.52f, 0.47f)), // toprak
+            P(MineArt.Material.Stone,    new Color(0.50f, 0.50f, 0.52f), new Color(0.85f, 0.90f, 0.98f)), // taş
+            P(MineArt.Material.Crystal,  new Color(0.36f, 0.32f, 0.44f), new Color(0.80f, 0.50f, 1.00f)), // kristal mağarası
+            P(MineArt.Material.WetStone, new Color(0.28f, 0.38f, 0.48f), new Color(0.45f, 0.80f, 1.00f)), // yeraltı gölü
+            P(MineArt.Material.Iron,     new Color(0.42f, 0.32f, 0.28f), new Color(0.85f, 0.42f, 0.16f)), // cüce demirhanesi
+            P(MineArt.Material.Fossil,   new Color(0.70f, 0.65f, 0.52f), new Color(0.96f, 0.93f, 0.82f)), // fosil mezarlığı
+            P(MineArt.Material.Scales,   new Color(0.22f, 0.36f, 0.27f), new Color(0.35f, 1.00f, 0.55f)), // ejderin ini
+            P(MineArt.Material.Basalt,   new Color(0.17f, 0.14f, 0.13f), new Color(1.00f, 0.60f, 0.15f)), // lav kalbi
+            P(MineArt.Material.Void,     new Color(0.27f, 0.21f, 0.36f), new Color(0.75f, 0.50f, 1.00f)), // dünyanın kökleri
         };
 
-        /// <summary>Bu kat hangi bölgede (0..)?</summary>
-        public static int ZoneIndex(int step) => ((System.Math.Max(step, 1) - 1) / ZoneSize) % WallColors.Length;
+        private static MineArt.Palette P(MineArt.Material m, Color baseColor, Color accent) =>
+            new MineArt.Palette { material = m, baseColor = baseColor, accent = accent };
 
-        public static Color WallColor(int step) => WallColors[ZoneIndex(step)];
+        /// <summary>Bu kat hangi bölgede (0..8, döner)?</summary>
+        public static int ZoneIndex(int step) => ((System.Math.Max(step, 1) - 1) / ZoneSize) % Palettes.Length;
 
-        // Her bölgenin cevheri (kayadaki damar ve benekler):
-        // altın, gümüş, ametist, safir, bakır, kemik, zümrüt, magma, hiçlik
-        private static readonly Color[] OreColors =
-        {
-            new Color(1.00f, 0.80f, 0.25f),
-            new Color(0.85f, 0.90f, 0.98f),
-            new Color(0.80f, 0.50f, 1.00f),
-            new Color(0.35f, 0.70f, 1.00f),
-            new Color(1.00f, 0.55f, 0.25f),
-            new Color(0.95f, 0.92f, 0.80f),
-            new Color(0.35f, 1.00f, 0.55f),
-            new Color(1.00f, 0.45f, 0.10f),
-            new Color(0.70f, 0.40f, 1.00f),
-        };
+        public static MineArt.Palette Palette(int step) => Palettes[ZoneIndex(step)];
 
-        public static Color OreColor(int step) => OreColors[ZoneIndex(step)];
+        /// <summary>Bir sonraki bölgenin malzemesi (geçiş yamaları için).</summary>
+        public static MineArt.Palette NextPalette(int step) => Palettes[(ZoneIndex(step) + 1) % Palettes.Length];
 
         /// <summary>
-        /// Maden görselinin zenginliği: 1-10. kat 0 (sade), her 10 katta +1, en fazla MineArt.MaxLevel.
-        /// Renkler 9 bölgede bir döner ama zenginlik dönmez: derindeki maden hep daha gösterişli.
+        /// Geçiş oranı: bölgenin 8. katında %25, 9. katında %50, boss katında %75 sonraki malzeme. Diğer katlarda 0.
+        /// Dörtte birlik adımlar: aynı görsel tekrar üretilmez (önbellek).
         /// </summary>
-        public static int DetailLevel(int step) => System.Math.Min((System.Math.Max(step, 1) - 1) / ZoneSize, MineArt.MaxLevel);
+        public static float TransitionMix(int step)
+        {
+            int floorInZone = (System.Math.Max(step, 1) - 1) % ZoneSize + 1;
+            return floorInZone >= 8 ? (floorInZone - 7) * 0.25f : 0f;
+        }
+
+        /// <summary>Moloz ve parçacıklar için malzemenin ana rengi.</summary>
+        public static Color WallColor(int step) => Palette(step).baseColor;
+
+        public static Color OreColor(int step) => Palette(step).accent;
     }
 }

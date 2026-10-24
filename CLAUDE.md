@@ -22,9 +22,9 @@
   sol üst istatistik (karakter, derinlik, değer, 12 stat kartı, risk çubuğu, kısa satırlar), sağ üst bulgu koleksiyonu,
   sağ alt KAZ / Yüzeye dön, alt orta mesaj, en üstte yarı saydam üst bar. Ortası (duvar, canavar, bulgu) hep açık.
   Kazma ve silah HUD'ların iç kenarında (`HudSideWidth`), oyuncu can barı üst barın altında. HUD arka planı tıklamayı yutar (yanlış vuruş yok).
-- Sahne: perspektif maden tüneli (`MineArt`, bkz. 17. tur), ortada kaya yüzü (+çatlak katmanı, "12. KAT" kazınmış yazı), sağ altta kazma,
-  kenar karartma (fener titremesi). Kaya rengi bölgeye göre değişir (`Art/DepthTheme`: toprak, taş, kristal, göl, demirhane, fosil, ejder, lav;
-  bölgeler keşif katlarında başlar). Her bölgede 4 doku çeşidi dönüşümlü.
+- Sahne: kazdığın malzemeden 3B tünel (`MineArt`, bkz. 19. tur), ortada kaya yüzü (+çatlak katmanı, "12. KAT" kazınmış yazı), sağ altta kazma,
+  kenar karartma (fener titremesi). Malzeme bölgeye göre değişir (`Art/DepthTheme`: toprak, taş, kristal, göl, demir, fosil, ejder, lav, hiçlik;
+  bölge sonunda sonraki malzeme yamalarla belirir). Her bölgede 4 kaya yüzü çeşidi dönüşümlü.
 - **Bir kat = kazı gücüne göre 1-8 kazma vuruşu** (başta 3; bkz. kazma yuvası). Her vuruş: geri çekil → hızla in → kıvılcım + moloz + toz, duvar sarsılır, çatlak büyür.
   Tuş basılı tutulursa art arda vurur (yorucu olmasın). Sahneye tıklamak da vurur. Zar SADECE son vuruşta atılır.
 - Son vuruş: duvar titrer `0.12 + 0.7*risk` sn (gerilim) → sonuç:
@@ -126,16 +126,27 @@ Kullanıcı: kazı "kahverengi çamurda blok kazıyormuş" gibi duruyor, derin m
 - **Oyunun adı: "Bir Kat Daha!"** (döngünün kendisi: bir kat daha inersem...). `UIStrings.GameTitle` (DAHA! turuncu), pencere/ürün adı
   `Bir Kat Daha`, exe `BirKatDaha.exe`, zip `Builds/BirKatDaha_Windows.zip`. Kod adı, namespace ve menüler `RiskLoop` olarak kaldı.
   Kayıt klasörü ürün adıyla değişti (`LocalLow/MT/Bir Kat Daha`): `SaveSystem.MigrateOldSave` eski `RiskLoop` klasöründeki kaydı bir kez taşır.
-- **Maden tüneli (`Art/MineArt.Tunnel`, 384x216 tam ekran):** piksel başına basit perspektif (kutu tünel, kamera ortada, sonu duvarla
-  aynı boyda: 640x600). Katmanlı kaya, cevher benekleri, 4 ahşap destek çerçevesi (dikme + başlık kirişi), tabanda ray + travers,
-  asılı fenerler (sıcak hale), derinlikle kararan ışık. Eski 4 iç içe halkadan sadece ilki kullanılır.
-- **Kaya yüzü (`MineArt.RockFace`, 128x120):** kırık taş blokları (Voronoi), aralarında çatlak, üst-sol ışıkla kabartma, tortu katmanları,
-  bölge renginde parıltılı cevher damarı, düzensiz saydam kenar. Cevher rengi `DepthTheme.OreColor` (altın, gümüş, ametist, safir, bakır,
-  kemik, zümrüt, magma, hiçlik). 1. bölge kaya rengi daha taşsı yapıldı.
-- **Görsel zenginlik derinlikle artar (18. tur, kullanıcı: ilk katlar çok karmaşık):** `DepthTheme.DetailLevel` = (kat-1)/10, en fazla 5,
-  ayarlar tek tabloda (`MineArt.Levels`). 0 (1-10): yumuşak kaya, tek çerçeve, 6 büyük taş, damar/benek yok. 1: hafif katmanlar,
-  2 çerçeve, ilk cevher taneleri. 2: raylar, çatlaklar, ince damar. 3: asılı fener, 4 çerçeve, parıltılı damar. 4: iki fener, iki damar.
-  5 (51+): cevher karanlıkta parlar. Renkler 9 bölgede döner, zenginlik dönmez. Neden: sade başlangıç + derine inmenin görsel ödülü.
+- Maden görseli 17-18. turda ahşap kolonlu galeri oldu, 19. turda kaldırıldı (bkz. 19. tur).
+
+## Kazdığın malzeme, 3B tünel, 7 renkli kutlama (19. tur)
+Kullanıcı: 17-18. turdaki maden (ahşap kolonlar, raylar, fenerler) beğenilmedi; eski basit konsept daha iyiydi (önce toprak, sonra taş,
+taşlar değişiyor: derine indiğini hissediyordun). İstek: o konsept gerçekçi + 3B + kazarak ilerleme hissi; kutlama renk renk büyüsün.
+- **Tünel = kazdığın malzeme (`Art/MineArt`):** ahşap/ray/fener YOK. Bölge malzemeleri (`MineArt.Material`, `DepthTheme.Palette`):
+  toprak (topaklar, çakıl, kökler) → taş (kırık bloklar) → kristal (koyu taş + parlak kristal kümeleri) → göl taşı (ıslak katmanlar) →
+  demir (pas, metal pırıltısı) → fosil (kemik, kabuk) → ejder pulu → bazalt (çatlaklardan lav parlar) → hiçlik (yıldız zerreleri).
+  **Geçiş:** bölgenin 8. katında %25, 9. katında %50, boss katında %75 sonraki malzeme yamalar halinde belirir (`DepthTheme.TransitionMix`).
+- **3B:** yuvarlak (elips, elle kazılmış gibi düzensiz) tünel, piksel başına perspektif (z = R / r), her malzemenin yükseklik haritası
+  ile kabartma ışığı (kameraya bakan yamaç aydınlık, çukur gölgede), fener ışığı derinlikle kararır, uzakta ayrıntı yumuşar.
+  Desenler tünel çevresinde dikişsiz sarar (`AroundWrap`, `S`/`R` yardımcıları). Kaya yüzü aynı malzeme, yüzey normaliyle aydınlatılır,
+  kenarı tünelin sonuyla birebir aynı düzensiz elips.
+- **İlerleme hissi (`DigView.Emerge`, 0.6 sn):** eski görüntü (Ring_1) büyüyüp solarak kameranın yanından geçer, yeni tünel 0.72 → 1
+  yaklaşır, yeni yüz karanlıktan çıkar, kamera iki adımla sallanır, toz merkezden kenarlara akar.
+- **Performans:** bir doku ~0.3 sn (Mono). Sonraki katınki `MineArt.Prewarm` ile arka plan iş parçacığında hesaplanır (pikseller saf
+  matematik), Sprite ana iş parçacığında oluşur. Önbellek: bölge + geçiş oranı (tünel), + 4 çeşit (yüz).
+- **Kutlama 7 renk (`UIStrings.CourageTier`, `RunFeedbackDirector.CourageColors`):** beyaz → mavi → yeşil → sarı → turuncu → kırmızı →
+  pembe (bossa giden yolda 1. kat beyaz ... 8-9. kat pembe). Her katta kademe renginde kıvılcım, flaş, titreyen başlık, "+%X RİSK BONUSU".
+  **Turda yeni renge çıkınca (`TierUp`):** şok dalgaları (`FxLayerView.Shockwave`), ekran çatlar (`ScreenCracks`, `PixelArt.GlassCracks`),
+  başlığın arkasında dönen hüzmeler (`Rays`), donma, sarsıntı; her renkte katlanır, kırmızı/pembede ikinci dalga, pembede gökkuşağı patlaması.
 
 ## Oynanabilir oyun: menüler, ses, Windows sürümü (16. tur)
 Kullanıcı: arkadaşına göndermek için standart bir oyun (menü vb.).
@@ -159,8 +170,7 @@ Kullanıcı: oyuncu her bossta yüzeye çıkacak (bosstan eşya düştü), o yü
   Yeni oyuncu bossa (9 kat) sağ ulaşma ~%21 (yükseltme, yetenek, bulgu, büyüyle artar).
 - **Risk bonusu `courageEdge` 0.35:** kat başı +%5 → +%74; 9 katın toplamı ~+%700. "k. katta dön" ort. kazanç 3 → 38, 5 → 76,
   7 → 122, 9 → 158 (başarılı turda 756): risk almak en kârlı yol, ekonomi patlamadı.
-- **5 kademeli kutlama (`UIStrings.CourageTier`):** her katta en az kıvılcım + hafif flaş + kısa başlık (SAĞLAM ADIM!) + "+%X RİSK BONUSU";
-  2 (geçme <%80) altın + sarsıntı, 3 (<%65) patlama, 4 (<%50, GÖZÜ KARA!) turuncu + donma, 5 (<%38) efsanevi.
+- Kutlama kademeleri 19. turda 7 renge çıktı (bkz. 19. tur).
   Terazi rengi yeşil → sarı (%35 risk) → kırmızı (%65), nabız %30 riskten başlar.
 - **Config:** `BalanceConfig.asset` **Reset** gerekir.
 

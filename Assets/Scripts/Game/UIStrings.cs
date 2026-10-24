@@ -752,37 +752,37 @@ namespace RiskLoop.Game
                 ? $"<size=70%>KAZANIRSAN</size>\n<color=#3CCB5A><b>+{Num(win)}</b></color>  <color=#FFC83A><b>{CourageBonus(courage)} bonus</b></color>"
                 : GaugeWin(win);
 
-        // Kutlama başlıkları: 5 kademe, gösterilen risk büyüdükçe daha görkemli. En güvenli katta bile kısa bir başlık var.
-        private static readonly string[] SteadyTitles = { "SAĞLAM ADIM!", "İYİ GİDİYOR!", "DEVAM!" };
-        private static readonly string[] BraveTitles = { "CESUR ADIM!", "YİĞİTÇE!", "SAĞLAM YÜREK!" };
-        private static readonly string[] BoldTitles = { "YÜREKLİ!", "KORKUSUZ!", "DAĞ GİBİ!" };
-        private static readonly string[] FearlessTitles = { "GÖZÜ KARA!", "KADER SENDEN YANA!", "ÖLÜMLE DANS!" };
-        private static readonly string[] LegendTitles = { "EFSANEVİ CESARET!", "İMKANSIZI BAŞARDIN!", "DESTANLIK!" };
+        // Kutlama başlıkları: 7 kademe (renkler beyaz → mavi → yeşil → sarı → turuncu → kırmızı → pembe),
+        // gösterilen risk büyüdükçe daha görkemli. En güvenli katta bile kısa bir başlık var.
+        private static readonly string[][] CourageTitles =
+        {
+            new[] { "SAĞLAM ADIM!", "İYİ GİDİYOR!", "DEVAM!" },
+            new[] { "CESUR ADIM!", "YİĞİTÇE!", "SAĞLAM YÜREK!" },
+            new[] { "YÜREKLİ!", "KORKUSUZ!", "DAĞ GİBİ!" },
+            new[] { "GÖZÜ PEK!", "ATEŞ GİBİ!", "YILMAZ!" },
+            new[] { "GÖZÜ KARA!", "KADER SENDEN YANA!", "ÖLÜMLE DANS!" },
+            new[] { "YENİLMEZ!", "KADERE MEYDAN OKUDUN!", "DEMİR YÜREK!" },
+            new[] { "EFSANEVİ CESARET!", "İMKANSIZI BAŞARDIN!", "DESTANLIK!" },
+        };
+
+        public const int CourageTierCount = 7;
 
         /// <summary>
-        /// Kutlama kademesi 1..5 (gösterilen göçük riskine göre; geçme şansı ~%80 üstü 1, %65-80 2, %50-65 3, %38-50 4, altı 5).
-        /// Bossa giden 9 katta (geçme %88 -> %32) oyuncu her kademeyi sırayla yaşar.
+        /// Kutlama kademesi 1..7 (gösterilen göçük riskine göre). Bossa giden 9 katta (geçme %88 -> %32)
+        /// oyuncu her katta bir üst renge çıkar: 1. kat beyaz, 2 mavi, 3 yeşil, 4 sarı, 5-6 turuncu, 7 kırmızı, 8-9 pembe.
         /// </summary>
         public static int CourageTier(double bustChance)
         {
-            if (bustChance >= 0.62) return 5;
-            if (bustChance >= 0.50) return 4;
-            if (bustChance >= 0.35) return 3;
-            if (bustChance >= 0.20) return 2;
+            if (bustChance >= 0.60) return 7;
+            if (bustChance >= 0.50) return 6;
+            if (bustChance >= 0.38) return 5;
+            if (bustChance >= 0.30) return 4;
+            if (bustChance >= 0.22) return 3;
+            if (bustChance >= 0.15) return 2;
             return 1;
         }
 
-        public static string CourageTitle(double bustChance)
-        {
-            switch (CourageTier(bustChance))
-            {
-                case 5: return Pick(LegendTitles);
-                case 4: return Pick(FearlessTitles);
-                case 3: return Pick(BoldTitles);
-                case 2: return Pick(BraveTitles);
-                default: return Pick(SteadyTitles);
-            }
-        }
+        public static string CourageTitle(int tier) => Pick(CourageTitles[System.Math.Clamp(tier, 1, CourageTierCount) - 1]);
 
         public static string CourageMessage(double chance, double gain) =>
             gain > 0

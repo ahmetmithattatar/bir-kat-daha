@@ -43,11 +43,11 @@ namespace RiskLoop.Game
         private static readonly Color CritYellow = new Color(1f, 0.85f, 0.2f);
         private static readonly Color XpBlue = new Color(0.55f, 0.85f, 1f);
         private static readonly Color SpellPurple = new Color(0.7f, 0.45f, 1f);
-        private static readonly Color CourageOrange = new Color(1f, 0.55f, 0.15f);
 
         private int _hits;               // Bu duvara kaç vuruş yapıldı
         private int _swingsNeeded = 3;   // Bu duvar kaç vuruşta yıkılır (kazı gücü / duvar sertliği)
         private bool _bestRunAnnounced;  // "En değerli turun" bu turda zaten duyuruldu mu?
+        private int _courageTier;        // Bu turda ulaşılan en yüksek cesaret kademesi (yeni renge çıkınca patlama)
 
         /// <summary>Normal animasyon hızı. Hit-stop sırasında geçici olarak neredeyse durur.</summary>
         public float BaseSpeed { get; set; } = 1f;
@@ -78,6 +78,7 @@ namespace RiskLoop.Game
         {
             _hits = 0;
             _bestRunAnnounced = false;
+            _courageTier = 0;
             digView.ResetForRun(session.CurrentRun.Step, session.NextBustChance);
             digView.SetWeapon(session.GetEquipped(GearSlot.Weapon));
             digView.SetPickaxe(session.GetEquipped(GearSlot.Pickaxe));
@@ -402,51 +403,101 @@ namespace RiskLoop.Game
             yield return popup.ShowLevelUp(level, news, session.TalentPointsAvailable, fx);
         }
 
+        // Cesaret kademelerinin renkleri (1..7): beyaz, mavi, yeşil, sarı, turuncu, kırmızı, pembe
+        private static readonly Color[] CourageColors =
+        {
+            new Color(1f, 1f, 1f),
+            new Color(0.35f, 0.68f, 1f),
+            new Color(0.3f, 0.95f, 0.4f),
+            new Color(1f, 0.88f, 0.2f),
+            new Color(1f, 0.55f, 0.12f),
+            new Color(1f, 0.22f, 0.2f),
+            new Color(1f, 0.42f, 0.85f),
+        };
+
         /// <summary>
         /// Riskten sağ çıkma kutlaması: HER katta (ilk kattan itibaren), gösterilen riskle sürekli büyür.
-        ///   5 kademe (gösterilen göçük riskine göre, UIStrings.CourageTier): her katta en az kıvılcım, flaş, kısa başlık ve
-        ///   "+%X RİSK BONUSU" yazısı; 2+ altın + sarsıntı, 3+ patlama, 4+ turuncu + donma, 5 efsanevi (çift flaş, dev patlama).
+        ///   7 renkli kademe (UIStrings.CourageTier): beyaz → mavi → yeşil → sarı → turuncu → kırmızı → pembe.
+        ///   Her katta: kademe renginde kıvılcım, flaş, başlık, "+%X RİSK BONUSU"; kademeyle sarsıntı ve altın akışı büyür.
+        ///   Turda YENİ bir renge çıkılınca (kademe atlama) ayrıca patlama: şok dalgaları, ekran çatlar, başlığın arkasında
+        ///   dönen hüzmeler, donma; her üst renkte daha sert. Pembede gökkuşağı: önceki tüm renkler birlikte patlar.
         /// Boss katında risk yok: kutlama da yok.
         /// </summary>
         private IEnumerator CelebrateSurvival(AdvanceResult r)
         {
             float risk = (float)r.BustChance;
             if (risk <= 0f) yield break;
-            int tier = UIStrings.CourageTier(r.BustChance);   // 1..5: gösterilen riske göre kutlama kademesi
-            Sfx.Play(SoundId.Courage, tier - 1, 0.5f + 0.1f * tier);   // Risk büyüdükçe daha tiz ve yüksek
-            Color color = tier >= 4 ? CourageOrange : Gold;
+            int tier = UIStrings.CourageTier(r.BustChance);   // 1..7: gösterilen riske göre kutlama kademesi
+            Color color = CourageColors[tier - 1];
+            bool tierUp = tier > _courageTier && tier >= 2;   // Bu turda ilk kez bu renge çıktı
+            _courageTier = Mathf.Max(_courageTier, tier);
+            Sfx.Play(SoundId.Courage, tier - 1, 0.45f + 0.08f * tier);   // Risk büyüdükçe daha tiz ve yüksek
 
-            // 1+ (her kat, en güvenlisinde bile): kıvılcım, hafif flaş, kısa başlık, "+%X RİSK BONUSU" sayaca uçar
-            fx.Burst(digView.WallAnchor, Gold, 12 + 18 * tier, 400f + 160f * tier);
-            fx.Flash(color, 0.06f + 0.08f * tier, 0.3f + 0.1f * tier);
-            fx.Banner(UIStrings.CourageTitle(r.BustChance), color, 0.15f + 0.15f * tier);
+            // Her kat (en güvenlisinde bile): kıvılcım, flaş, başlık, "+%X RİSK BONUSU" sayaca uçar
+            fx.Burst(digView.WallAnchor, color, 10 + 12 * tier, 380f + 120f * tier);
+            fx.Flash(color, 0.05f + 0.05f * tier, 0.25f + 0.06f * tier);
+            fx.Banner(UIStrings.CourageTitle(tier), color, 0.15f + 0.1f * tier, 1f + 0.12f * tier + (tierUp ? 0.3f : 0f));
             if (r.CourageMult > 1.0)
             {
-                fx.FloatText($"+{UIStrings.CourageBonus(r.CourageMult).Substring(1)} RİSK BONUSU", color, 32f + 12f * tier, runPanel.RiskBonusAnchor);
-                fx.Burst(runPanel.RiskBonusAnchor, color, 8 + 10 * tier, 300f + 120f * tier);
+                fx.FloatText($"+{UIStrings.CourageBonus(r.CourageMult).Substring(1)} RİSK BONUSU", color, 30f + 9f * tier, runPanel.RiskBonusAnchor);
+                fx.Burst(runPanel.RiskBonusAnchor, color, 6 + 8 * tier, 280f + 100f * tier);
             }
             runPanel.ShowMessage(UIStrings.CourageMessage(r.BustChance, r.CourageGain));
 
-            // 2+: altınlar sayaca, hafif sarsıntı
+            // 2+: altınlar sayaca, sarsıntı
             if (tier >= 2)
             {
-                fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 6 * tier, Gold);
-                fx.Shake(4f + 5f * tier, 0.15f + 0.08f * tier);
+                fx.CoinsTo(digView.WallAnchor, runPanel.RunValueAnchor, 4 * tier, Gold);
+                fx.Shake(3f + 4f * tier, 0.12f + 0.06f * tier);
             }
-            // 3+: turun değerinde patlama
-            if (tier >= 3) fx.Burst(runPanel.RunValueAnchor, color, 20 * tier, 700f);
-            // 4+: zaman bir an durur
-            if (tier >= 4) HitStop(0.06f * tier);
-            // 5: efsanevi: ikinci flaş, dev patlama, büyük sarsıntı
-            if (tier >= 5)
+            // 4+: turun değerinde patlama
+            if (tier >= 4) fx.Burst(runPanel.RunValueAnchor, color, 12 * tier, 650f);
+
+            if (tierUp) yield return TierUp(tier, color);
+            yield return UIFx.Wait(0.12f + 0.1f * tier);   // Anın tadına varsın (risk büyükse daha uzun)
+        }
+
+        /// <summary>
+        /// Yeni renge çıkış: "patlayan, çatlayan" ödül anı. Kademe büyüdükçe her şey katlanır:
+        /// şok dalgası sayısı, ekran çatlağı dalları, donma süresi, sarsıntı. Pembe (7) gökkuşağı patlamasıyla biter.
+        /// </summary>
+        private IEnumerator TierUp(int tier, Color color)
+        {
+            float power = (tier - 1) / (float)(UIStrings.CourageTierCount - 1);   // 0..1 (mavi ~0.17, pembe 1)
+
+            HitStop(0.05f + 0.05f * tier);                                        // Zaman bir an durur
+            fx.Flash(Color.white, 0.25f + 0.35f * power, 0.35f + 0.25f * power);
+            fx.Rays(color, 0.8f + 0.5f * power);                                  // Başlığın arkasında dönen hüzmeler
+            fx.Shockwave(digView.WallAnchor, color, 900f + 900f * power, 0.55f);
+            if (tier >= 3) fx.Shockwave(digView.WallAnchor, Color.white, 700f + 800f * power, 0.5f, 0.08f);
+            if (tier >= 5) fx.Shockwave(digView.WallAnchor, color, 1400f + 900f * power, 0.7f, 0.16f);
+            fx.ScreenCracks(color, 4 + tier * 2, 0.6f + 0.5f * power, tier * 17);    // Ekran çatlar (her renkte daha çok dal)
+            if (tier >= 5) fx.ScreenCracks(Color.white, 3 + tier, 0.5f + 0.4f * power, tier * 29 + 7);
+            fx.Burst(digView.WallAnchor, Color.white, 15 * tier, 800f + 120f * tier);
+            fx.Burst(runPanel.RiskBonusAnchor, color, 10 * tier, 600f + 80f * tier);
+            fx.Shake(10f + 6f * tier, 0.3f + 0.06f * tier);
+            Sfx.Play(SoundId.LevelUp, tier - 2, 0.4f + 0.06f * tier);   // Her renkte daha tiz
+
+            if (tier >= 6)
             {
-                yield return UIFx.Wait(0.15f);
-                fx.Flash(Color.white, 0.55f, 0.6f);
-                fx.Burst(digView.WallAnchor, CourageOrange, 90, 1150f);
-                fx.Burst(runPanel.RiskBonusAnchor, Gold, 50, 900f);
-                fx.Shake(45f, 0.6f);
+                // Kırmızı ve pembe: ikinci dalga
+                yield return UIFx.Wait(0.18f);
+                fx.Flash(color, 0.5f, 0.5f);
+                fx.Burst(digView.WallAnchor, color, 80, 1250f);
+                fx.Shake(40f + 5f * tier, 0.5f);
             }
-            yield return UIFx.Wait(0.12f + 0.14f * tier);   // Anın tadına varsın (risk büyükse daha uzun)
+            if (tier >= UIStrings.CourageTierCount)
+            {
+                // Pembe: gökkuşağı, önceki tüm renkler birden patlar
+                yield return UIFx.Wait(0.12f);
+                foreach (Color c in CourageColors)
+                {
+                    fx.Burst(digView.WallAnchor, c, 18, 1100f);
+                    fx.Burst(runPanel.RiskBonusAnchor, c, 8, 700f);
+                }
+                fx.Shockwave(runPanel.RiskBonusAnchor, color, 900f, 0.6f);
+            }
+            yield return UIFx.Wait(0.15f + 0.25f * power);
         }
 
         /// <summary>Bu tur, şimdiye kadarki en değerli turu geçtiyse bir kez duyur.</summary>

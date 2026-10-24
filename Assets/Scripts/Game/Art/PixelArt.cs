@@ -193,6 +193,73 @@ namespace RiskLoop.Game.Art
             return Finish(key, tex, pixels);
         }
 
+        /// <summary>
+        /// Ekran çatlağı (kutlama efekti): merkezden dışa ışık saçan, dallanan BEYAZ çizgiler (Image rengiyle boyanır).
+        /// branches arttıkça daha çok ve daha uzun çatlak: büyük ödülde ekran "çatlar".
+        /// </summary>
+        public static Sprite GlassCracks(int seed, int branches, int size = 160)
+        {
+            string key = $"glass_{seed}_{branches}_{size}";
+            if (TryGetCached(key, out Sprite cached)) return cached;
+
+            Texture2D tex = NewTexture(size, size);
+            var pixels = new Color32[size * size];
+            var core = new Color32(255, 255, 255, 255);
+            var halo = new Color32(255, 255, 255, 80);
+            var rng = new System.Random(seed);
+
+            void Plot(int px, int py, Color32 c)
+            {
+                if (px < 0 || py < 0 || px >= size || py >= size) return;
+                if (pixels[py * size + px].a < c.a) pixels[py * size + px] = c;
+            }
+
+            // Bir çatlak yürüyüşü: düz gibi ilerler, arada küçük kırılmalar ve yan dallar
+            void Walk(float x, float y, float angle, int length, int depth)
+            {
+                for (int i = 0; i < length; i++)
+                {
+                    if (rng.NextDouble() < 0.12) angle += (float)(rng.NextDouble() - 0.5) * 1.1f;   // Kırılma
+                    x += Mathf.Cos(angle);
+                    y += Mathf.Sin(angle);
+                    int px = (int)x, py = (int)y;
+                    Plot(px, py, core);
+                    Plot(px + 1, py, halo); Plot(px - 1, py, halo); Plot(px, py + 1, halo); Plot(px, py - 1, halo);
+                    if (depth < 2 && rng.NextDouble() < 0.025)
+                        Walk(x, y, angle + (rng.NextDouble() < 0.5 ? -1f : 1f) * (0.5f + (float)rng.NextDouble()), length / 3, depth + 1);
+                }
+            }
+
+            for (int b = 0; b < branches; b++)
+            {
+                float angle = (b + (float)rng.NextDouble() * 0.6f) / branches * Mathf.PI * 2f;
+                int length = (int)(size * (0.3f + 0.25f * (float)rng.NextDouble()));
+                Walk(size / 2f, size / 2f, angle, length, 0);
+            }
+            return Finish(key, tex, pixels);
+        }
+
+        /// <summary>Şok dalgası halkası: içi boş, kenarı yumuşak beyaz çember (Image rengiyle boyanır).</summary>
+        public static Sprite Ring(int size = 96)
+        {
+            string key = $"ring_{size}";
+            if (TryGetCached(key, out Sprite cached)) return cached;
+
+            Texture2D tex = NewTexture(size, size);
+            var pixels = new Color32[size * size];
+            float c = (size - 1) / 2f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / c;   // 0 merkez, 1 kenar
+                    float a = Mathf.Clamp01(1f - Mathf.Abs(d - 0.88f) / 0.1f);
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(a * a * 255));
+                }
+            }
+            return Finish(key, tex, pixels);
+        }
+
         // ---------------- Yardımcılar ----------------
 
         internal static Texture2D NewTexture(int width, int height)
