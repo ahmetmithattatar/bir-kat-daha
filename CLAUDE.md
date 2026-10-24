@@ -128,6 +128,18 @@ Kullanıcı: kazı "kahverengi çamurda blok kazıyormuş" gibi duruyor, derin m
   Kayıt klasörü ürün adıyla değişti (`LocalLow/MT/Bir Kat Daha`): `SaveSystem.MigrateOldSave` eski `RiskLoop` klasöründeki kaydı bir kez taşır.
 - Maden görseli 17-18. turda ahşap kolonlu galeri oldu, 19. turda kaldırıldı (bkz. 19. tur).
 
+## Okunabilirlik ve yazı tipleri (22. tur)
+Kullanıcı: okunabilirlik ve UX'e özen, gerekirse düzen değişsin, şekiller ve yazı tipleri göze hitap etsin.
+- **Yazı tipleri (`Editor/UIFonts.cs`, `Assets/Fonts`):** Google Fonts, SIL OFL (ticari oyunda serbest; `*_OFL.txt` lisanslar yanında,
+  oyunla dağıtılırken korunmalı). Başlık **Cinzel** (oyma taş harfler: menü başlıkları, kutlama/olay başlıkları, açılır kart, kat adı,
+  canavar adı, derinlik). Metin **Rubik** (yuvarlak, küçük boyda okunaklı; TMP varsayılanı yapılır, kodla eklenen her yazı onu alır).
+  TTF'lerden dinamik SDF dosyaları (Türkçe karakterler baştan atlasa) ve gölgeli malzemeler üretilir (sadece eksikse).
+- **Okunabilirlik kuralları (sahne kurucu):** yazı en az 18 punto (`CreateText`), kendiliğinden küçülme en fazla %28 ve en az 16;
+  kart yazıları büyütüldü (etiket 18, değer 30, kısayol 17); ana yazı rengi sıcak kırık beyaz (`TextColor`), ikincil yazı daha açık (`HintColor`);
+  sahnenin üstündeki tüm yazılar gölgeli.
+- **Düzen:** her yükseltme kendi oyuk kartında; yükseltme ekranının sol sütunu (sonuç, eşya, başla) ayrı oyukta; büyü kitabı satırları ve yetenek
+  dalları oyuk; mesaj kutusu HUD paneli; Cesaret terazisi çerçeve payıyla 200 yüksekliğinde.
+
 ## Oyun gibi görünen arayüz (21. tur)
 Kullanıcı: arayüz "yapay zeka yapımı basit" görünüyor; oynanabilir bir oyun görünümü istendi.
 - **UI kaplaması (`Editor/UISkin.cs`):** kodla çizilen ama GERÇEK PNG olarak kaydedilen 9-dilimli görseller (`Assets/Art/UI`):

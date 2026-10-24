@@ -45,13 +45,14 @@ namespace RiskLoop.EditorTools
         private static readonly Color BuyColor = new Color(0.22f, 0.45f, 0.80f);
         private static readonly Color MutedColor = new Color(0.35f, 0.35f, 0.40f);
         private static readonly Color BarBackColor = new Color(0.25f, 0.25f, 0.30f);
-        private static readonly Color HintColor = new Color(0.6f, 0.6f, 0.68f);
+        private static readonly Color HintColor = new Color(0.74f, 0.72f, 0.67f);   // İkincil yazı: koyu zeminde okunacak kadar açık
+        private static readonly Color TextColor = new Color(0.97f, 0.95f, 0.89f);  // Ana yazı: saf beyaz yerine sıcak kırık beyaz (göz yormaz)
         private static readonly Color HudColor = new Color(0.04f, 0.04f, 0.07f, 0.62f);   // Sahnenin üstündeki yarı saydam paneller
 
         // Tam ekran HUD ölçüleri
         private const float TopBarHeight = 90;
         private const float HudSideWidth = 460;
-        private const float GaugeHeight = 178;
+        private const float GaugeHeight = 200;   // Çerçeve payı dahil
         private const float GaugeWidth = 760;   // Dar tutulur: kazma ve silah iki yanında görünsün
 
         [MenuItem("RiskLoop/Build Prototype Scene")]
@@ -79,6 +80,7 @@ namespace RiskLoop.EditorTools
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
             UISkin.Generate(force: false);   // Arayüz kaplaması: eksik PNG'ler üretilir (Assets/Art/UI)
+            UIFonts.Ensure();                 // Cinzel (başlık) + Rubik (metin) yazı tipleri, Rubik varsayılan olur
 
             // Önce sahneyi aç, SONRA config'i yükle: NewScene kullanılmayan asset'leri bellekten atar,
             // önceden yüklenmiş referans boşa düşer ve GameController'a null bağlanır.
@@ -290,6 +292,7 @@ namespace RiskLoop.EditorTools
             AddVerticalLayout(topTexts, spacing: 2, padding: 0);
             TMP_Text depth = CreateText("DepthText", topTexts, "0. KAT", 44, 46, TextAlignmentOptions.MidlineLeft);
             depth.fontStyle = FontStyles.Bold;
+            UIFonts.ApplyTitle(depth);
             TMP_Text runValue = CreateText("RunValueText", topTexts, "0", 46, 52, TextAlignmentOptions.MidlineLeft);
             runValue.fontStyle = FontStyles.Bold;
             runValue.color = new Color(1f, 0.88f, 0.23f);
@@ -330,21 +333,22 @@ namespace RiskLoop.EditorTools
             RectTransform messageRt = CreateUIObject("MessageText", panel);
             messageRt.anchorMin = messageRt.anchorMax = new Vector2(0.5f, 0f);
             messageRt.pivot = new Vector2(0.5f, 0f);
-            messageRt.sizeDelta = new Vector2(GaugeWidth, 66);
+            messageRt.sizeDelta = new Vector2(GaugeWidth, 78);
             messageRt.anchoredPosition = new Vector2(0f, 20f + GaugeHeight + 10f);
-            AddImage(messageRt, new Color(0f, 0f, 0f, 0.35f)).raycastTarget = false;
+            AddSkinned(messageRt, Color.white, UISkin.Style.PanelHud).raycastTarget = false;
             RectTransform messageTextRt = CreateUIObject("Text", messageRt);
             Stretch(messageTextRt);
-            messageTextRt.offsetMin = new Vector2(16, 4);
-            messageTextRt.offsetMax = new Vector2(-16, -4);
+            messageTextRt.offsetMin = new Vector2(24, 14);
+            messageTextRt.offsetMax = new Vector2(-24, -14);
             var message = messageTextRt.gameObject.AddComponent<TextMeshProUGUI>();
             message.fontSize = 24;
             message.alignment = TextAlignmentOptions.Center;
-            message.color = Color.white;
+            message.color = TextColor;
             message.raycastTarget = false;
             message.enableAutoSizing = true;
             message.fontSizeMax = 24;
-            message.fontSizeMin = 15;
+            message.fontSizeMin = 17;
+            UIFonts.ApplyBody(message);
 
             var view = panel.gameObject.AddComponent<RunPanelView>();
             SetRef(view, "avatar", avatar);
@@ -382,7 +386,7 @@ namespace RiskLoop.EditorTools
             root.sizeDelta = new Vector2(GaugeWidth, GaugeHeight);
             root.pivot = new Vector2(0.5f, 0f);
             var layout = root.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(24, 24, 8, 10);
+            layout.padding = new RectOffset(28, 28, 18, 20);   // Metal çerçevenin içinde kalsın
             layout.spacing = 6;
 
             RectTransform top = CreateUIObject("Top", root);
@@ -471,9 +475,9 @@ namespace RiskLoop.EditorTools
             Image accent = AddImage(accentRt, Color.white);
             accent.raycastTarget = false;
 
-            TMP_Text label = AddChipText(root, "Label", 15, new Vector2(16, 34), new Vector2(-8, -4), TextAlignmentOptions.TopLeft);
+            TMP_Text label = AddChipText(root, "Label", 18, new Vector2(16, 34), new Vector2(-8, -4), TextAlignmentOptions.TopLeft);
             label.color = HintColor;
-            TMP_Text value = AddChipText(root, "Value", 28, new Vector2(16, 2), new Vector2(-8, -22), TextAlignmentOptions.BottomLeft);
+            TMP_Text value = AddChipText(root, "Value", 30, new Vector2(16, 2), new Vector2(-8, -22), TextAlignmentOptions.BottomLeft);
             value.fontStyle = FontStyles.Bold;
 
             var tip = root.gameObject.AddComponent<TooltipTrigger>();
@@ -494,11 +498,12 @@ namespace RiskLoop.EditorTools
             var tmp = rt.gameObject.AddComponent<TextMeshProUGUI>();
             tmp.fontSize = size;
             tmp.alignment = align;
-            tmp.color = Color.white;
+            tmp.color = TextColor;
             tmp.raycastTarget = false;
             tmp.enableAutoSizing = true;
             tmp.fontSizeMax = size;
-            tmp.fontSizeMin = size * 0.6f;
+            tmp.fontSizeMin = Mathf.Max(size * 0.75f, 14f);
+            UIFonts.ApplyBody(tmp);
             return tmp;
         }
 
@@ -640,7 +645,7 @@ namespace RiskLoop.EditorTools
             RectTransform manaTextRt = CreateUIObject("ManaText", bar);
             Stretch(manaTextRt);
             var manaText = manaTextRt.gameObject.AddComponent<TextMeshProUGUI>();
-            manaText.fontSize = 15;
+            manaText.fontSize = 18;
             manaText.fontStyle = FontStyles.Bold;
             manaText.alignment = TextAlignmentOptions.Center;
             manaText.raycastTarget = false;
@@ -680,9 +685,9 @@ namespace RiskLoop.EditorTools
             icon.raycastTarget = false;
             icon.preserveAspect = true;
 
-            TMP_Text hotkey = AddChipText(root, "Hotkey", 14, new Vector2(5, 30), new Vector2(-5, -3), TextAlignmentOptions.TopLeft);
+            TMP_Text hotkey = AddChipText(root, "Hotkey", 17, new Vector2(5, 30), new Vector2(-5, -3), TextAlignmentOptions.TopLeft);
             hotkey.color = new Color(0.8f, 0.8f, 0.85f);
-            TMP_Text cost = AddChipText(root, "Cost", 14, new Vector2(5, 3), new Vector2(-5, -30), TextAlignmentOptions.BottomRight);
+            TMP_Text cost = AddChipText(root, "Cost", 17, new Vector2(5, 3), new Vector2(-5, -30), TextAlignmentOptions.BottomRight);
             cost.color = new Color(0.5f, 0.7f, 1f);
             cost.fontStyle = FontStyles.Bold;
 
@@ -727,7 +732,7 @@ namespace RiskLoop.EditorTools
             {
                 RectTransform row = CreateUIObject($"SpellRow_{i}", root);
                 SetHeight(row, rowHeight);
-                AddImage(row, new Color(0f, 0f, 0f, 0.25f));   // raycastTarget açık: ipucu
+                AddSkinned(row, new Color(0.1f, 0.1f, 0.13f, 0.9f), UISkin.Style.Slot);   // raycastTarget açık: ipucu
                 AddHorizontalLayout(row, spacing: 14);
                 row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(8, 8, 4, 4);
                 tips[i] = row.gameObject.AddComponent<TooltipTrigger>();
@@ -773,6 +778,7 @@ namespace RiskLoop.EditorTools
             title.alignment = TextAlignmentOptions.Center;
             title.color = new Color(1f, 0.88f, 0.23f);
             title.raycastTarget = false;
+            UIFonts.ApplyTitle(title);
 
             RectTransform hintRt = CreateUIObject("Hint", root);
             hintRt.anchorMin = hintRt.anchorMax = new Vector2(0.5f, 1f);
@@ -875,6 +881,7 @@ namespace RiskLoop.EditorTools
             titleText.colorGradient = new VertexGradient(new Color(1f, 0.95f, 0.65f), new Color(1f, 0.95f, 0.65f),
                                                          new Color(0.95f, 0.6f, 0.15f), new Color(0.95f, 0.6f, 0.15f));
             titleText.characterSpacing = 4f;
+            UIFonts.ApplyTitle(titleText);
 
             group.alpha = 0f;
             group.blocksRaycasts = false;
@@ -1188,6 +1195,7 @@ namespace RiskLoop.EditorTools
             depthLabel.alignment = TextAlignmentOptions.Center;
             depthLabel.color = new Color(1f, 1f, 1f, 0.35f);  // Kayaya kazınmış gibi soluk
             depthLabel.raycastTarget = false;
+            UIFonts.ApplyTitle(depthLabel);   // Oyma taş harfler
 
             // Canavar: kap (ölçeklenmez) > gövde (aura + görsel, büyür/sarsılır) + üstte isim ve can barı
             RectTransform monster = CreateUIObject("MonsterRoot", scene);
@@ -1213,6 +1221,7 @@ namespace RiskLoop.EditorTools
             monsterNameText.alignment = TextAlignmentOptions.Center;
             monsterNameText.color = Color.white;
             monsterNameText.raycastTarget = false;
+            UIFonts.ApplyTitle(monsterNameText);
             monsterNameText.enableAutoSizing = true;
             monsterNameText.fontSizeMin = 20;
             monsterNameText.fontSizeMax = 32;
@@ -1509,6 +1518,7 @@ namespace RiskLoop.EditorTools
             TMP_Text header = CreateText("HeaderText", inner, "", 34, 50);
             header.color = new Color(1f, 0.88f, 0.23f);
             header.fontStyle = FontStyles.Bold;
+            UIFonts.ApplyTitle(header);
 
             // İkon alanı: arkada dönen hüzme, önde pixel art (düzen grubu sadece yüksekliği ayırır)
             RectTransform iconArea = CreateUIObject("IconArea", inner);
@@ -1519,6 +1529,7 @@ namespace RiskLoop.EditorTools
 
             TMP_Text title = CreateText("TitleText", inner, "", 60, 80);
             title.fontStyle = FontStyles.Bold;
+            UIFonts.ApplyTitle(title);
             TMP_Text description = CreateText("DescriptionText", inner, "", 36, 60);
             TMP_Text hype = CreateText("HypeText", inner, "", 34, 110);
             CreateFlexibleSpacer(inner);
@@ -1562,6 +1573,7 @@ namespace RiskLoop.EditorTools
             floating.fontStyle = FontStyles.Bold;
             floating.alignment = TextAlignmentOptions.Center;
             floating.raycastTarget = false;
+            UIFonts.ApplyBody(floating);
             floatRt.gameObject.SetActive(false);
 
             // Parçacık şablonu: küçük kare
@@ -1582,6 +1594,7 @@ namespace RiskLoop.EditorTools
             banner.fontStyle = FontStyles.Bold;
             banner.alignment = TextAlignmentOptions.Center;
             banner.raycastTarget = false;
+            UIFonts.ApplyTitle(banner);   // Kutlama ve olay başlıkları oyma taş harflerle
             banner.alpha = 0f;
 
             var view = layer.gameObject.AddComponent<FxLayerView>();
@@ -1599,6 +1612,9 @@ namespace RiskLoop.EditorTools
 
             // ---- Sol sütun: son turun sonucu, seçili eşya detayı, geçit seçici, başla butonu ----
             RectTransform left = CreateColumn("LeftColumn", panel, flexibleWidth: 1);
+            // Sol sütun kendi oyuğunda: sonuç ve başla butonu sekmelerden görsel olarak ayrı
+            AddSkinned(left, new Color(0.1f, 0.1f, 0.13f, 0.75f), UISkin.Style.Slot).raycastTarget = false;
+            left.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(20, 20, 20, 20);
             TMP_Text result = CreateText("ResultText", left, "", 26, 140);
             ItemDetailView detail = BuildItemDetail(left);
             CreateFlexibleSpacer(left);
@@ -1710,7 +1726,7 @@ namespace RiskLoop.EditorTools
             for (int b = 0; b < branches.Length; b++)
             {
                 RectTransform column = CreateColumn($"Branch_{branches[b]}", columns, flexibleWidth: 1);
-                AddImage(column, new Color(0f, 0f, 0f, 0.25f)).raycastTarget = false;
+                AddSkinned(column, new Color(0.1f, 0.1f, 0.13f, 0.85f), UISkin.Style.Slot).raycastTarget = false;
                 headers[b] = CreateText("Header", column, UIStrings.BranchName(branches[b]), 24, 60);
 
                 for (int r = 0; r <= maxRow; r++)
@@ -1778,9 +1794,9 @@ namespace RiskLoop.EditorTools
             talentIcon.raycastTarget = false;
             talentIcon.preserveAspect = true;
 
-            TMP_Text nameText = AddChipText(root, "Name", 16, new Vector2(4, 22), new Vector2(-4, -40), TextAlignmentOptions.Center);
+            TMP_Text nameText = AddChipText(root, "Name", 18, new Vector2(4, 22), new Vector2(-4, -40), TextAlignmentOptions.Center);
             nameText.fontStyle = FontStyles.Bold;
-            TMP_Text rankText = AddChipText(root, "Rank", 16, new Vector2(4, 3), new Vector2(-4, -58), TextAlignmentOptions.Center);
+            TMP_Text rankText = AddChipText(root, "Rank", 17, new Vector2(4, 3), new Vector2(-4, -58), TextAlignmentOptions.Center);
             rankText.color = new Color(1f, 0.88f, 0.23f);
 
             var button = root.gameObject.AddComponent<Button>();
@@ -1943,7 +1959,7 @@ namespace RiskLoop.EditorTools
                 labelRt.sizeDelta = new Vector2(0f, 22f);
                 labelRt.anchoredPosition = new Vector2(0f, 4f);
                 label = labelRt.gameObject.AddComponent<TextMeshProUGUI>();
-                label.fontSize = 16;
+                label.fontSize = 18;
                 label.alignment = TextAlignmentOptions.Center;
                 label.color = HintColor;
                 label.raycastTarget = false;
@@ -1955,7 +1971,7 @@ namespace RiskLoop.EditorTools
             plusRt.sizeDelta = new Vector2(44, 24);
             plusRt.anchoredPosition = new Vector2(-5, -3);
             var plus = plusRt.gameObject.AddComponent<TextMeshProUGUI>();
-            plus.fontSize = 18;
+            plus.fontSize = 20;
             plus.fontStyle = FontStyles.Bold;
             plus.alignment = TextAlignmentOptions.TopRight;
             plus.raycastTarget = false;
@@ -2079,13 +2095,16 @@ namespace RiskLoop.EditorTools
             RectTransform row = CreateUIObject($"UpgradeRow_{type}", parent);
             SetHeight(row, rowHeight);
             AddHorizontalLayout(row, spacing: 20);
+            // Her yükseltme kendi oyuk kartında: satırlar birbirinden net ayrılır, göz kolay tarar
+            AddSkinned(row, new Color(0.11f, 0.11f, 0.14f, 0.95f), UISkin.Style.Slot).raycastTarget = false;
+            row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 8, 8);
 
-            Image icon = BuildIconBox(row, rowHeight - 10);
+            Image icon = BuildIconBox(row, rowHeight - 20);
 
-            TMP_Text info = CreateText("InfoText", row, UIStrings.UpgradeName(type), 28, rowHeight, TextAlignmentOptions.MidlineLeft);
+            TMP_Text info = CreateText("InfoText", row, UIStrings.UpgradeName(type), 28, rowHeight - 16, TextAlignmentOptions.MidlineLeft);
             FillRemainingWidth(info);
 
-            Button buy = CreateButton("BuyButton", row, "Al", BuyColor, rowHeight, 34, out TMP_Text buyText);
+            Button buy = CreateButton("BuyButton", row, "Al", BuyColor, rowHeight - 16, 32, out TMP_Text buyText);
             SetFixedWidth(buy, 260);
 
             var view = row.gameObject.AddComponent<UpgradeRowView>();
@@ -2239,15 +2258,15 @@ namespace RiskLoop.EditorTools
             SetHeight(rt, height);
             var tmp = rt.gameObject.AddComponent<TextMeshProUGUI>();
             tmp.text = text;
-            tmp.fontSize = fontSize;
+            tmp.fontSize = Mathf.Max(fontSize, 18f);   // 18 altı yazı 1080p'de bile zor okunur
             tmp.alignment = alignment;
-            UISkin.ApplyTextShadow(tmp);   // Gölgeli yazı: sahnenin ve flaşların üstünde de okunur
-            tmp.color = Color.white;
+            UISkin.ApplyTextShadow(tmp);   // Oyunun yazı tipi + gölge: sahnenin ve flaşların üstünde de okunur
+            tmp.color = TextColor;
             tmp.raycastTarget = false;
-            // Metin kutuya sığmazsa yazı boyutu kendiliğinden küçülür (en fazla %40). Taşma olmaz.
+            // Metin kutuya sığmazsa yazı boyutu kendiliğinden küçülür (en fazla %28, en az 16). Taşma olmaz.
             tmp.enableAutoSizing = true;
-            tmp.fontSizeMax = fontSize;
-            tmp.fontSizeMin = fontSize * 0.6f;
+            tmp.fontSizeMax = tmp.fontSize;
+            tmp.fontSizeMin = Mathf.Max(tmp.fontSize * 0.72f, 16f);
             return tmp;
         }
 
@@ -2269,7 +2288,7 @@ namespace RiskLoop.EditorTools
             labelRt.offsetMin = new Vector2(height - 4, 0f);
             labelText.enableAutoSizing = true;
             labelText.fontSizeMax = fontSize;
-            labelText.fontSizeMin = fontSize * 0.6f;
+            labelText.fontSizeMin = Mathf.Max(fontSize * 0.72f, 16f);
             return button;
         }
 

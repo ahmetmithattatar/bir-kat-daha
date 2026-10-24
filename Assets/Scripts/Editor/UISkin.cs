@@ -28,7 +28,6 @@ namespace RiskLoop.EditorTools
         }
 
         private const string Folder = "Assets/Art/UI";
-        private const string ShadowMaterialPath = Folder + "/TextShadow.mat";
         private const float PixelScale = 3f;   // Bir doku pikseli ekranda kaç birim
 
         /// <summary>Gri tonlu (Image rengiyle boyanan) stiller. Gövdeleri ~0.8 parlaklıkta: renk biraz yükseltilerek verilir.</summary>
@@ -54,7 +53,6 @@ namespace RiskLoop.EditorTools
                 Draw(s, out Color[] pixels, out int size, out int border, out float scale);
                 WritePng(path, pixels, size, border, scale, s == Style.Background);
             }
-            if (force || !File.Exists(ShadowMaterialPath)) CreateShadowMaterial();
             AssetDatabase.Refresh();
         }
 
@@ -83,15 +81,8 @@ namespace RiskLoop.EditorTools
             };
         }
 
-        /// <summary>Yazıya koyu gölge (oyun sahnesinin ve flaşların üstünde de okunsun).</summary>
-        public static Material ShadowMaterial => AssetDatabase.LoadAssetAtPath<Material>(ShadowMaterialPath);
-
-        /// <summary>Gölgeli malzemeyi uygular (malzeme yoksa yazı olduğu gibi kalır).</summary>
-        public static void ApplyTextShadow(TMP_Text text)
-        {
-            Material mat = ShadowMaterial;
-            if (mat != null) text.fontSharedMaterial = mat;
-        }
+        /// <summary>Yazıya oyunun metin yazı tipi ve koyu gölge (bkz. UIFonts).</summary>
+        public static void ApplyTextShadow(TMP_Text text) => UIFonts.ApplyBody(text);
 
         private static Color Brighten(Color c) =>
             new Color(Mathf.Min(1f, c.r * 1.22f), Mathf.Min(1f, c.g * 1.22f), Mathf.Min(1f, c.b * 1.22f), c.a);
@@ -405,20 +396,5 @@ namespace RiskLoop.EditorTools
             importer.SaveAndReimport();
         }
 
-        /// <summary>Varsayılan TMP yazı tipinin gölgeli kopyası (alt-sağa koyu, hafif yumuşak gölge).</summary>
-        private static void CreateShadowMaterial()
-        {
-            TMP_FontAsset font = TMP_Settings.defaultFontAsset;
-            if (font == null) return;
-            var mat = new Material(font.material) { name = "TextShadow" };
-            mat.EnableKeyword("UNDERLAY_ON");
-            mat.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.85f));
-            mat.SetFloat("_UnderlayOffsetX", 0.55f);
-            mat.SetFloat("_UnderlayOffsetY", -0.55f);
-            mat.SetFloat("_UnderlayDilate", 0.25f);
-            mat.SetFloat("_UnderlaySoftness", 0.15f);
-            AssetDatabase.DeleteAsset(ShadowMaterialPath);
-            AssetDatabase.CreateAsset(mat, ShadowMaterialPath);
-        }
     }
 }
