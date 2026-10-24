@@ -1,4 +1,4 @@
-# RiskLoop — Kazı temalı risk/ödül prototipi
+# Bir Kat Daha! (kod adı RiskLoop) — Kazı temalı risk/ödül oyunu
 
 ## Proje bağlamı
 - Unity 6.6 (6000.6.6f1), 2D URP şablonu, Windows. Yeni Input System aktif (`activeInputHandler: 1`).
@@ -22,7 +22,7 @@
   sol üst istatistik (karakter, derinlik, değer, 12 stat kartı, risk çubuğu, kısa satırlar), sağ üst bulgu koleksiyonu,
   sağ alt KAZ / Yüzeye dön, alt orta mesaj, en üstte yarı saydam üst bar. Ortası (duvar, canavar, bulgu) hep açık.
   Kazma ve silah HUD'ların iç kenarında (`HudSideWidth`), oyuncu can barı üst barın altında. HUD arka planı tıklamayı yutar (yanlış vuruş yok).
-- Sahne: iç içe 4 tünel halkası (içe koyulaşır), ortada kaya duvarı (+çatlak katmanı, "12. KAT" kazınmış yazı), sağ altta kazma,
+- Sahne: perspektif maden tüneli (`MineArt`, bkz. 17. tur), ortada kaya yüzü (+çatlak katmanı, "12. KAT" kazınmış yazı), sağ altta kazma,
   kenar karartma (fener titremesi). Kaya rengi bölgeye göre değişir (`Art/DepthTheme`: toprak, taş, kristal, göl, demirhane, fosil, ejder, lav;
   bölgeler keşif katlarında başlar). Her bölgede 4 doku çeşidi dönüşümlü.
 - **Bir kat = kazı gücüne göre 1-8 kazma vuruşu** (başta 3; bkz. kazma yuvası). Her vuruş: geri çekil → hızla in → kıvılcım + moloz + toz, duvar sarsılır, çatlak büyür.
@@ -120,6 +120,32 @@ hitap etsin, yükseltme/yetenekler ikonlu olsun, class sistemi + spell book (sev
 - **Eşya butonları:** sıra Sat (küçük, solda, koyu kırmızı) | Güçlendir | Kuşan (en geniş, sağda), hepsinde ikon (para, çekiç, zırh).
   Değerli eşyada (yeşil+, güçlendirilmiş ya da Kudret artıran) satış iki basış ister.
 - **Config:** risk eğrisi değiştiği için `BalanceConfig.asset` yine **Reset** edilmeli.
+
+## Gerçekçi maden ve oyunun adı (17. tur)
+Kullanıcı: kazı "kahverengi çamurda blok kazıyormuş" gibi duruyor, derin maden hissi yok; oyuna eğlenceli bir isim.
+- **Oyunun adı: "Bir Kat Daha!"** (döngünün kendisi: bir kat daha inersem...). `UIStrings.GameTitle` (DAHA! turuncu), pencere/ürün adı
+  `Bir Kat Daha`, exe `BirKatDaha.exe`, zip `Builds/BirKatDaha_Windows.zip`. Kod adı, namespace ve menüler `RiskLoop` olarak kaldı.
+  Kayıt klasörü ürün adıyla değişti (`LocalLow/MT/Bir Kat Daha`): `SaveSystem.MigrateOldSave` eski `RiskLoop` klasöründeki kaydı bir kez taşır.
+- **Maden tüneli (`Art/MineArt.Tunnel`, 384x216 tam ekran):** piksel başına basit perspektif (kutu tünel, kamera ortada, sonu duvarla
+  aynı boyda: 640x600). Katmanlı kaya, cevher benekleri, 4 ahşap destek çerçevesi (dikme + başlık kirişi), tabanda ray + travers,
+  asılı fenerler (sıcak hale), derinlikle kararan ışık. Eski 4 iç içe halkadan sadece ilki kullanılır.
+- **Kaya yüzü (`MineArt.RockFace`, 128x120):** kırık taş blokları (Voronoi), aralarında çatlak, üst-sol ışıkla kabartma, tortu katmanları,
+  bölge renginde parıltılı cevher damarı, düzensiz saydam kenar. Cevher rengi `DepthTheme.OreColor` (altın, gümüş, ametist, safir, bakır,
+  kemik, zümrüt, magma, hiçlik). 1. bölge kaya rengi daha taşsı yapıldı.
+
+## Oynanabilir oyun: menüler, ses, Windows sürümü (16. tur)
+Kullanıcı: arkadaşına göndermek için standart bir oyun (menü vb.).
+- **Ana menü (`MainMenuView`):** açılışta. Devam Et (kayıt varsa), Yeni Oyun (kayıt varsa iki basış, kayıt silinir), Nasıl Oynanır,
+  Ayarlar, Çıkış. İlk oyunda (`GameSettings.TutorialSeen` yoksa) 6 sayfalık rehber açılır (`HowToPlayView`, metinler `UIStrings.HowToPlayPages`).
+- **Duraklatma (`PauseMenuView`):** Esc ya da üst bardaki MENÜ. Açıkken oyun durur (`RunFeedbackDirector.Paused` -> FxTime 0,
+  canavar sayacı durur, tuşlar kilitli). Tur sürerken Ana Menü kilitli (tur ortası kaydedilmez). Esc en üstteki menüyü kapatır.
+- **Ayarlar (`SettingsView`, `GameSettings`, PlayerPrefs, kayıttan bağımsız):** ses, tam ekran (pencere 1600x900), ekran sarsıntısı
+  (kapalıyken FxLayer sarsmaz, UIFx sarsıntısı %15), parlak flaşlar (kapalıyken %25), kaydı sıfırla (iki basış, tur yokken). Kaydı sıfırla üst bardan buraya taşındı.
+- **Ses (`Sfx`, 17 efekt):** dosya yok, oyun açılınca kodla sentezlenir (sinüs/kare/gürültü + zarf). Kazma, duvar, göçük, altın, bulgu
+  (nadirlikle tizleşir), kutlama (kademeyle), seviye, vuruş/kritik/hasar, canavar ölümü, büyü, güçlendirme, kırılma, yüzeye dönüş, buton tıkı (`ClickSound`).
+- **Windows sürümü (`Editor/BuildTools.cs`, menü RiskLoop > Windows Sürümü Al (zip)):** PlayerSettings (RiskLoop, pencere 1600x900,
+  yeniden boyutlandırılabilir, arka planda çalışır) + `Builds/Windows/BirKatDaha.exe` + `Builds/BirKatDaha_Windows.zip` (DoNotShip klasörleri hariç).
+  Kayıt: `%USERPROFILE%/AppData/LocalLow/MT/Bir Kat Daha/save.json`.
 
 ## Bossa giden yol baştan sona risk (15. tur kararları)
 Kullanıcı: oyuncu her bossta yüzeye çıkacak (bosstan eşya düştü), o yüzden bossa giden 9 katın risk/ödülü önemli;
@@ -316,6 +342,7 @@ Kararlar (kullanıcıyla): **tıklayarak vur**, **yenilgi = göçük gibi tur bi
 | Klavye | ↓/S/Boşluk kaz (basılı tut = art arda vuruş; yükseltme ekranında YENİ basışla kazıya başla), ↑/W yüzeye dön. Tur bitince 0.6 sn tuş kilidi. Butonların UI navigasyonu kapalı |
 | Layout tuzağı | Dikey düzenin içindeki yatay grupta `childForceExpandHeight = true` OLMAZ: grup esnek yükseklik ister ve ekranı kaplar. Yan yana dizilimde metin genişliği `preferredWidth = 0` ile sıfırlanır (TMP tek satır genişliğini bildirir, sütunu taşırır) |
 | Tema | Mantık temadan bağımsız (`Step`, `Bust`, `Find`, `Zone`). Tema metinleri `UIStrings.cs` + `RarityStyle.cs` içinde |
+| Play modu / statikler | Projede "Enter Play Mode Options" açık, **Domain Reload KAPALI** (`EditorSettings` `m_EnterPlayModeOptions: 1`): statik alanlar iki Play arasında kalır. Unity'ye ait nesneleri (Sprite, Texture) statikte tutan her önbellek `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]` ile her Play başında temizlenmeli ve silinmiş nesneyi (`== null`) yeniden üretmeli. Belirti: ikinci Play'de görseller beyaz kutu (`PixelArt.ResetOnPlay` + `TryGetCached`, `FxTime.ResetOnPlay`) |
 
 ## Mimari
 ```

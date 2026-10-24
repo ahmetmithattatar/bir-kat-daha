@@ -11,6 +11,10 @@ namespace RiskLoop.Game.UI
     {
         public static float Speed = 1f;
 
+        /// <summary>Her Play başında hız normale döner (Domain Reload kapalıyken statik alan önceki Play'den kalabilir).</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => Speed = 1f;
+
         /// <summary>Bu kareden geçen animasyon süresi (hızlandırılmış).</summary>
         public static float Delta => Time.unscaledDeltaTime * Speed;
     }

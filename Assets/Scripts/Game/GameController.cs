@@ -29,6 +29,12 @@ namespace RiskLoop.Game
         [SerializeField] private RunFeedbackDirector feedback;
         [SerializeField] private ClassSelectView classSelect;
 
+        [Header("Menüler")]
+        [SerializeField] private MainMenuView mainMenu;
+        [SerializeField] private PauseMenuView pauseMenu;
+        [SerializeField] private SettingsView settingsMenu;
+        [SerializeField] private HowToPlayView howToPlay;
+
         [Header("Test")]
         [Tooltip("0 = her seferinde farklı. Başka bir sayı = aynı zar dizisi (hata ayıklamak için).")]
         [SerializeField] private int randomSeed = 0;
@@ -60,7 +66,8 @@ namespace RiskLoop.Game
                 enabled = false;
                 return;
             }
-            if (topBar == null || runPanel == null || upgradePanel == null || feedback == null || classSelect == null)
+            if (topBar == null || runPanel == null || upgradePanel == null || feedback == null || classSelect == null
+                || mainMenu == null || pauseMenu == null || settingsMenu == null || howToPlay == null)
             {
                 Debug.LogError("GameController: UI referanslarından biri boş. Sahneyi RiskLoop > Build Prototype Scene ile yeniden kur.", this);
                 enabled = false;
@@ -85,13 +92,27 @@ namespace RiskLoop.Game
             upgradePanel.BuyPrestigeClicked += OnBuyPrestigeClicked;
             upgradePanel.LearnTalentClicked += OnLearnTalentClicked;
             upgradePanel.RespecClicked += OnRespecClicked;
-            topBar.ResetConfirmed += OnResetConfirmed;
+            topBar.MenuClicked += OpenPause;
+            mainMenu.ContinueClicked += OnContinue;
+            mainMenu.NewGameClicked += OnNewGame;
+            mainMenu.HowToPlayClicked += howToPlay.Open;
+            mainMenu.SettingsClicked += OpenSettings;
+            mainMenu.QuitClicked += QuitGame;
+            pauseMenu.ResumeClicked += pauseMenu.Close;
+            pauseMenu.HowToPlayClicked += howToPlay.Open;
+            pauseMenu.SettingsClicked += OpenSettings;
+            pauseMenu.MainMenuClicked += OnPauseMainMenu;
+            pauseMenu.QuitClicked += QuitGame;
+            settingsMenu.BackClicked += settingsMenu.Close;
+            settingsMenu.ResetConfirmed += OnResetConfirmed;
         }
 
         private void Start()
         {
+            GameSettings.ApplyScreen();
             upgradePanel.ShowResult(UIStrings.Welcome);
-            ShowUpgradeScreen();
+            ShowUpgradeScreen(askClass: false);   // Arkada görünsün; sınıf seçimi oyuna girince
+            mainMenu.Open(SaveSystem.Exists);
         }
 
         /// <summary>
@@ -108,12 +129,16 @@ namespace RiskLoop.Game
             }
             if (_session == null) return;
 
-            TickMonster();
+            // Menü açıkken oyun durur: canavar vurmaz, animasyonlar donar, kazı tuşları çalışmaz
+            feedback.Paused = AnyMenuOpen;
+            if (!AnyMenuOpen) TickMonster();
 
 #if ENABLE_INPUT_SYSTEM
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
+            if (keyboard.escapeKey.wasPressedThisFrame) HandleEscape();
+            if (AnyMenuOpen) return;
             if (classSelect.IsOpen) return;   // Sınıf seçilmeden oyun başlamaz
             if (InputLocked || Time.unscaledTime < _keysLockedUntil) return;
 
@@ -185,7 +210,7 @@ namespace RiskLoop.Game
             upgradePanel.BuyPrestigeClicked -= OnBuyPrestigeClicked;
             upgradePanel.LearnTalentClicked -= OnLearnTalentClicked;
             upgradePanel.RespecClicked -= OnRespecClicked;
-            topBar.ResetConfirmed -= OnResetConfirmed;
+            topBar.MenuClicked -= OpenPause;
         }
 
         // Mobilde uygulama arka plana atılınca OnApplicationQuit çağrılmayabilir, o yüzden burada da kaydediyoruz.
@@ -513,8 +538,72 @@ namespace RiskLoop.Game
         {
             SaveSystem.Delete();
             CreateSession(CreateNewProgress());
+            settingsMenu.Close();
+            pauseMenu.Close();
             upgradePanel.ShowResult(UIStrings.SaveReset);
+            ShowUpgradeScreen(askClass: !mainMenu.IsOpen);
+        }
+
+        // ---------------- Menüler ----------------
+
+        /// <summary>Herhangi bir tam ekran menü açık mı? (Açıkken oyun durur.)</summary>
+        private bool AnyMenuOpen => mainMenu.IsOpen || pauseMenu.IsOpen || settingsMenu.IsOpen || howToPlay.IsOpen;
+
+        /// <summary>Esc: en üstteki menüyü kapat; hiçbiri açık değilse duraklat.</summary>
+        private void HandleEscape()
+        {
+            if (howToPlay.IsOpen) howToPlay.Close();
+            else if (settingsMenu.IsOpen) settingsMenu.Close();
+            else if (pauseMenu.IsOpen) pauseMenu.Close();
+            else if (!mainMenu.IsOpen) OpenPause();
+        }
+
+        private void OpenPause()
+        {
+            if (mainMenu.IsOpen) return;
+            Sfx.Play(SoundId.Click);
+            pauseMenu.Open(_session.IsRunActive);
+        }
+
+        private void OpenSettings() => settingsMenu.Open(resetAllowed: !_session.IsRunActive);
+
+        /// <summary>Devam Et: kayıtlı oyuna gir (sınıf yoksa seçim ekranı gelir).</summary>
+        private void OnContinue()
+        {
+            mainMenu.Close();
             ShowUpgradeScreen();
+            if (!GameSettings.TutorialSeen) howToPlay.Open();
+        }
+
+        /// <summary>Yeni Oyun: kayıt silinir, sıfırdan başlanır. İlk kez oynayana rehber açılır.</summary>
+        private void OnNewGame()
+        {
+            SaveSystem.Delete();
+            CreateSession(CreateNewProgress());
+            mainMenu.Close();
+            upgradePanel.ShowResult(UIStrings.Welcome);
+            ShowUpgradeScreen();
+            if (!GameSettings.TutorialSeen) howToPlay.Open();
+        }
+
+        /// <summary>Duraklatmadan ana menüye (sadece tur yokken; tur ortası kaydedilmez).</summary>
+        private void OnPauseMainMenu()
+        {
+            if (_session.IsRunActive) return;
+            Save();
+            pauseMenu.Close();
+            mainMenu.Open(true);
+        }
+
+        /// <summary>Oyundan çık. Tur sürüyorsa risk altındaki kazanç kaybolur (tur ortası kaydedilmez), kalıcı ilerleme kaydedilir.</summary>
+        private void QuitGame()
+        {
+            Save();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         // ---------------- Yardımcılar ----------------
@@ -536,18 +625,16 @@ namespace RiskLoop.Game
         {
             upgradePanel.gameObject.SetActive(false);
             runPanel.gameObject.SetActive(true);
-            topBar.SetResetVisible(false);  // Tur sırasında sıfırlama yok
             RefreshAll();
         }
 
-        private void ShowUpgradeScreen()
+        private void ShowUpgradeScreen(bool askClass = true)
         {
             _keysLockedUntil = Time.unscaledTime + keyLockAfterRunEnd;
             runPanel.gameObject.SetActive(false);
             upgradePanel.gameObject.SetActive(true);
-            topBar.SetResetVisible(true);
             RefreshAll();
-            if (!_session.HasClass) classSelect.Show();   // İlk giriş ya da Yeni Çağ: önce sınıf
+            if (askClass && !_session.HasClass) classSelect.Show();   // İlk giriş ya da Yeni Çağ: önce sınıf
         }
 
         private void RefreshAll()

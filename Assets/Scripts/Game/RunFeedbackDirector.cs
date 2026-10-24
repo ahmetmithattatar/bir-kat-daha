@@ -52,12 +52,16 @@ namespace RiskLoop.Game
         /// <summary>Normal animasyon hızı. Hit-stop sırasında geçici olarak neredeyse durur.</summary>
         public float BaseSpeed { get; set; } = 1f;
 
+        /// <summary>Menü açık: animasyonlar durur (GameController her kare ayarlar).</summary>
+        public bool Paused { get; set; }
+
         private float _hitStopUntil;   // Bu zamana kadar animasyonlar donuk (vuruş hissi)
 
         private void Update()
         {
             // Animasyon hızını tek yerden yönet: hit-stop varsa neredeyse dur, yoksa temel hız
-            FxTime.Speed = Time.unscaledTime < _hitStopUntil ? 0.03f : BaseSpeed;
+            // Menü açıkken (Paused) animasyonlar tamamen durur
+            FxTime.Speed = Paused ? 0f : Time.unscaledTime < _hitStopUntil ? 0.03f : BaseSpeed;
         }
 
         /// <summary>Kısa donma: kritik vuruşta ve öldürmede "tok" bir his verir.</summary>
@@ -88,6 +92,7 @@ namespace RiskLoop.Game
         {
             if (_hits == 0) _swingsNeeded = Mathf.Max(1, swingsNeeded);
             _hits++;
+            Sfx.Play(SoundId.Pick, 0, 0.8f);
             yield return digView.Swing(_hits, _swingsNeeded);
 
             if (WallBroken)
@@ -104,7 +109,9 @@ namespace RiskLoop.Game
             RunState run = session.CurrentRun;
 
             // Duvar yıkılır
+            Sfx.Play(SoundId.Break);
             yield return digView.Shatter();
+            Sfx.Play(SoundId.Coin, 0, 0.6f);
             StartCoroutine(UIFx.Punch(runPanel.DepthAnchor, 0.15f, 0.25f));
             runPanel.ShowMessage(UIStrings.StepMessage(r));
             fx.FloatText($"+{UIStrings.Num(r.RewardGained)}", RewardColor(r.RewardGained, valueBefore), 46f, runPanel.RunValueAnchor);
@@ -163,6 +170,7 @@ namespace RiskLoop.Game
         public IEnumerator PlayAttack(AttackResult hit, MonsterInstance monster)
         {
             yield return digView.WeaponSwing();
+            Sfx.Play(hit.Crit ? SoundId.Crit : SoundId.Hit);
             digView.MonsterHit(monster, hit.Crit);
 
             string dmg = UIStrings.Num(Mathf.Max(1f, (float)hit.Damage));
@@ -185,6 +193,7 @@ namespace RiskLoop.Game
         public IEnumerator PlaySpell(SpellResult r, MonsterInstance monster, GameSession session)
         {
             SpellDefinition s = r.Spell;
+            Sfx.Play(SoundId.Spell);
             fx.Flash(SpellPurple, 0.18f, 0.35f);
             fx.Banner(UIStrings.SpellName(s.id).ToUpper() + "!", SpellPurple, 0.45f);
             fx.Burst(monster != null ? digView.MonsterAnchor : digView.WallAnchor, SpellPurple, 26, 650f);
@@ -229,6 +238,7 @@ namespace RiskLoop.Game
         public IEnumerator PlayMonsterHit(MonsterHitResult hit, MonsterInstance monster, RunState run)
         {
             yield return digView.MonsterLunge(monster);
+            Sfx.Play(SoundId.Hurt);
             fx.Flash(DangerRed, 0.25f, 0.35f);
             fx.FloatText($"-{UIStrings.Num(hit.Damage)}", DangerRed, 44f, digView.PlayerHpAnchor);
             digView.SetPlayerHealth(System.Math.Max(0, run.PlayerHealth), run.PlayerMaxHealth);
@@ -242,6 +252,7 @@ namespace RiskLoop.Game
             bool boss = m.Kind != MonsterKind.Normal;
 
             HitStop(boss ? 0.15f : 0.07f);
+            Sfx.Play(SoundId.MonsterDie);
             yield return digView.MonsterDeath(m);
             fx.CoinsTo(digView.MonsterAnchor, runPanel.RunValueAnchor, boss ? 20 : 8, Gold);
             runPanel.ShowMessage(UIStrings.Victory(v) + (v.UnlockedCheckpoint ? "\n" + UIStrings.CheckpointUnlocked(m.Step) : ""));
@@ -281,6 +292,7 @@ namespace RiskLoop.Game
             _hits = 0;
             fx.Shake(40f, 0.8f);
             fx.Flash(DangerRed, 0.7f, 1.0f);
+            Sfx.Play(SoundId.Bust);
             fx.Banner(UIStrings.DefeatTitle(), DangerRed, 0.9f);
             yield return digView.Collapse();
             digView.HideMonster();
@@ -295,6 +307,7 @@ namespace RiskLoop.Game
             _hits = 0;
             fx.Shake(45f, 0.9f);
             fx.Flash(DangerRed, 0.6f, 1.0f);
+            Sfx.Play(SoundId.Bust);
             fx.Banner(UIStrings.BustTitle(), DangerRed, 0.9f);
             yield return digView.Collapse();
             yield return UIFx.Wait(0.6f);
@@ -305,6 +318,7 @@ namespace RiskLoop.Game
         {
             _hits = 0;
             digView.HideMonster();
+            Sfx.Play(SoundId.CashOut);
             fx.FloatText($"+{UIStrings.Num(payout)}", CashGreen, 64f, runPanel.RunValueAnchor);
             fx.Burst(runPanel.RunValueAnchor, CashGreen, 26, 600f);
             fx.Flash(CashGreen, 0.15f, 0.4f);
@@ -337,6 +351,7 @@ namespace RiskLoop.Game
         private IEnumerator RevealFind(FindResult find, int step, bool isMilestone, bool firstReach, string extraHype)
         {
             yield return digView.RevealFind(find);
+            Sfx.Play(SoundId.Find, find.Tier / 2, 0.6f + 0.05f * find.Tier);   // Nadirlik arttıkça perde yükselir
 
             bool fullReveal = (find.FirstOfTier && find.Tier >= popupMinTier) || isMilestone;
             bool quickCard = !fullReveal && (find.Tier >= quickCardMinTier || (find.FromMonster && find.Tier >= 2));
@@ -382,6 +397,7 @@ namespace RiskLoop.Game
             string newSpells = UIStrings.SpellsLearned(spells);
             if (newSpells != null) news = news == null ? newSpells : news + "\n" + newSpells;
 
+            Sfx.Play(SoundId.LevelUp);
             fx.Banner(UIStrings.LevelUpHeader, XpBlue, 0.6f);
             yield return popup.ShowLevelUp(level, news, session.TalentPointsAvailable, fx);
         }
@@ -397,6 +413,7 @@ namespace RiskLoop.Game
             float risk = (float)r.BustChance;
             if (risk <= 0f) yield break;
             int tier = UIStrings.CourageTier(r.BustChance);   // 1..5: gösterilen riske göre kutlama kademesi
+            Sfx.Play(SoundId.Courage, tier - 1, 0.5f + 0.1f * tier);   // Risk büyüdükçe daha tiz ve yüksek
             Color color = tier >= 4 ? CourageOrange : Gold;
 
             // 1+ (her kat, en güvenlisinde bile): kıvılcım, hafif flaş, kısa başlık, "+%X RİSK BONUSU" sayaca uçar

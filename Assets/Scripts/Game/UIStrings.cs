@@ -880,6 +880,72 @@ namespace RiskLoop.Game
 
         public static string BuyButton(double cost) => $"Al: {Num(cost)}";
 
+        // ---------------- Menüler ----------------
+
+        public const string GameTitle = "BİR KAT <color=#FFB347>DAHA!</color>";   // Oyunun adı: "bir tur daha" döngüsünün ta kendisi
+        public const string GameSubtitle = "Ne kadar derine inmeye yüreğin yeter?";
+        public static string Version(string v) => $"sürüm {v}";
+
+        public const string MenuContinue = "DEVAM ET";
+        public const string MenuNewGame = "YENİ OYUN";
+        public const string MenuNewGameConfirm = "EMİN MİSİN? Kayıt silinir\n<size=60%>tekrar bas</size>";
+        public const string MenuHowToPlay = "NASIL OYNANIR";
+        public const string MenuSettings = "AYARLAR";
+        public const string MenuQuit = "ÇIKIŞ";
+        public const string MenuResume = "DEVAM";
+        public const string MenuMainMenu = "ANA MENÜ";
+        public const string MenuMainMenuLocked = "ANA MENÜ\n<size=55%>önce yüzeye dön</size>";
+        public const string MenuQuitGame = "OYUNDAN ÇIK";
+        public const string PauseTitle = "DURAKLATILDI";
+        public const string TopBarMenu = "MENÜ (Esc)";
+
+        public const string SettingsTitle = "AYARLAR";
+        public const string SettingsVolume = "Ses";
+        public const string SettingsFullscreen = "Tam ekran";
+        public const string SettingsShake = "Ekran sarsıntısı";
+        public const string SettingsFlash = "Parlak flaşlar";
+        public const string SettingsReset = "Kaydı sıfırla";
+        public const string SettingsResetConfirm = "<color=#FF5A4A>Emin misin? Her şey silinir</color>\n<size=60%>tekrar bas</size>";
+        public const string SettingsResetLocked = "Kaydı sıfırla\n<size=60%>tur sürerken olmaz</size>";
+        public const string SettingsBack = "GERİ";
+        public static string SettingsToggle(string name, bool on) =>
+            $"{name}: {(on ? "<color=#3CCB5A>AÇIK</color>" : "<color=#FF5A4A>KAPALI</color>")}";
+
+        public const string HowToPlayNext = "SONRAKİ";
+        public const string HowToPlayPrev = "ÖNCEKİ";
+        public const string HowToPlayDone = "ANLADIM!";
+        public const string HowToPlayClose = "KAPAT";
+
+        /// <summary>Nasıl oynanır sayfaları (başlık, metin). Kısa tutuldu: oyuncu okusun, sonra oynayarak öğrensin.</summary>
+        public static readonly (string title, string body)[] HowToPlayPages =
+        {
+            ("KAZ, AMA NE ZAMAN DURACAĞINI BİL",
+             "Her kat altın verir ama bir sonraki katta tavan çökebilir.\n\n" +
+             "<b>↓ / S / Boşluk</b> ya da duvara tıkla: kaz (basılı tutunca art arda vurur)\n" +
+             "<b>↑ / W</b> ya da <b>Yüzeye dön</b>: turun kazancını cebine at\n\n" +
+             "Göçük olursa o turda biriken her şey gider. Kararı sen verirsin."),
+            ("GEÇME ŞANSI",
+             "Ekranın altındaki büyük sayı, bir sonraki kata <b>geçme şansın</b>.\n\n" +
+             "Derine indikçe bu sayı düşer. %90'da rahat kazarsın, %40'ta yüreğin ağzına gelir.\n\n" +
+             "Ekran kenarı kırmızı atmaya başladıysa tehlike büyüyor demektir."),
+            ("RİSK BONUSU",
+             "Her geçtiğin kat, o turda biriken TÜM kazancını büyütür.\n" +
+             "Geçme şansı ne kadar düşükse bonus o kadar büyük.\n\n" +
+             "Soldaki <color=#FFC83A><b>RİSK BONUSU</b></color> sayacı turun toplamını gösterir. Cesaretin ödüllendirilir!"),
+            ("CANAVARLAR VE BOSSLAR",
+             "Duvarın ardından canavar çıkabilir: kaz tuşu artık <b>SALDIR</b> olur.\n" +
+             "Her 10. katta bir bölge bossu bekler. Yenersen nadir ganimet ve o kattan başlama hakkı (geçit) kazanırsın.\n\n" +
+             "Canavarın adının rengi zorluğunu gösterir: maviden kırmızıya zorlaşır."),
+            ("GÜÇLEN",
+             "Yüzeyde kazandığın altınla yükseltme al, düşen eşyaları kuşan.\n" +
+             "Seviye atladıkça yeni özellikler, yetenekler ve büyüler açılır.\n\n" +
+             "Büyüler <b>1-6</b> tuşlarıyla. Bir eşyanın üstüne gelince ne kadar güçlü olduğunu görürsün (Kudret)."),
+            ("HAZIRSIN",
+             "Bossu geçemiyorsan bölgeyi tekrar kaz: eşya topla, güçlen, tekrar dene.\n\n" +
+             "<b>Esc</b> oyunu duraklatır. Ayarlardan sesi, tam ekranı ve sarsıntıyı değiştirebilirsin.\n\n" +
+             "İyi kazılar!"),
+        };
+
         // ---------------- Yardımcılar ----------------
 
         // Büyük sayı kısaltmaları: 12.3K, 4.56M, 7.8B, 1.2T, sonra Qa, Qi... (idle oyun standardı)

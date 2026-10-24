@@ -34,6 +34,7 @@ namespace RiskLoop.Game.UI
         public static IEnumerator Shake(RectTransform target, float strength, float duration, Vector2? origin = null)
         {
             Vector2 home = origin ?? target.anchoredPosition;
+            if (!GameSettings.ScreenShake) strength *= 0.15f;   // Sarsıntı kapalı: sadece çok hafif kıpırtı kalır
             float t = 0f;
             while (t < duration)
             {

@@ -15,11 +15,31 @@ namespace RiskLoop.Game.Art
         private static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
 
         /// <summary>
+        /// Her Play başında önbelleği boşalt. Projede "Enter Play Mode Options" ile Domain Reload kapalı: statik alanlar
+        /// iki Play arasında hafızada kalır, ama Unity Play bitince kodla üretilen sprite/texture'ları siler.
+        /// Temizlenmezse ikinci Play'de önbellek SİLİNMİŞ sprite döndürür ve görseller beyaz kutu olur.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => Cache.Clear();
+
+        /// <summary>Önbellekte geçerli (silinmemiş) sprite varsa döndürür. Silinmişse kaydı atar, yeniden üretilsin.</summary>
+        internal static bool TryGetCached(string key, out Sprite sprite)
+        {
+            if (Cache.TryGetValue(key, out sprite))
+            {
+                if (sprite != null) return true;   // Unity'de silinmiş nesne "== null" olur
+                Cache.Remove(key);
+            }
+            sprite = null;
+            return false;
+        }
+
+        /// <summary>
         /// Metin ızgarasından sprite. rows[0] en ÜST satırdır. Eksik/fazla karakter hata vermez ('.' sayılır).
         /// </summary>
         public static Sprite FromRows(string key, string[] rows, Dictionary<char, Color32> palette)
         {
-            if (Cache.TryGetValue(key, out Sprite cached)) return cached;
+            if (TryGetCached(key, out Sprite cached)) return cached;
 
             int height = rows.Length;
             int width = 0;
@@ -44,7 +64,7 @@ namespace RiskLoop.Game.Art
         /// <summary>Kaya dokusu: taban renk üzerinde gürültü, koyu lekeler ve parlak benekler.</summary>
         public static Sprite Rock(string key, int seed, Color baseColor, int size = 48)
         {
-            if (Cache.TryGetValue(key, out Sprite cached)) return cached;
+            if (TryGetCached(key, out Sprite cached)) return cached;
 
             var rng = new System.Random(seed);
             Texture2D tex = NewTexture(size, size);
@@ -80,7 +100,7 @@ namespace RiskLoop.Game.Art
         /// </summary>
         public static Sprite Cracks(string key, int seed, int stage, int size = 48)
         {
-            if (Cache.TryGetValue(key, out Sprite cached)) return cached;
+            if (TryGetCached(key, out Sprite cached)) return cached;
 
             Texture2D tex = NewTexture(size, size);
             var pixels = new Color32[size * size];
@@ -113,7 +133,7 @@ namespace RiskLoop.Game.Art
         public static Sprite Rays(int rayCount = 12, int size = 64)
         {
             string key = $"rays_{rayCount}_{size}";
-            if (Cache.TryGetValue(key, out Sprite cached)) return cached;
+            if (TryGetCached(key, out Sprite cached)) return cached;
 
             Texture2D tex = NewTexture(size, size);
             var pixels = new Color32[size * size];
@@ -138,7 +158,7 @@ namespace RiskLoop.Game.Art
         public static Sprite Glow(int size = 32)
         {
             string key = $"glow_{size}";
-            if (Cache.TryGetValue(key, out Sprite cached)) return cached;
+            if (TryGetCached(key, out Sprite cached)) return cached;
 
             Texture2D tex = NewTexture(size, size);
             var pixels = new Color32[size * size];
@@ -157,7 +177,7 @@ namespace RiskLoop.Game.Art
         public static Sprite Vignette(int size = 64)
         {
             string key = $"vignette_{size}";
-            if (Cache.TryGetValue(key, out Sprite cached)) return cached;
+            if (TryGetCached(key, out Sprite cached)) return cached;
 
             Texture2D tex = NewTexture(size, size);
             tex.filterMode = FilterMode.Bilinear;  // Bu yumuşak olsun
@@ -175,7 +195,7 @@ namespace RiskLoop.Game.Art
 
         // ---------------- Yardımcılar ----------------
 
-        private static Texture2D NewTexture(int width, int height)
+        internal static Texture2D NewTexture(int width, int height)
         {
             return new Texture2D(width, height, TextureFormat.RGBA32, false)
             {
@@ -184,7 +204,7 @@ namespace RiskLoop.Game.Art
             };
         }
 
-        private static Sprite Finish(string key, Texture2D tex, Color32[] pixels)
+        internal static Sprite Finish(string key, Texture2D tex, Color32[] pixels)
         {
             tex.SetPixels32(pixels);
             tex.Apply();

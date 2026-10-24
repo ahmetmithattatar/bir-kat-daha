@@ -158,6 +158,10 @@ namespace RiskLoop.EditorTools
             ClassSelectView classSelect = BuildClassSelect(canvas);
             RevealPopupView popup = BuildRevealPopup(canvas);
             FxLayerView fx = BuildFxLayer(canvas, world);
+            MainMenuView mainMenu = BuildMainMenu(canvas);
+            PauseMenuView pauseMenu = BuildPauseMenu(canvas);
+            SettingsView settingsMenu = BuildSettingsMenu(canvas);   // Ana menü ve duraklatmanın üstünde açılır
+            HowToPlayView howToPlay = BuildHowToPlay(canvas);
             BuildTooltip(canvas);   // En üstte: her şeyin üzerinde görünsün
 
             // --- GameController + hissiyat yönetmeni ---
@@ -176,6 +180,13 @@ namespace RiskLoop.EditorTools
             SetRef(controller, "upgradePanel", upgradePanel);
             SetRef(controller, "feedback", director);
             SetRef(controller, "classSelect", classSelect);
+            SetRef(controller, "mainMenu", mainMenu);
+            SetRef(controller, "pauseMenu", pauseMenu);
+            SetRef(controller, "settingsMenu", settingsMenu);
+            SetRef(controller, "howToPlay", howToPlay);
+
+            // Ses efektleri (kodla sentezlenir)
+            new GameObject("Audio", typeof(Sfx));
 
             // Eşya detayı güçlendirme efektlerini en üst efekt katmanında oynatır
             SetRef(upgradePanel.GetComponentInChildren<ItemDetailView>(true), "fx", fx);
@@ -230,8 +241,8 @@ namespace RiskLoop.EditorTools
             TMP_Text record = CreateText("RecordText", bar, "Rekor", 30, h, TextAlignmentOptions.MidlineRight);
             SetFixedWidth(record, 300);
 
-            Button reset = CreateButton("ResetSaveButton", bar, UIStrings.ResetSaveButton, MutedColor, 56, 22, out TMP_Text resetText);
-            SetFixedWidth(reset, 200);
+            Button menu = CreateButton("MenuButton", bar, UIStrings.TopBarMenu, MutedColor, 56, 22, out TMP_Text menuText);
+            SetFixedWidth(menu, 200);
 
             var view = bar.gameObject.AddComponent<TopBarView>();
             SetRef(view, "moneyText", money);
@@ -239,8 +250,8 @@ namespace RiskLoop.EditorTools
             SetRef(view, "levelText", levelText);
             SetRef(view, "xpText", xpText);
             SetRef(view, "xpBarFill", xpFill);
-            SetRef(view, "resetButton", reset);
-            SetRef(view, "resetButtonText", resetText);
+            SetRef(view, "menuButton", menu);
+            SetRef(view, "menuButtonText", menuText);
             return view;
         }
 
@@ -831,6 +842,224 @@ namespace RiskLoop.EditorTools
             // Başta gizli (ClassSelectView.Awake de gizler)
             group.alpha = 0f;
             group.blocksRaycasts = false;
+            return view;
+        }
+
+        // ---------------- Menüler ----------------
+
+        /// <summary>
+        /// Tam ekran menü iskeleti: koyu perde (tıklamayı yutar) + ortada panel + başlık + dikey içerik.
+        /// İçeriği (butonlar) çağıran ekler. Başta gizli (MenuPanel.Awake de gizler).
+        /// </summary>
+        private static RectTransform BuildMenuFrame(string name, Transform canvas, string title, Vector2 size, float dim,
+                                                    out CanvasGroup group, out RectTransform root, out TMP_Text titleText)
+        {
+            root = CreateUIObject(name, canvas);
+            Stretch(root);
+            group = root.gameObject.AddComponent<CanvasGroup>();
+            AddImage(root, new Color(0.02f, 0.02f, 0.04f, dim));
+
+            RectTransform panel = CreateUIObject("Panel", root);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = size;
+            AddImage(panel, new Color(0.11f, 0.11f, 0.15f, 0.97f)).raycastTarget = false;
+            AddVerticalLayout(panel, spacing: 14, padding: 36);
+
+            titleText = CreateText("Title", panel, title, 56, 80);
+            titleText.fontStyle = FontStyles.Bold;
+            titleText.color = new Color(1f, 0.88f, 0.23f);
+
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            return panel;
+        }
+
+        private static Button MenuButton(Transform parent, string name, string label, Color color, out TMP_Text text, float height = 72)
+        {
+            return CreateButton(name, parent, label, color, height, 32, out text);
+        }
+
+        /// <summary>Ana menü: büyük oyun adı, alt başlık, 5 buton, köşede sürüm.</summary>
+        private static MainMenuView BuildMainMenu(Transform canvas)
+        {
+            RectTransform panel = BuildMenuFrame("MainMenu", canvas, UIStrings.GameTitle, new Vector2(720, 760), 0.85f,
+                                                 out CanvasGroup group, out RectTransform root, out TMP_Text title);
+            title.fontSize = 96;
+            title.enableAutoSizing = true;   // Uzun oyun adı panele sığsın
+            title.fontSizeMin = 56;
+            title.fontSizeMax = 96;
+            LayoutElement titleLe = title.GetComponent<LayoutElement>();
+            titleLe.minHeight = titleLe.preferredHeight = 120;
+            TMP_Text subtitle = CreateText("Subtitle", panel, UIStrings.GameSubtitle, 26, 44);
+            subtitle.color = HintColor;
+            CreateUIObject("Gap", panel).gameObject.AddComponent<LayoutElement>().minHeight = 20;
+
+            Button cont = MenuButton(panel, "ContinueButton", UIStrings.MenuContinue, CashOutColor, out _);
+            Button newGame = MenuButton(panel, "NewGameButton", UIStrings.MenuNewGame, AdvanceColor, out TMP_Text newGameLabel);
+            Button howTo = MenuButton(panel, "HowToPlayButton", UIStrings.MenuHowToPlay, BuyColor, out _);
+            Button settings = MenuButton(panel, "SettingsButton", UIStrings.MenuSettings, MutedColor, out _);
+            Button quit = MenuButton(panel, "QuitButton", UIStrings.MenuQuit, new Color(0.45f, 0.18f, 0.16f), out _);
+
+            RectTransform versionRt = CreateUIObject("Version", root);
+            versionRt.anchorMin = versionRt.anchorMax = new Vector2(1f, 0f);
+            versionRt.pivot = new Vector2(1f, 0f);
+            versionRt.sizeDelta = new Vector2(400, 40);
+            versionRt.anchoredPosition = new Vector2(-20, 12);
+            var version = versionRt.gameObject.AddComponent<TextMeshProUGUI>();
+            version.fontSize = 20;
+            version.alignment = TextAlignmentOptions.BottomRight;
+            version.color = HintColor;
+            version.raycastTarget = false;
+
+            var view = root.gameObject.AddComponent<MainMenuView>();
+            SetRef(view, "canvasGroup", group);
+            SetRef(view, "titleText", title);
+            SetRef(view, "subtitleText", subtitle);
+            SetRef(view, "versionText", version);
+            SetRef(view, "continueButton", cont);
+            SetRef(view, "newGameButton", newGame);
+            SetRef(view, "newGameLabel", newGameLabel);
+            SetRef(view, "howToPlayButton", howTo);
+            SetRef(view, "settingsButton", settings);
+            SetRef(view, "quitButton", quit);
+            return view;
+        }
+
+        /// <summary>Duraklatma menüsü: Devam, Nasıl Oynanır, Ayarlar, Ana Menü, Oyundan Çık.</summary>
+        private static PauseMenuView BuildPauseMenu(Transform canvas)
+        {
+            RectTransform panel = BuildMenuFrame("PauseMenu", canvas, UIStrings.PauseTitle, new Vector2(620, 620), 0.7f,
+                                                 out CanvasGroup group, out RectTransform root, out _);
+            Button resume = MenuButton(panel, "ResumeButton", UIStrings.MenuResume, CashOutColor, out _);
+            Button howTo = MenuButton(panel, "HowToPlayButton", UIStrings.MenuHowToPlay, BuyColor, out _);
+            Button settings = MenuButton(panel, "SettingsButton", UIStrings.MenuSettings, MutedColor, out _);
+            Button mainMenu = MenuButton(panel, "MainMenuButton", UIStrings.MenuMainMenu, MutedColor, out TMP_Text mainMenuLabel);
+            Button quit = MenuButton(panel, "QuitButton", UIStrings.MenuQuitGame, new Color(0.45f, 0.18f, 0.16f), out _);
+
+            var view = root.gameObject.AddComponent<PauseMenuView>();
+            SetRef(view, "canvasGroup", group);
+            SetRef(view, "resumeButton", resume);
+            SetRef(view, "howToPlayButton", howTo);
+            SetRef(view, "settingsButton", settings);
+            SetRef(view, "mainMenuButton", mainMenu);
+            SetRef(view, "mainMenuLabel", mainMenuLabel);
+            SetRef(view, "quitButton", quit);
+            return view;
+        }
+
+        /// <summary>Ayarlar: ses kaydırıcısı, 3 aç/kapa butonu, kaydı sıfırla, Geri.</summary>
+        private static SettingsView BuildSettingsMenu(Transform canvas)
+        {
+            RectTransform panel = BuildMenuFrame("SettingsMenu", canvas, UIStrings.SettingsTitle, new Vector2(700, 720), 0.6f,
+                                                 out CanvasGroup group, out RectTransform root, out _);
+
+            // Ses: etiket + kaydırıcı + değer
+            RectTransform volumeRow = CreateUIObject("VolumeRow", panel);
+            SetHeight(volumeRow, 64);
+            AddHorizontalLayout(volumeRow, spacing: 16);
+            TMP_Text volumeLabel = CreateText("Label", volumeRow, UIStrings.SettingsVolume, 30, 64, TextAlignmentOptions.MidlineLeft);
+            SetFixedWidth(volumeLabel, 110);
+            Slider slider = BuildSlider(volumeRow);
+            TMP_Text volumeValue = CreateText("Value", volumeRow, "%70", 28, 64, TextAlignmentOptions.MidlineRight);
+            SetFixedWidth(volumeValue, 90);
+
+            Button fullscreen = MenuButton(panel, "FullscreenButton", "", BarBackColor, out TMP_Text fullscreenLabel, 64);
+            Button shake = MenuButton(panel, "ShakeButton", "", BarBackColor, out TMP_Text shakeLabel, 64);
+            Button flash = MenuButton(panel, "FlashButton", "", BarBackColor, out TMP_Text flashLabel, 64);
+            foreach (TMP_Text l in new[] { fullscreenLabel, shakeLabel, flashLabel }) l.fontStyle = FontStyles.Normal;
+            CreateFlexibleSpacer(panel);
+            Button reset = MenuButton(panel, "ResetButton", UIStrings.SettingsReset, new Color(0.45f, 0.18f, 0.16f), out TMP_Text resetLabel, 64);
+            resetLabel.fontSize = 24;
+            Button back = MenuButton(panel, "BackButton", UIStrings.SettingsBack, CashOutColor, out _);
+
+            var view = root.gameObject.AddComponent<SettingsView>();
+            SetRef(view, "canvasGroup", group);
+            SetRef(view, "volumeSlider", slider);
+            SetRef(view, "volumeValue", volumeValue);
+            SetRef(view, "fullscreenButton", fullscreen);
+            SetRef(view, "fullscreenLabel", fullscreenLabel);
+            SetRef(view, "shakeButton", shake);
+            SetRef(view, "shakeLabel", shakeLabel);
+            SetRef(view, "flashButton", flash);
+            SetRef(view, "flashLabel", flashLabel);
+            SetRef(view, "resetButton", reset);
+            SetRef(view, "resetLabel", resetLabel);
+            SetRef(view, "backButton", back);
+            return view;
+        }
+
+        /// <summary>Basit yatay kaydırıcı (arka plan + dolgu + tutamaç). Kalan genişliği kaplar.</summary>
+        private static Slider BuildSlider(Transform parent)
+        {
+            RectTransform root = CreateUIObject("Slider", parent);
+            SetHeight(root, 64);
+            FillRemainingWidth(root);
+
+            RectTransform bg = CreateUIObject("Background", root);
+            bg.anchorMin = new Vector2(0f, 0.4f);
+            bg.anchorMax = new Vector2(1f, 0.6f);
+            bg.offsetMin = bg.offsetMax = Vector2.zero;
+            AddImage(bg, BarBackColor);
+
+            RectTransform fillArea = CreateUIObject("FillArea", root);
+            fillArea.anchorMin = new Vector2(0f, 0.4f);
+            fillArea.anchorMax = new Vector2(1f, 0.6f);
+            fillArea.offsetMin = fillArea.offsetMax = Vector2.zero;
+            RectTransform fill = CreateUIObject("Fill", fillArea);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = new Vector2(0.7f, 1f);
+            fill.offsetMin = fill.offsetMax = Vector2.zero;
+            AddImage(fill, new Color(1f, 0.82f, 0.25f)).raycastTarget = false;
+
+            RectTransform handleArea = CreateUIObject("HandleArea", root);
+            Stretch(handleArea);
+            handleArea.offsetMin = new Vector2(12, 0);
+            handleArea.offsetMax = new Vector2(-12, 0);
+            RectTransform handle = CreateUIObject("Handle", handleArea);
+            handle.sizeDelta = new Vector2(26, 40);
+            Image handleImage = AddImage(handle, Color.white);
+
+            var slider = root.gameObject.AddComponent<Slider>();
+            slider.fillRect = fill;
+            slider.handleRect = handle;
+            slider.targetGraphic = handleImage;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.navigation = new Navigation { mode = Navigation.Mode.None };
+            return slider;
+        }
+
+        /// <summary>Nasıl oynanır: başlık, metin, sayfa numarası, Önceki / Sonraki / Kapat.</summary>
+        private static HowToPlayView BuildHowToPlay(Transform canvas)
+        {
+            RectTransform panel = BuildMenuFrame("HowToPlay", canvas, "", new Vector2(1100, 720), 0.8f,
+                                                 out CanvasGroup group, out RectTransform root, out TMP_Text title);
+            title.fontSize = 44;
+            TMP_Text body = CreateText("Body", panel, "", 30, 400, TextAlignmentOptions.TopLeft);
+            body.enableAutoSizing = true;
+            body.fontSizeMin = 20;
+            TMP_Text page = CreateText("Page", panel, "", 22, 30);
+            page.color = HintColor;
+
+            RectTransform buttons = CreateUIObject("Buttons", panel);
+            SetHeight(buttons, 72);
+            AddHorizontalLayout(buttons, spacing: 14);
+            Button prev = MenuButton(buttons, "PrevButton", UIStrings.HowToPlayPrev, MutedColor, out _);
+            FillRemainingWidth(prev);
+            Button close = MenuButton(buttons, "CloseButton", UIStrings.HowToPlayClose, BarBackColor, out _);
+            FillRemainingWidth(close);
+            Button next = MenuButton(buttons, "NextButton", UIStrings.HowToPlayNext, CashOutColor, out TMP_Text nextLabel);
+            FillRemainingWidth(next);
+
+            var view = root.gameObject.AddComponent<HowToPlayView>();
+            SetRef(view, "canvasGroup", group);
+            SetRef(view, "titleText", title);
+            SetRef(view, "bodyText", body);
+            SetRef(view, "pageText", page);
+            SetRef(view, "prevButton", prev);
+            SetRef(view, "nextButton", next);
+            SetRef(view, "nextLabel", nextLabel);
+            SetRef(view, "closeButton", close);
             return view;
         }
 
@@ -2049,6 +2278,8 @@ namespace RiskLoop.EditorTools
             tmp.color = Color.white;
             tmp.fontStyle = FontStyles.Bold;
             tmp.raycastTarget = false;
+
+            rt.gameObject.AddComponent<ClickSound>();   // Tık sesi
 
             labelText = tmp;
             return button;

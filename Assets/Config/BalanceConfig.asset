@@ -17,9 +17,9 @@ MonoBehaviour:
     baseStepReward: 10
     stepMultiplierGrowth: 1.12
     zoneSize: 10
-    baseBustChance: 0.02
-    bustChancePerZoneFloor: 0
-    bustChancePerZoneFloorSq: 0.0067
+    baseBustChance: 0.12
+    bustChancePerZoneFloor: 0.07
+    bustChancePerZoneFloorSq: 0
     bustChancePerZone: 0.01
     minBustChance: 0.01
     bustFloorPerZoneFloor: 0.012
@@ -70,8 +70,8 @@ MonoBehaviour:
     maxSafetyFindReduction: 0.5
     minTotalRiskFactor: 0.6
     courageMinChance: 0
-    courageEdge: 0.7
-    riskDisplayExponent: 1.6
+    courageEdge: 0.35
+    riskDisplayExponent: 2.4
     maxCourageMult: 3
     courageLuckPerRisk: 1
     bustSalvageChance: 0.5

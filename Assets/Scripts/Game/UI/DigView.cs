@@ -102,7 +102,6 @@ namespace RiskLoop.Game.UI
         private static readonly Color HitTint = new Color(1f, 0.45f, 0.45f);
         private Color _auraColor;
 
-        private static readonly float[] RingBrightness = { 0.55f, 0.42f, 0.30f, 0.20f };
 
         private double _risk;
         private int _digStep;        // Şu an kazılan kat
@@ -213,15 +212,18 @@ namespace RiskLoop.Game.UI
 
             int zone = DepthTheme.ZoneIndex(_digStep);
             Color rockColor = DepthTheme.WallColor(_digStep);
-            int variant = _digStep % 4;  // Her bölgede 4 farklı kaya dokusu dönüşümlü
-            Sprite rock = PixelArt.Rock($"rock_{zone}_{variant}", zone * 100 + variant, rockColor);
+            Color oreColor = DepthTheme.OreColor(_digStep);
+            int variant = _digStep % 4;  // Her bölgede 4 farklı kaya yüzü dönüşümlü
+            wallImage.sprite = MineArt.RockFace($"face_{zone}_{variant}", zone * 100 + variant, rockColor, oreColor);
 
-            wallImage.sprite = rock;
+            // Tünel tek tam ekran perspektif görsel (destek çerçeveleri, raylar, fenerler).
+            // Eski iç içe halkalardan sadece ilki (tam ekran olan) kullanılır, diğerleri kapalı.
             for (int i = 0; i < tunnelRings.Length; i++)
             {
-                tunnelRings[i].sprite = rock;
-                float b = RingBrightness[Mathf.Min(i, RingBrightness.Length - 1)];
-                tunnelRings[i].color = new Color(b, b, b, 1f);
+                tunnelRings[i].enabled = i == 0;
+                if (i > 0) continue;
+                tunnelRings[i].sprite = MineArt.Tunnel($"tunnel_{zone}", zone * 31 + 5, rockColor, oreColor);
+                tunnelRings[i].color = Color.white;
             }
 
             depthLabel.text = $"{_digStep}. KAT";

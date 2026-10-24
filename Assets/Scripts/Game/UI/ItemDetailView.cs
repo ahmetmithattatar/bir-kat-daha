@@ -198,6 +198,7 @@ namespace RiskLoop.Game.UI
                 if (fx != null)
                 {
                     fx.Burst(icon.rectTransform, Spark, 10 + i * 3, 420f + i * 60f);
+                    Sfx.Play(SoundId.Pick, i, 0.7f);   // Örs vuruşu, her vuruşta biraz daha tiz
                     fx.Shake(3f + i, 0.08f);
                 }
                 yield return UIFx.Wait(0.08f);
@@ -208,6 +209,7 @@ namespace RiskLoop.Game.UI
             if (r.Success)
             {
                 // 2) Başarı: yeni görünüş + büyük "+N"
+                Sfx.Play(SoundId.EnhanceOk, Mathf.Min(r.NewLevel / 3, 3));
                 icon.sprite = GearArt.Icon(_item);
                 SetEnhanceVisuals(_item);
                 messageText.text = UIStrings.EnhanceSuccess(r.NewLevel);
@@ -233,6 +235,7 @@ namespace RiskLoop.Game.UI
             else if (r.Destroyed)
             {
                 // 4) Kırıldı: parçalara ayrılır
+                Sfx.Play(SoundId.Shatter);
                 messageText.text = UIStrings.EnhanceBroken;
                 if (fx != null)
                 {
@@ -255,6 +258,7 @@ namespace RiskLoop.Game.UI
             else
             {
                 // 3) Başarısız
+                Sfx.Play(SoundId.EnhanceFail);
                 messageText.text = r.Downgraded ? UIStrings.EnhanceDowngrade(r.NewLevel) : UIStrings.EnhanceFailSafe;
                 if (r.Downgraded)
                 {

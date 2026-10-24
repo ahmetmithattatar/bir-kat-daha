@@ -35,6 +35,7 @@ namespace RiskLoop.Game.UI
 
         public void Shake(float strength, float duration)
         {
+            if (!GameSettings.ScreenShake) return;   // Ayarlardan kapatılabilir
             if (_shakeRoutine != null)
             {
                 StopCoroutine(_shakeRoutine);
@@ -47,6 +48,7 @@ namespace RiskLoop.Game.UI
 
         public void Flash(Color color, float peakAlpha, float duration)
         {
+            if (!GameSettings.Flashes) peakAlpha *= 0.25f;   // Parlak flaşlar kapalıysa çok hafif
             if (_flashRoutine != null) StopCoroutine(_flashRoutine);
             _flashRoutine = StartCoroutine(FlashRoutine(color, peakAlpha, duration));
         }
